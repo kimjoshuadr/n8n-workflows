@@ -1,0 +1,738 @@
+{
+  "name": "Payments · Event ledger",
+  "nodes": [
+    {
+      "id": "c1f6502e-fdfb-47ed-a4ba-3af6e117ecad",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -570
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Payments · Event ledger\nRecords each payment, failure and refund from the processor exactly once, updates the invoice, and sends the receipt or the retry notice.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, PAYMENTS_WEBHOOK_SECRET\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
+      }
+    },
+    {
+      "id": "1df99ca6-66d9-4b26-aea8-189f0cd074b0",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Payment event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "payment-event",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "daf11e40-9a91-48af-af82-c2485782af2d"
+    },
+    {
+      "id": "b999fdca-a584-4416-a8ae-253d6192da13",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Signed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3b98ad77-7366-49b1-a86c-8bdb20d41ed2",
+              "leftValue": "={{ $json.headers['x-webhook-secret'] === $env.PAYMENTS_WEBHOOK_SECRET }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ddba1875-6030-497e-a8df-19bf02596182",
+      "position": [
+        480,
+        -90
+      ],
+      "name": "Unauthorised",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      }
+    },
+    {
+      "id": "4539a812-c446-4942-a270-b7c15a47ff83",
+      "position": [
+        480,
+        90
+      ],
+      "name": "Read the event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const e = $(\"Payment event\").first().json.body ?? {};\nconst o = e.data?.object ?? {};\nif (!e.id || !e.type) throw new Error(\"Event has no id or type\");\nreturn [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount ?? 0) / 100, currency: String(o.currency ?? \"usd\").toUpperCase(), invoice_id: o.metadata?.invoice_id ?? null, email: o.receipt_email ?? o.billing_details?.email ?? null, charge_id: o.id ?? null, scope: \"payment-event\", key: String(e.id) } }];"
+      }
+    },
+    {
+      "id": "ebc81471-1db2-4394-a815-bae534df600a",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Seen before?",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:idempotency-guard__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5c36a794-32fe-49a9-a724-5d7e589dd195",
+      "position": [
+        960,
+        0
+      ],
+      "name": "New event?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f1c64d35-a071-4dd0-a620-f335ac2939dd",
+              "leftValue": "={{ !$json.duplicate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6abd1e57-5047-411a-ac51-92fba181d15c",
+      "position": [
+        1200,
+        -90
+      ],
+      "name": "Already recorded",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, duplicate: true }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "1966f55f-e626-400b-ae31-bb0aa2206e22",
+      "position": [
+        1200,
+        90
+      ],
+      "name": "Which event?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "55ae4cd3-3995-498a-a977-17f508376709",
+                    "leftValue": "={{ $json.type === 'payment_intent.succeeded' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "paid"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "02077640-3da2-4e87-a52b-07ac0a067a19",
+                    "leftValue": "={{ $json.type === 'payment_intent.payment_failed' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "failed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "84f36773-5325-4f6a-a297-f6543f289338",
+                    "leftValue": "={{ $json.type === 'charge.refunded' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "refunded"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      }
+    },
+    {
+      "id": "793f844b-66d0-474d-a389-030d836d2a3d",
+      "position": [
+        1440,
+        -270
+      ],
+      "name": "Ledger: credit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/ledger",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ event_id: $json.event_id, charge_id: $json.charge_id, kind: 'payment', amount: $json.amount, currency: $json.currency, invoice_id: $json.invoice_id, at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "f343455c-2f7f-4ea6-aaba-a32a138c091e",
+      "position": [
+        1680,
+        -180
+      ],
+      "name": "Mark invoice paid",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/invoices",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $('New event?').first().json.invoice_id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'paid', paid_at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "a8298417-a3e1-4ed4-a69d-0b8b14778a60",
+      "position": [
+        1920,
+        -90
+      ],
+      "name": "Send receipt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $('New event?').first().json.email, subject: 'Receipt for your payment', template: 'receipt', data: { amount: $('New event?').first().json.amount, currency: $('New event?').first().json.currency } }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "dbedd1fe-a271-4e26-a00e-8491961b1ca4",
+      "position": [
+        1440,
+        -90
+      ],
+      "name": "Mark invoice failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/invoices",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $json.invoice_id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'payment_failed', last_failure_at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "3f2ddc1e-027a-4dc4-a942-cdbf726e81b4",
+      "position": [
+        1680,
+        0
+      ],
+      "name": "Ask to update card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $('New event?').first().json.email, subject: 'Your payment did not go through', template: 'payment-failed', data: { amount: $('New event?').first().json.amount } }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "e27e0fc7-9cbc-4f4a-a7a2-f777829d441b",
+      "position": [
+        1440,
+        90
+      ],
+      "name": "Ledger: debit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/ledger",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ event_id: $json.event_id, charge_id: $json.charge_id, kind: 'refund', amount: -$json.amount, currency: $json.currency, invoice_id: $json.invoice_id, at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "d01584a2-0199-4844-ad1c-2591a1bc229b",
+      "position": [
+        1680,
+        180
+      ],
+      "name": "Refund message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const e = $(\"New event?\").first().json;\nreturn [{ json: { text: \"Refund of \" + e.amount + \" \" + e.currency + \" recorded for \" + (e.email ?? \"an unknown customer\") + \".\", level: \"info\" } }];"
+      }
+    },
+    {
+      "id": "881191cb-1b22-4e06-a381-ed5bf819a420",
+      "position": [
+        1920,
+        90
+      ],
+      "name": "Tell finance",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e8d852ed-f906-4f64-a6d1-ac42ab5b6e10",
+      "position": [
+        2160,
+        0
+      ],
+      "name": "Recorded",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "ab6cbdf4-0e54-4b36-a3d6-e381a671e42a",
+      "position": [
+        1440,
+        270
+      ],
+      "name": "Not handled",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, ignored: true }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Payment event": {
+      "main": [
+        [
+          {
+            "node": "Signed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signed?": {
+      "main": [
+        [
+          {
+            "node": "Read the event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unauthorised",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the event": {
+      "main": [
+        [
+          {
+            "node": "Seen before?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seen before?": {
+      "main": [
+        [
+          {
+            "node": "New event?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New event?": {
+      "main": [
+        [
+          {
+            "node": "Which event?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Already recorded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Which event?": {
+      "main": [
+        [
+          {
+            "node": "Ledger: credit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark invoice failed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ledger: debit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not handled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ledger: credit": {
+      "main": [
+        [
+          {
+            "node": "Mark invoice paid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark invoice paid": {
+      "main": [
+        [
+          {
+            "node": "Send receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send receipt": {
+      "main": [
+        [
+          {
+            "node": "Recorded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark invoice failed": {
+      "main": [
+        [
+          {
+            "node": "Ask to update card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask to update card": {
+      "main": [
+        [
+          {
+            "node": "Recorded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ledger: debit": {
+      "main": [
+        [
+          {
+            "node": "Refund message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refund message": {
+      "main": [
+        [
+          {
+            "node": "Tell finance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tell finance": {
+      "main": [
+        [
+          {
+            "node": "Recorded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

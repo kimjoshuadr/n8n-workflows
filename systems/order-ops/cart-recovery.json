@@ -1,0 +1,297 @@
+{
+  "name": "Order ops · Abandoned cart recovery",
+  "nodes": [
+    {
+      "id": "f6f15c39-e5cc-4a24-af37-ea7a6d11700d",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Order ops · Abandoned cart recovery\nEvery half hour, writes once to people who left a cart over an hour ago and have not ordered since.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
+      }
+    },
+    {
+      "id": "bf374b17-7bf5-455e-aa1b-cd26e7b0b724",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Every 30 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ef20ccc2-6d8f-4926-a900-55032fbf7a07",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Open carts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/carts",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "recovered",
+              "value": "={{ 'eq.false' }}"
+            },
+            {
+              "name": "reminded",
+              "value": "={{ 'eq.false' }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "f596ebf9-a01e-4790-a4f2-6e03f5bd4c6e",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Old enough, with an email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const now = Date.now();\nreturn $input.all().map((i) => i.json).filter((c) => c.email && c.updated_at)\n  .filter((c) => now - new Date(c.updated_at).getTime() > 36e5)\n  .filter((c) => now - new Date(c.updated_at).getTime() < 3 * 864e5)\n  .map((json) => ({ json }));"
+      }
+    },
+    {
+      "id": "45339362-e072-4837-af59-ff251cb63367",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Ordered since?",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/orders",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "={{ 'eq.' + $json.email }}"
+            },
+            {
+              "name": "limit",
+              "value": "={{ '1' }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "4bd795cf-d826-4fed-abe3-f96e4f87ce3f",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Keep the ones who did not",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const carts = $(\"Old enough, with an email\").all();\nreturn $input.all().map((item, i) => ({ cart: carts[i]?.json, ordered: !!item.json.order_id }))\n  .filter((x) => x.cart && !x.ordered).map((x) => ({ json: x.cart }));"
+      }
+    },
+    {
+      "id": "7a6181b9-c613-4c6f-aaf1-dc55d26ca9a6",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "Send the reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $json.email, subject: 'You left something behind', template: 'cart-reminder', data: { items: $json.items, cart_url: $json.cart_url } }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "bffa7485-a137-422c-a30b-1fc7f3ea835d",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Mark reminded",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/carts",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $('Keep the ones who did not').item.json.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ reminded: true, reminded_at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "Every 30 minutes": {
+      "main": [
+        [
+          {
+            "node": "Open carts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open carts": {
+      "main": [
+        [
+          {
+            "node": "Old enough, with an email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Old enough, with an email": {
+      "main": [
+        [
+          {
+            "node": "Ordered since?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordered since?": {
+      "main": [
+        [
+          {
+            "node": "Keep the ones who did not",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep the ones who did not": {
+      "main": [
+        [
+          {
+            "node": "Send the reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the reminder": {
+      "main": [
+        [
+          {
+            "node": "Mark reminded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

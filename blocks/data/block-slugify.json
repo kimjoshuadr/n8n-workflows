@@ -1,0 +1,63 @@
+{
+  "name": "Block · Clean text into a URL slug",
+  "nodes": [
+    {
+      "id": "7050fceb-60a2-4a83-aeb7-a61a497c43f9",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Clean text into a URL slug\nTurns any title into a safe, readable URL slug, including accented and non-Latin titles.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+      }
+    },
+    {
+      "id": "5b63157a-4dde-41a3-a430-e0c9f4206eb7",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "b05acf1e-8a58-410c-ae7b-0f17a3fde092",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Slugify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => {\n  const slug = String(item.json.title ?? \"\").normalize(\"NFKD\").replace(/[\\u0300-\\u036f]/g, \"\").toLowerCase().replace(/&/g, \" and \").replace(/[^a-z0-9]+/g, \"-\").replace(/^-+|-+$/g, \"\").slice(0, 80).replace(/-+$/, \"\");\n  return { json: { ...item.json, slug: slug || \"untitled-\" + Math.abs([...String(item.json.title ?? \"\")].reduce((h, c) => (h * 31 + c.codePointAt(0)) | 0, 7)).toString(36) } };\n});"
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Slugify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

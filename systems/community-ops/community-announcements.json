@@ -1,0 +1,462 @@
+{
+  "name": "Community ops · Scheduled announcements",
+  "nodes": [
+    {
+      "id": "102ecbf1-c4d8-4df8-a281-9ca0252cdc62",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Community ops · Scheduled announcements\nPosts announcements at the time they were scheduled for, once, and reports any that could not be posted.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/community-ops`"
+      }
+    },
+    {
+      "id": "94a3fee6-4122-409d-a687-86e048b23b04",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Every 5 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "e18b8fd2-19a7-472a-abf3-226d8e12a57f",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Due announcements",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/announcements",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "={{ 'eq.scheduled' }}"
+            },
+            {
+              "name": "send_at",
+              "value": "={{ 'lte.' + $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "93c7d4cd-691f-4efc-a129-1725bdbcea4b",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Any due?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7125bf0e-bf22-4fac-a3ea-eb96788fcc72",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "827d27d6-4baa-4653-ab50-756f07e67c05",
+      "position": [
+        720,
+        -90
+      ],
+      "name": "Claim it",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/announcements",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $json.id }}"
+            },
+            {
+              "name": "status",
+              "value": "={{ 'eq.scheduled' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'sending' }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "4e9bed98-201b-4067-a15b-6dc31d676d3c",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Claimed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d2884e8b-6ff0-4d17-a44b-f99996ad5e65",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "15c59722-fa30-44b8-a0f1-5313b8358198",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "Post it",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_BASE_URL }}/channels/announcements/messages",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DISCORD_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, content: $json.content, mention_everyone: $json.mention_everyone === true }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "8c10dae4-67df-420a-a827-914fff88de0d",
+      "position": [
+        1440,
+        -90
+      ],
+      "name": "Mark sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/announcements",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $('Claimed?').item.json.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'sent', sent_at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "bd231682-82ba-4c0d-a09f-a46fcc86076d",
+      "position": [
+        1440,
+        90
+      ],
+      "name": "Mark failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/announcements",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $('Claimed?').item.json.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'failed' }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "b8c9a21d-f837-4a5a-a4bf-553c9cdccf9f",
+      "position": [
+        1680,
+        0
+      ],
+      "name": "Failure message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => ({ json: { channel: \"#mods\", level: \"warn\", text: \"An announcement could not be posted and was marked failed: \\\"\" + String(i.json.content ?? \"\").slice(0, 120) + \"\\\"\" } }));"
+      }
+    },
+    {
+      "id": "846f044b-d042-484b-a597-9b0e21a47e6c",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Tell the team",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "69c0f051-6c6b-496e-aea2-44e3fda0d8a9",
+      "position": [
+        720,
+        90
+      ],
+      "name": "Nothing due",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Every 5 minutes": {
+      "main": [
+        [
+          {
+            "node": "Due announcements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Due announcements": {
+      "main": [
+        [
+          {
+            "node": "Any due?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any due?": {
+      "main": [
+        [
+          {
+            "node": "Claim it",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing due",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim it": {
+      "main": [
+        [
+          {
+            "node": "Claimed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claimed?": {
+      "main": [
+        [
+          {
+            "node": "Post it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post it": {
+      "main": [
+        [
+          {
+            "node": "Mark sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark failed": {
+      "main": [
+        [
+          {
+            "node": "Failure message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Failure message": {
+      "main": [
+        [
+          {
+            "node": "Tell the team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

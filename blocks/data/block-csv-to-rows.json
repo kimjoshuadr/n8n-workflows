@@ -1,0 +1,63 @@
+{
+  "name": "Block · CSV text to rows",
+  "nodes": [
+    {
+      "id": "34855172-e6ca-47ca-a4d1-7d1ce09f62c3",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · CSV text to rows\nParses CSV text properly, including quoted commas and blank lines, into one item per row.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+      }
+    },
+    {
+      "id": "19f91a05-4d91-48d9-ae9f-bb0b97a2d092",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "3153f988-044b-41a2-ab72-7a1c9aaaacee",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Parse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const text = String($input.first().json.csv ?? \"\").replace(/^\\uFEFF/, \"\");\nconst rows = [];\nlet row = [], cell = \"\", quoted = false;\nfor (let i = 0; i < text.length; i++) {\n  const c = text[i];\n  if (quoted) { if (c === '\"' && text[i + 1] === '\"') { cell += '\"'; i++; } else if (c === '\"') quoted = false; else cell += c; }\n  else if (c === '\"') quoted = true;\n  else if (c === \",\") { row.push(cell); cell = \"\"; }\n  else if (c === \"\\n\" || c === \"\\r\") { if (c === \"\\r\" && text[i + 1] === \"\\n\") i++; row.push(cell); rows.push(row); row = []; cell = \"\"; }\n  else cell += c;\n}\nif (cell.length || row.length) { row.push(cell); rows.push(row); }\nconst [header, ...body] = rows.filter((r) => r.some((v) => v.trim() !== \"\"));\nif (!header) return [];\nreturn body.map((r) => ({ json: Object.fromEntries(header.map((h, i) => [h.trim(), (r[i] ?? \"\").trim()])) }));"
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

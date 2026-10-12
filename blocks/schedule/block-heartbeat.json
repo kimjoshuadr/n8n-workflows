@@ -1,0 +1,95 @@
+{
+  "name": "Block · Check in with the heartbeat monitor",
+  "nodes": [
+    {
+      "id": "15f28b4f-f2be-4b3f-aaab-d5275e239a15",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Check in with the heartbeat monitor\nThe two nodes a scheduled workflow adds so the heartbeat monitor can tell when it stops running.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/schedule`"
+      }
+    },
+    {
+      "id": "0d5e14a1-4a8a-4110-a3f8-9061685c8175",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "25f69045-c3d2-4b4a-a5bc-5407849851d3",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Check in",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/heartbeats",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "={{ 'name' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: $json.name, last_seen: $now.toISO(), max_gap_minutes: $json.max_gap_minutes ?? 90 }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Check in",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

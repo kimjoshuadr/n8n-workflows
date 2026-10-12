@@ -1,0 +1,63 @@
+{
+  "name": "Block · Split a document into overlapping chunks",
+  "nodes": [
+    {
+      "id": "ad11c3c8-722b-4aa6-a2b6-8457d6fe6a86",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Split a document into overlapping chunks\nCuts long text into chunks that end on sentence boundaries and overlap by whole sentences, ready for embedding or a model's context window.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/ai`"
+      }
+    },
+    {
+      "id": "d8c40d0f-3482-448c-a148-58c7d4990a72",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "8eb0eea8-551e-4cc2-ae4a-386a3f731b27",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Chunk",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const { text = \"\", size = 800, overlap = 100, id = \"doc\" } = $input.first().json;\nconst sentences = (String(text).replace(/\\s+/g, \" \").trim().match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? []).map((s) => s.trim());\nconst chunks = [];\nlet current = [];\nconst length = (list) => list.join(\" \").length;\nfor (const s of sentences) {\n  if (current.length && length([...current, s]) > size) {\n    chunks.push(current.join(\" \"));\n    // Carry whole sentences into the next chunk, never half a word.\n    const carry = [];\n    for (const prev of [...current].reverse()) { if (length([prev, ...carry]) > overlap) break; carry.unshift(prev); }\n    current = carry;\n  }\n  current.push(s);\n}\nif (current.length) chunks.push(current.join(\" \"));\nreturn chunks.map((c, i) => ({ json: { id: id + \"#\" + i, index: i, of: chunks.length, text: c, chars: c.length } }));"
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Chunk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

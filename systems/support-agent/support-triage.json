@@ -1,0 +1,520 @@
+{
+  "name": "Support agent · Ticket triage",
+  "nodes": [
+    {
+      "id": "2f056257-b6b9-4a22-a17a-2179606663a5",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -570
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Support agent · Ticket triage\nLabels each new ticket by topic and urgency, routes it to the right team, and pages someone only when it is urgent.\n\n**Needs:** HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/support-agent`"
+      }
+    },
+    {
+      "id": "431a2f30-91a4-4b47-af24-a2f667ac1dfe",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Ticket created",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "support-ticket",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "aebb35ac-e5a4-4458-aff4-4d6b1373ff1f"
+    },
+    {
+      "id": "edb65851-2fa0-4626-a9c9-c9ee992b1f46",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Read the ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body ?? {};\nreturn [{ json: { ticket_id: String(b.id), subject: String(b.subject ?? \"\"), body: String(b.body ?? \"\").slice(0, 3000), from: b.from ?? null } }];"
+      }
+    },
+    {
+      "id": "708e926a-f7d5-46df-a6ff-97df9a82e789",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Classify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: \"[task:classify] Classify a support ticket. Reply with JSON: { label: 'billing'|'technical'|'spam'|'general', urgent: boolean, sentiment: 'negative'|'neutral'|'positive' }.\" },\n    { role: \"user\", content: $json.subject + '\\n\\n' + $json.body }\n  ]\n}) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "7919cc74-98d4-4cc3-ac94-ddc39959eba0",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Read the labels",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const before = $(\"Read the ticket\").all();\nconst out = [];\nfor (const [i, item] of $input.all().entries()) {\n  let reply = {\"label\":\"general\",\"urgent\":false,\"sentiment\":\"neutral\"};\n  let parse_error = false;\n  try {\n    reply = JSON.parse(item.json.choices[0].message.content);\n  } catch (e) {\n    parse_error = true;\n  }\n  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "d638aa7d-b630-45a4-abc3-e66644b04cee",
+      "position": [
+        960,
+        0
+      ],
+      "name": "By topic",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "29130356-0c00-4622-a1b3-dafe22b8ffea",
+                    "leftValue": "={{ $json.label === 'spam' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "spam"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "26eaf4eb-6b00-4c02-aa1e-020dd518fb3d",
+                    "leftValue": "={{ $json.label === 'billing' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "billing"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "986705cc-9c8c-463a-a493-20ff6b7d85c4",
+                    "leftValue": "={{ $json.label === 'technical' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "technical"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      }
+    },
+    {
+      "id": "e32eef67-376a-47d5-ac3a-7959a64506b7",
+      "position": [
+        1200,
+        -270
+      ],
+      "name": "Close as spam",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HELPDESK_BASE_URL }}/tickets/update",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ticket_id: $json.ticket_id, status: 'closed', labels: ['spam'] }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "4fad6ab2-8b70-4ac5-a51f-cde4668d7d7e",
+      "position": [
+        1200,
+        -90
+      ],
+      "name": "Send to billing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HELPDESK_BASE_URL }}/tickets/update",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ticket_id: $json.ticket_id, team: 'billing', labels: ['billing', $json.sentiment] }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "3874c530-1c45-4bd7-ac01-e6be81aa78f5",
+      "position": [
+        1200,
+        90
+      ],
+      "name": "Send to engineering",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HELPDESK_BASE_URL }}/tickets/update",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ticket_id: $json.ticket_id, team: 'engineering', labels: ['technical', $json.sentiment] }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "9d0d05e7-9aac-47e9-a2ca-8b2254b4ac26",
+      "position": [
+        1200,
+        270
+      ],
+      "name": "Send to general queue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HELPDESK_BASE_URL }}/tickets/update",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ticket_id: $json.ticket_id, team: 'support', labels: ['general', $json.sentiment], needs_review: $json.parse_error }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "c6dc00c3-876e-4539-afce-d063a9ba18e5",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Urgent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "dc9ef982-ea50-4272-a239-1f980bb39d3a",
+              "leftValue": "={{ $('Read the labels').first().json.urgent === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5b5ccbb9-2713-43fd-a196-1f71bd86a29c",
+      "position": [
+        1680,
+        0
+      ],
+      "name": "Page message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const t = $(\"Read the labels\").first().json;\nreturn [{ json: { text: \"Urgent \" + t.label + \" ticket #\" + t.ticket_id + \": \" + t.subject, level: \"critical\" } }];"
+      }
+    },
+    {
+      "id": "8cac8dc5-3c3e-42f6-a07f-b8b45d049a2d",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Page on-call",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Ticket created": {
+      "main": [
+        [
+          {
+            "node": "Read the ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the ticket": {
+      "main": [
+        [
+          {
+            "node": "Classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify": {
+      "main": [
+        [
+          {
+            "node": "Read the labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the labels": {
+      "main": [
+        [
+          {
+            "node": "By topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "By topic": {
+      "main": [
+        [
+          {
+            "node": "Close as spam",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to billing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to engineering",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to general queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to billing": {
+      "main": [
+        [
+          {
+            "node": "Urgent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to engineering": {
+      "main": [
+        [
+          {
+            "node": "Urgent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to general queue": {
+      "main": [
+        [
+          {
+            "node": "Urgent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Urgent?": {
+      "main": [
+        [
+          {
+            "node": "Page message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Page message": {
+      "main": [
+        [
+          {
+            "node": "Page on-call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

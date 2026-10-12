@@ -1,0 +1,543 @@
+{
+  "name": "Events · Webinar registration and reminders",
+  "nodes": [
+    {
+      "id": "94b9bb57-e865-4777-a101-c40bc4d3a993",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Events · Webinar registration and reminders\nRegisters someone for a webinar, sends the calendar invite, and reminds them a day and an hour before. Full sessions get a waitlist reply.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
+      }
+    },
+    {
+      "id": "84fdd34d-0acb-4d79-afc1-890f3c149c2b",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Registration",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "webinar-register",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "45ead164-37b3-49fe-a3a4-6f6df1b0b1fa"
+    },
+    {
+      "id": "a4de99b5-a706-4a2f-a431-d8138de2aa91",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Read the form",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body ?? {};\nconst email = String(b.email ?? \"\").trim().toLowerCase();\nreturn [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.webinar_id, email, name: String(b.name ?? \"\").trim(), webinar_id: String(b.webinar_id ?? \"\") } }];"
+      }
+    },
+    {
+      "id": "6ac60d43-855b-4256-ab86-5cb748269af3",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8ba548b6-353c-474e-a581-189fba03a955",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "969476db-290f-4136-add8-c2187d38051d",
+      "position": [
+        720,
+        -90
+      ],
+      "name": "Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'A valid email and a webinar are required' }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "f5a5fd9d-6142-41d4-afdc-9431895facb9",
+      "position": [
+        720,
+        90
+      ],
+      "name": "Load the webinar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/webinars",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $json.webinar_id }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "52b5b9dd-0c38-4456-a42a-11d8c20516df",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Seats left?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "29a8c670-2e15-429a-af52-6794689dbd48",
+              "leftValue": "={{ !!$json.id && ($json.registered ?? 0) < $json.capacity }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5a5f949e-b610-4c2b-aafc-11893dadaadc",
+      "position": [
+        1200,
+        -90
+      ],
+      "name": "Register",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/registrations",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "={{ 'key' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ key: $('Read the form').first().json.webinar_id + ':' + $('Read the form').first().json.email, webinar_id: $('Read the form').first().json.webinar_id, email: $('Read the form').first().json.email, name: $('Read the form').first().json.name, reminded_day: false, reminded_hour: false }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "ae900ee8-782e-41fd-a01a-868339b997fb",
+      "position": [
+        1440,
+        -90
+      ],
+      "name": "Newly registered?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0f192728-634d-47cc-a52d-0f5eaa7461a2",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "39d1899e-d1cd-4cf0-a1ba-c4c5c3b8a480",
+      "position": [
+        1680,
+        -90
+      ],
+      "name": "Count the seat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/webinars",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $('Load the webinar').first().json.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ registered: ($('Load the webinar').first().json.registered ?? 0) + 1 }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "5ddd5294-a794-4b65-ab8d-b5b27a9c8270",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Send the invite",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $('Read the form').first().json.email, subject: 'You are in: ' + $('Load the webinar').first().json.title, template: 'webinar-confirmed', data: { starts_at: $('Load the webinar').first().json.starts_at, join_url: $('Load the webinar').first().json.join_url }, calendar_invite: true }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "4ff542d0-6946-47aa-a546-25dd5a54921d",
+      "position": [
+        2160,
+        0
+      ],
+      "name": "Confirmed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, status: 'registered' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "e75c8f15-5b89-4a39-aa36-d441b6d50f68",
+      "position": [
+        1680,
+        90
+      ],
+      "name": "Already registered",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, status: 'already_registered' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "be848488-61d4-47e6-ab84-78065c63d285",
+      "position": [
+        1200,
+        90
+      ],
+      "name": "Add to waitlist",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/waitlist",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ webinar_id: $('Read the form').first().json.webinar_id, email: $('Read the form').first().json.email, at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "f0100853-d664-47d8-ad8a-fa1dfa6be095",
+      "position": [
+        1440,
+        90
+      ],
+      "name": "Waitlisted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, status: 'waitlisted' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Registration": {
+      "main": [
+        [
+          {
+            "node": "Read the form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the form": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load the webinar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load the webinar": {
+      "main": [
+        [
+          {
+            "node": "Seats left?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seats left?": {
+      "main": [
+        [
+          {
+            "node": "Register",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add to waitlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register": {
+      "main": [
+        [
+          {
+            "node": "Newly registered?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Newly registered?": {
+      "main": [
+        [
+          {
+            "node": "Count the seat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Already registered",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count the seat": {
+      "main": [
+        [
+          {
+            "node": "Send the invite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the invite": {
+      "main": [
+        [
+          {
+            "node": "Confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to waitlist": {
+      "main": [
+        [
+          {
+            "node": "Waitlisted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

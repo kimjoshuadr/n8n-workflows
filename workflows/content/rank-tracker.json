@@ -1,0 +1,366 @@
+{
+  "name": "SEO · Keyword rank tracker",
+  "nodes": [
+    {
+      "id": "d0c1473d-46df-4478-ab66-a7b8d05afaaf",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## SEO · Keyword rank tracker\nRecords where the site ranks for each tracked keyword every day, and alerts when one falls five places or drops off the first page.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, SEARCH_API_KEY, SEARCH_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
+      }
+    },
+    {
+      "id": "7088e2ba-68f5-463b-aa23-ed2f4b1464bc",
+      "position": [
+        0,
+        0
+      ],
+      "name": "05:00 daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 5 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "93568259-4da4-4912-aec0-7288e35a5379",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Tracked keywords",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/keywords",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "46728195-3a4d-41e7-a6a9-fb7b6af5d707",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Search for it",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SEARCH_BASE_URL }}/serp",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SEARCH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: $json.keyword, num: 30 }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "16c88ff0-1d72-41d0-a1d8-08d2967004cb",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Find our position",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const kws = $(\"Tracked keywords\").all();\nreturn $input.all().map((item, i) => {\n  const k = kws[i]?.json;\n  if (!k?.keyword) return null;\n  const results = item.json.results;\n  if (!Array.isArray(results)) return { json: { ...k, position: null, checked: false } };\n  const idx = results.findIndex((r) => String(r.url ?? \"\").includes(k.domain));\n  const position = idx === -1 ? null : idx + 1;\n  const before = k.last_position ?? null;\n  const fell = before !== null && (position === null || position - before >= 5);\n  const offFirstPage = before !== null && before <= 10 && (position === null || position > 10);\n  return { json: { ...k, position, before, checked: true, alert: fell || offFirstPage } };\n}).filter(Boolean);"
+      }
+    },
+    {
+      "id": "80c5ba5f-d592-497d-a633-63c769914243",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Got a result?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "736a0f7e-147b-4f5c-a53a-b3694398cd04",
+              "leftValue": "={{ $json.checked }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7fb769f1-eae5-43e7-ad02-ccf615078f6b",
+      "position": [
+        1200,
+        -90
+      ],
+      "name": "Record today",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/rank_history",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ keyword: $json.keyword, position: $json.position, at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "e47b9f1c-9133-4c51-aef5-2819eb56261b",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Update the keyword",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/keywords",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "keyword",
+              "value": "={{ 'eq.' + $('Got a result?').item.json.keyword }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ last_position: $('Got a result?').item.json.position, checked_at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "db1a4d9a-0c7c-4beb-a80e-dc9f3c0f0c54",
+      "position": [
+        1680,
+        0
+      ],
+      "name": "Gather the drops",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const drops = $(\"Got a result?\").all().map((i) => i.json).filter((k) => k.alert);\nif (!drops.length) return [];\nreturn [{ json: { channel: \"#seo\", level: \"warn\", text: drops.length + \" keyword(s) dropped: \" + drops.map((d) => \"\\\"\" + d.keyword + \"\\\" \" + d.before + \" to \" + (d.position ?? \"not in top 30\")).join(\"; \") } }];"
+      }
+    },
+    {
+      "id": "d7a6ee0b-7089-424c-a59b-c0209e3b07ad",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Alert",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "8dda734b-cae2-4de8-a5a5-42069bc76550",
+      "position": [
+        1200,
+        90
+      ],
+      "name": "Search failed, keep yesterday",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "05:00 daily": {
+      "main": [
+        [
+          {
+            "node": "Tracked keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tracked keywords": {
+      "main": [
+        [
+          {
+            "node": "Search for it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search for it": {
+      "main": [
+        [
+          {
+            "node": "Find our position",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find our position": {
+      "main": [
+        [
+          {
+            "node": "Got a result?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Got a result?": {
+      "main": [
+        [
+          {
+            "node": "Record today",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search failed, keep yesterday",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record today": {
+      "main": [
+        [
+          {
+            "node": "Update the keyword",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update the keyword": {
+      "main": [
+        [
+          {
+            "node": "Gather the drops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gather the drops": {
+      "main": [
+        [
+          {
+            "node": "Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

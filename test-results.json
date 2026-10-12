@@ -1,0 +1,1012 @@
+{
+  "n8n": "2.42.7",
+  "passed": 201,
+  "failed": 0,
+  "cases": [
+    {
+      "id": "block-webhook-to-table",
+      "name": "stores named fields and drops the rest",
+      "ok": true
+    },
+    {
+      "id": "block-webhook-secret",
+      "name": "accepts the right secret",
+      "ok": true
+    },
+    {
+      "id": "block-webhook-secret",
+      "name": "refuses a wrong one",
+      "ok": true
+    },
+    {
+      "id": "block-validate-respond",
+      "name": "names each wrong field",
+      "ok": true
+    },
+    {
+      "id": "block-validate-respond",
+      "name": "accepts a good payload",
+      "ok": true
+    },
+    {
+      "id": "block-webhook-to-chat",
+      "name": "posts the title and text",
+      "ok": true
+    },
+    {
+      "id": "block-fan-out",
+      "name": "sends all three",
+      "ok": true
+    },
+    {
+      "id": "block-fan-out",
+      "name": "an email outage does not stop chat or SMS",
+      "ok": true
+    },
+    {
+      "id": "block-template-email",
+      "name": "fills and sends",
+      "ok": true
+    },
+    {
+      "id": "block-template-email",
+      "name": "holds back an email with a blank placeholder",
+      "ok": true
+    },
+    {
+      "id": "block-scheduled-report",
+      "name": "counts rows",
+      "ok": true
+    },
+    {
+      "id": "block-scheduled-report",
+      "name": "reports zero and does not go silent",
+      "ok": true
+    },
+    {
+      "id": "block-heartbeat",
+      "name": "writes a heartbeat row",
+      "ok": true
+    },
+    {
+      "id": "block-working-hours",
+      "name": "Tuesday 10:00 in Manila is open",
+      "ok": true
+    },
+    {
+      "id": "block-working-hours",
+      "name": "the same instant in New York is closed",
+      "ok": true
+    },
+    {
+      "id": "block-working-hours",
+      "name": "a Saturday is closed",
+      "ok": true
+    },
+    {
+      "id": "block-dedupe",
+      "name": "treats differently-cased emails as one",
+      "ok": true
+    },
+    {
+      "id": "block-paginate",
+      "name": "stops when there is no next cursor",
+      "ok": true
+    },
+    {
+      "id": "block-rate-limited-loop",
+      "name": "sends every item across batches",
+      "ok": true
+    },
+    {
+      "id": "block-batch-upsert",
+      "name": "250 rows become three requests and update on repeat",
+      "ok": true
+    },
+    {
+      "id": "block-retry-backoff",
+      "name": "succeeds on the third attempt",
+      "ok": true
+    },
+    {
+      "id": "block-retry-backoff",
+      "name": "gives up after four",
+      "ok": true
+    },
+    {
+      "id": "block-error-to-dead-letter",
+      "name": "writes when the service is up",
+      "ok": true
+    },
+    {
+      "id": "block-error-to-dead-letter",
+      "name": "parks the payload when it stays down",
+      "ok": true
+    },
+    {
+      "id": "block-throttle",
+      "name": "allows up to the limit, then refuses",
+      "ok": true
+    },
+    {
+      "id": "block-approval-gate",
+      "name": "a link works once",
+      "ok": true
+    },
+    {
+      "id": "block-approval-gate",
+      "name": "an unknown token is refused",
+      "ok": true
+    },
+    {
+      "id": "block-csv-to-rows",
+      "name": "handles quoted commas, escaped quotes and blank lines",
+      "ok": true
+    },
+    {
+      "id": "block-change-detect",
+      "name": "names the field that changed",
+      "ok": true
+    },
+    {
+      "id": "block-change-detect",
+      "name": "an identical record is no change",
+      "ok": true
+    },
+    {
+      "id": "block-currency-convert",
+      "name": "converts and rounds to cents",
+      "ok": true
+    },
+    {
+      "id": "block-currency-convert",
+      "name": "admits when there is no rate",
+      "ok": true
+    },
+    {
+      "id": "block-slugify",
+      "name": "handles accents, symbols and empty results",
+      "ok": true
+    },
+    {
+      "id": "block-date-window",
+      "name": "Manila's yesterday is not UTC's yesterday",
+      "ok": true
+    },
+    {
+      "id": "block-cursor-sync",
+      "name": "moves the bookmark to the newest id",
+      "ok": true
+    },
+    {
+      "id": "block-cursor-sync",
+      "name": "leaves the bookmark when nothing is new",
+      "ok": true
+    },
+    {
+      "id": "block-file-to-storage",
+      "name": "the same address is copied once",
+      "ok": true
+    },
+    {
+      "id": "block-llm-json-guard",
+      "name": "accepts a complete reply first time",
+      "ok": true
+    },
+    {
+      "id": "block-llm-json-guard",
+      "name": "asks once more, then gives up",
+      "ok": true
+    },
+    {
+      "id": "block-pii-redact",
+      "name": "masks an email, a card and a phone",
+      "ok": true
+    },
+    {
+      "id": "block-chunk-text",
+      "name": "splits on sentences and overlaps by a whole sentence",
+      "ok": true
+    },
+    {
+      "id": "block-classify-route",
+      "name": "routes a billing message",
+      "ok": true
+    },
+    {
+      "id": "block-classify-route",
+      "name": "an unexpected label takes the default route",
+      "ok": true
+    },
+    {
+      "id": "block-classify-route",
+      "name": "a model outage takes the default route",
+      "ok": true
+    },
+    {
+      "id": "order-intake",
+      "name": "a new order is saved, confirmed and taken from stock",
+      "ok": true
+    },
+    {
+      "id": "order-intake",
+      "name": "low stock warns the team",
+      "ok": true
+    },
+    {
+      "id": "order-intake",
+      "name": "a resent order does not take stock twice",
+      "ok": true
+    },
+    {
+      "id": "order-intake",
+      "name": "a request without the secret is refused",
+      "ok": true
+    },
+    {
+      "id": "order-intake",
+      "name": "a stock outage parks the order",
+      "ok": true
+    },
+    {
+      "id": "order-fulfilment",
+      "name": "a shipped update emails the customer",
+      "ok": true
+    },
+    {
+      "id": "order-fulfilment",
+      "name": "the same update twice emails once",
+      "ok": true
+    },
+    {
+      "id": "order-fulfilment",
+      "name": "a failed delivery goes to support, not the customer",
+      "ok": true
+    },
+    {
+      "id": "order-fulfilment",
+      "name": "an unknown courier status is ignored",
+      "ok": true
+    },
+    {
+      "id": "cart-recovery",
+      "name": "reminds an hour-old cart once",
+      "ok": true
+    },
+    {
+      "id": "cart-recovery",
+      "name": "leaves a ten-minute-old cart alone",
+      "ok": true
+    },
+    {
+      "id": "cart-recovery",
+      "name": "does not chase someone who ordered",
+      "ok": true
+    },
+    {
+      "id": "community-onboarding",
+      "name": "a normal account is given the role and welcomed",
+      "ok": true
+    },
+    {
+      "id": "community-onboarding",
+      "name": "a day-old account is held for a moderator",
+      "ok": true
+    },
+    {
+      "id": "community-onboarding",
+      "name": "a bot is ignored",
+      "ok": true
+    },
+    {
+      "id": "community-onboarding",
+      "name": "a rejoin is not welcomed again",
+      "ok": true
+    },
+    {
+      "id": "community-moderation",
+      "name": "a scam link is removed, logged and reported",
+      "ok": true
+    },
+    {
+      "id": "community-moderation",
+      "name": "an insult goes to moderators and is not deleted",
+      "ok": true
+    },
+    {
+      "id": "community-moderation",
+      "name": "an ordinary message is left alone",
+      "ok": true
+    },
+    {
+      "id": "community-moderation",
+      "name": "nothing is removed while the model is down",
+      "ok": true
+    },
+    {
+      "id": "community-moderation",
+      "name": "a moderator's message is not judged",
+      "ok": true
+    },
+    {
+      "id": "community-announcements",
+      "name": "a due announcement is posted once and marked sent",
+      "ok": true
+    },
+    {
+      "id": "community-announcements",
+      "name": "a future announcement waits",
+      "ok": true
+    },
+    {
+      "id": "community-announcements",
+      "name": "a failed post is marked and reported",
+      "ok": true
+    },
+    {
+      "id": "content-draft",
+      "name": "drafts the queued topic and asks for approval",
+      "ok": true
+    },
+    {
+      "id": "content-draft",
+      "name": "does nothing when the queue is empty",
+      "ok": true
+    },
+    {
+      "id": "content-draft",
+      "name": "a thin outline sends the topic back",
+      "ok": true
+    },
+    {
+      "id": "content-approval",
+      "name": "approval publishes and records who approved",
+      "ok": true
+    },
+    {
+      "id": "content-approval",
+      "name": "rejection publishes nothing and keeps the reason",
+      "ok": true
+    },
+    {
+      "id": "content-approval",
+      "name": "approving twice publishes once",
+      "ok": true
+    },
+    {
+      "id": "content-approval",
+      "name": "an unknown draft is refused",
+      "ok": true
+    },
+    {
+      "id": "content-approval",
+      "name": "a malformed decision is a 400",
+      "ok": true
+    },
+    {
+      "id": "content-distribute",
+      "name": "schedules three posts and marks the article shared",
+      "ok": true
+    },
+    {
+      "id": "content-distribute",
+      "name": "uses a plain post when the model is down",
+      "ok": true
+    },
+    {
+      "id": "content-distribute",
+      "name": "does nothing when nothing is new",
+      "ok": true
+    },
+    {
+      "id": "lead-capture",
+      "name": "a good enquiry reaches the CRM and gets a booking link",
+      "ok": true
+    },
+    {
+      "id": "lead-capture",
+      "name": "a poor fit gets the nurture email and no CRM record",
+      "ok": true
+    },
+    {
+      "id": "lead-capture",
+      "name": "a bad email is rejected with a 400",
+      "ok": true
+    },
+    {
+      "id": "lead-capture",
+      "name": "a bot filling the hidden field is rejected",
+      "ok": true
+    },
+    {
+      "id": "lead-capture",
+      "name": "the same enquiry twice is handled once",
+      "ok": true
+    },
+    {
+      "id": "lead-capture",
+      "name": "an unreadable model reply goes to a person",
+      "ok": true
+    },
+    {
+      "id": "lead-capture",
+      "name": "a CRM outage parks the lead",
+      "ok": true
+    },
+    {
+      "id": "lead-follow-up",
+      "name": "nudges a lead that is due and counts it",
+      "ok": true
+    },
+    {
+      "id": "lead-follow-up",
+      "name": "leaves a lead contacted yesterday alone",
+      "ok": true
+    },
+    {
+      "id": "lead-follow-up",
+      "name": "marks a lead cold after three nudges",
+      "ok": true
+    },
+    {
+      "id": "lead-follow-up",
+      "name": "skips leads that already booked",
+      "ok": true
+    },
+    {
+      "id": "lead-booking-sync",
+      "name": "a booking marks the lead and opens a deal",
+      "ok": true
+    },
+    {
+      "id": "lead-booking-sync",
+      "name": "a booking from a stranger is flagged",
+      "ok": true
+    },
+    {
+      "id": "lead-booking-sync",
+      "name": "a resent webhook is handled once",
+      "ok": true
+    },
+    {
+      "id": "weekly-digest",
+      "name": "compares this week with last and sends both ways",
+      "ok": true
+    },
+    {
+      "id": "weekly-digest",
+      "name": "names a source that did not answer and still sends",
+      "ok": true
+    },
+    {
+      "id": "weekly-digest",
+      "name": "sends the numbers even when the model is down",
+      "ok": true
+    },
+    {
+      "id": "threshold-alerts",
+      "name": "alerts when a number crosses its line",
+      "ok": true
+    },
+    {
+      "id": "threshold-alerts",
+      "name": "stays quiet while it is still breached",
+      "ok": true
+    },
+    {
+      "id": "threshold-alerts",
+      "name": "says when it recovers",
+      "ok": true
+    },
+    {
+      "id": "payment-events",
+      "name": "a payment is credited, the invoice paid and a receipt sent",
+      "ok": true
+    },
+    {
+      "id": "payment-events",
+      "name": "the same event twice is one ledger line",
+      "ok": true
+    },
+    {
+      "id": "payment-events",
+      "name": "a refund is a negative line and finance is told",
+      "ok": true
+    },
+    {
+      "id": "payment-events",
+      "name": "a failed payment marks the invoice and asks for a new card",
+      "ok": true
+    },
+    {
+      "id": "payment-events",
+      "name": "an unsigned request is refused",
+      "ok": true
+    },
+    {
+      "id": "payment-events",
+      "name": "an event we do not act on is acknowledged",
+      "ok": true
+    },
+    {
+      "id": "payment-reconcile",
+      "name": "matching books post an all clear",
+      "ok": true
+    },
+    {
+      "id": "payment-reconcile",
+      "name": "a charge missing from the ledger is raised",
+      "ok": true
+    },
+    {
+      "id": "payment-reconcile",
+      "name": "a different amount is raised",
+      "ok": true
+    },
+    {
+      "id": "payment-reconcile",
+      "name": "a ledger line with no charge is raised",
+      "ok": true
+    },
+    {
+      "id": "invoice-dunning",
+      "name": "an invoice 8 days overdue gets the 7-day reminder",
+      "ok": true
+    },
+    {
+      "id": "invoice-dunning",
+      "name": "a step already sent is not sent again",
+      "ok": true
+    },
+    {
+      "id": "invoice-dunning",
+      "name": "an invoice not yet due is left alone",
+      "ok": true
+    },
+    {
+      "id": "invoice-dunning",
+      "name": "at 21 days it is handed to a person",
+      "ok": true
+    },
+    {
+      "id": "feed-digest",
+      "name": "sends only items not seen before",
+      "ok": true
+    },
+    {
+      "id": "feed-digest",
+      "name": "sends nothing in a quiet week",
+      "ok": true
+    },
+    {
+      "id": "feed-digest",
+      "name": "sends the plain list when the model is down",
+      "ok": true
+    },
+    {
+      "id": "broken-link-check",
+      "name": "reports a page that returns an error",
+      "ok": true
+    },
+    {
+      "id": "broken-link-check",
+      "name": "a clean site posts nothing and records the run",
+      "ok": true
+    },
+    {
+      "id": "rank-tracker",
+      "name": "records the position and alerts on a fall off page one",
+      "ok": true
+    },
+    {
+      "id": "rank-tracker",
+      "name": "a small move is recorded without an alert",
+      "ok": true
+    },
+    {
+      "id": "rank-tracker",
+      "name": "a failed search keeps yesterday's position",
+      "ok": true
+    },
+    {
+      "id": "mention-monitor",
+      "name": "raises a negative mention once",
+      "ok": true
+    },
+    {
+      "id": "mention-monitor",
+      "name": "a mention it cannot classify is raised too",
+      "ok": true
+    },
+    {
+      "id": "inventory-sync",
+      "name": "updates only what changed",
+      "ok": true
+    },
+    {
+      "id": "inventory-sync",
+      "name": "refuses an empty feed",
+      "ok": true
+    },
+    {
+      "id": "inventory-sync",
+      "name": "refuses a feed that zeroes most of the catalogue",
+      "ok": true
+    },
+    {
+      "id": "refund-approval",
+      "name": "a small recent order is refunded automatically",
+      "ok": true
+    },
+    {
+      "id": "refund-approval",
+      "name": "a large order goes to finance",
+      "ok": true
+    },
+    {
+      "id": "refund-approval",
+      "name": "a third refund goes to finance",
+      "ok": true
+    },
+    {
+      "id": "refund-approval",
+      "name": "asking twice refunds once",
+      "ok": true
+    },
+    {
+      "id": "refund-approval",
+      "name": "an unknown order is a 404",
+      "ok": true
+    },
+    {
+      "id": "renewal-reminder",
+      "name": "reminds once for a renewal five days away",
+      "ok": true
+    },
+    {
+      "id": "renewal-reminder",
+      "name": "a renewal a month away is left alone",
+      "ok": true
+    },
+    {
+      "id": "invoice-intake",
+      "name": "a clean invoice is filed",
+      "ok": true
+    },
+    {
+      "id": "invoice-intake",
+      "name": "a duplicate is caught and sent for review",
+      "ok": true
+    },
+    {
+      "id": "invoice-intake",
+      "name": "low confidence goes for review",
+      "ok": true
+    },
+    {
+      "id": "invoice-intake",
+      "name": "a negative total goes for review",
+      "ok": true
+    },
+    {
+      "id": "employee-onboarding",
+      "name": "creates six tasks, a meeting and a timed welcome",
+      "ok": true
+    },
+    {
+      "id": "employee-onboarding",
+      "name": "a hire without a start date fails loudly",
+      "ok": true
+    },
+    {
+      "id": "daily-agenda",
+      "name": "lists the day and flags a clash",
+      "ok": true
+    },
+    {
+      "id": "daily-agenda",
+      "name": "stays silent on an empty day",
+      "ok": true
+    },
+    {
+      "id": "contact-sync",
+      "name": "syncs changed contacts and moves the bookmark",
+      "ok": true
+    },
+    {
+      "id": "contact-sync",
+      "name": "a failed upsert leaves the bookmark where it was",
+      "ok": true
+    },
+    {
+      "id": "contract-expiry",
+      "name": "sends the 30-day warning once",
+      "ok": true
+    },
+    {
+      "id": "contract-expiry",
+      "name": "a contract a year out is left alone",
+      "ok": true
+    },
+    {
+      "id": "uptime-monitor",
+      "name": "one failure is noted without an alert",
+      "ok": true
+    },
+    {
+      "id": "uptime-monitor",
+      "name": "a second failure in a row alerts",
+      "ok": true
+    },
+    {
+      "id": "uptime-monitor",
+      "name": "recovery reports the downtime",
+      "ok": true
+    },
+    {
+      "id": "uptime-monitor",
+      "name": "still down stays quiet",
+      "ok": true
+    },
+    {
+      "id": "backup-verify",
+      "name": "a fresh, full backup passes quietly",
+      "ok": true
+    },
+    {
+      "id": "backup-verify",
+      "name": "a backup a third smaller raises an alert",
+      "ok": true
+    },
+    {
+      "id": "backup-verify",
+      "name": "a stale backup raises an alert",
+      "ok": true
+    },
+    {
+      "id": "backup-verify",
+      "name": "an unreachable backup service raises an alert",
+      "ok": true
+    },
+    {
+      "id": "contact-enrichment",
+      "name": "fills blanks and keeps what was typed",
+      "ok": true
+    },
+    {
+      "id": "contact-enrichment",
+      "name": "skips a personal address without a lookup",
+      "ok": true
+    },
+    {
+      "id": "contact-enrichment",
+      "name": "a failed lookup changes nothing",
+      "ok": true
+    },
+    {
+      "id": "meeting-notes-to-crm",
+      "name": "writes the note, creates owned tasks and asks about unowned ones",
+      "ok": true
+    },
+    {
+      "id": "meeting-notes-to-crm",
+      "name": "a near-empty transcript is left alone",
+      "ok": true
+    },
+    {
+      "id": "meeting-notes-to-crm",
+      "name": "an unreadable reply is flagged",
+      "ok": true
+    },
+    {
+      "id": "review-request",
+      "name": "asks once for a week-old delivery",
+      "ok": true
+    },
+    {
+      "id": "review-request",
+      "name": "does not ask a customer with an open conversation",
+      "ok": true
+    },
+    {
+      "id": "review-request",
+      "name": "waits for the week to pass",
+      "ok": true
+    },
+    {
+      "id": "nps-router",
+      "name": "a low score opens a ticket and tells the team",
+      "ok": true
+    },
+    {
+      "id": "nps-router",
+      "name": "a top score gets a review invite",
+      "ok": true
+    },
+    {
+      "id": "nps-router",
+      "name": "a middling score is only recorded",
+      "ok": true
+    },
+    {
+      "id": "nps-router",
+      "name": "an impossible score fails loudly",
+      "ok": true
+    },
+    {
+      "id": "webinar-registration",
+      "name": "registers, counts the seat and sends the invite",
+      "ok": true
+    },
+    {
+      "id": "webinar-registration",
+      "name": "registering twice takes one seat",
+      "ok": true
+    },
+    {
+      "id": "webinar-registration",
+      "name": "a full session waitlists",
+      "ok": true
+    },
+    {
+      "id": "webinar-registration",
+      "name": "a bad email is a 400",
+      "ok": true
+    },
+    {
+      "id": "sla-watch",
+      "name": "warns at three quarters and escalates a miss",
+      "ok": true
+    },
+    {
+      "id": "sla-watch",
+      "name": "does not repeat a stage already raised",
+      "ok": true
+    },
+    {
+      "id": "email-autoresponder",
+      "name": "a plain opening-hours question gets the template",
+      "ok": true
+    },
+    {
+      "id": "email-autoresponder",
+      "name": "an unsure classification goes to a person",
+      "ok": true
+    },
+    {
+      "id": "email-autoresponder",
+      "name": "a newsletter is archived without a model call",
+      "ok": true
+    },
+    {
+      "id": "email-autoresponder",
+      "name": "everything goes to a person while the model is down",
+      "ok": true
+    },
+    {
+      "id": "error-handler",
+      "name": "a new failure is logged and alerted",
+      "ok": true
+    },
+    {
+      "id": "error-handler",
+      "name": "the same failure inside the hour is not alerted twice",
+      "ok": true
+    },
+    {
+      "id": "idempotency-guard",
+      "name": "a first event is not a duplicate",
+      "ok": true
+    },
+    {
+      "id": "idempotency-guard",
+      "name": "a repeat is a duplicate",
+      "ok": true
+    },
+    {
+      "id": "notify",
+      "name": "posts to chat",
+      "ok": true
+    },
+    {
+      "id": "notify",
+      "name": "falls back to email when chat stays down",
+      "ok": true
+    },
+    {
+      "id": "notify",
+      "name": "recovers when chat fails once",
+      "ok": true
+    },
+    {
+      "id": "dead-letter",
+      "name": "parks the payload as pending",
+      "ok": true
+    },
+    {
+      "id": "dead-letter",
+      "name": "still parks when the alert cannot be sent",
+      "ok": true
+    },
+    {
+      "id": "dead-letter-replay",
+      "name": "replays pending items and marks them",
+      "ok": true
+    },
+    {
+      "id": "dead-letter-replay",
+      "name": "abandons after the fifth failure and escalates",
+      "ok": true
+    },
+    {
+      "id": "dead-letter-replay",
+      "name": "does nothing when nothing is parked",
+      "ok": true
+    },
+    {
+      "id": "heartbeat-monitor",
+      "name": "alerts for a workflow that went quiet",
+      "ok": true
+    },
+    {
+      "id": "heartbeat-monitor",
+      "name": "stays quiet when everything checked in",
+      "ok": true
+    },
+    {
+      "id": "support-answer",
+      "name": "answers a covered question",
+      "ok": true
+    },
+    {
+      "id": "support-answer",
+      "name": "hands over what the help centre does not cover",
+      "ok": true
+    },
+    {
+      "id": "support-answer",
+      "name": "hands over an upset customer even when the answer is known",
+      "ok": true
+    },
+    {
+      "id": "support-answer",
+      "name": "hands over when the model is unavailable",
+      "ok": true
+    },
+    {
+      "id": "support-answer",
+      "name": "ignores its own outgoing replies",
+      "ok": true
+    },
+    {
+      "id": "support-triage",
+      "name": "a billing ticket goes to billing without paging",
+      "ok": true
+    },
+    {
+      "id": "support-triage",
+      "name": "an urgent outage pages on-call",
+      "ok": true
+    },
+    {
+      "id": "support-triage",
+      "name": "spam is closed and nobody is paged",
+      "ok": true
+    },
+    {
+      "id": "support-triage",
+      "name": "an unreadable model reply falls back to the general queue for review",
+      "ok": true
+    },
+    {
+      "id": "support-gap-report",
+      "name": "reports the gaps",
+      "ok": true
+    },
+    {
+      "id": "support-gap-report",
+      "name": "says all clear when nothing was handed over",
+      "ok": true
+    }
+  ]
+}

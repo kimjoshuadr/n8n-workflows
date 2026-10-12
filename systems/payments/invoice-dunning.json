@@ -1,0 +1,361 @@
+{
+  "name": "Payments · Overdue reminders",
+  "nodes": [
+    {
+      "id": "79840fb5-36d1-43a3-a05f-7e09f64fc170",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Payments · Overdue reminders\nEach morning, reminds customers with overdue invoices at 3, 7 and 14 days, then hands the invoice to a person at 21.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
+      }
+    },
+    {
+      "id": "ec326e65-c3bc-4948-ab62-880c7bc76984",
+      "position": [
+        0,
+        0
+      ],
+      "name": "09:00 daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a3fea65c-604e-49da-af30-668ab48ec8bb",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Open invoices",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/invoices",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "={{ 'eq.open' }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "d89d4d11-6045-419c-a79a-a03f73268e36",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Which step is due?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const STEPS = [3, 7, 14, 21];\nconst today = Math.floor(Date.now() / 864e5);\nreturn $input.all().map((i) => i.json).filter((inv) => inv.due_date && inv.email).map((inv) => {\n  const overdue = today - Math.floor(new Date(inv.due_date).getTime() / 864e5);\n  const step = STEPS.filter((s) => overdue >= s).pop() ?? 0;\n  return { ...inv, overdue, step };\n}).filter((inv) => inv.step > (inv.last_reminder_step ?? 0)).map((json) => ({ json }));"
+      }
+    },
+    {
+      "id": "d97e4bfe-351d-406e-a652-7322fb3717a5",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Still a reminder?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "714b7ce1-87e3-4a6a-a4cd-3d715d346f3c",
+              "leftValue": "={{ $json.step < 21 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d1e2847d-7e25-4685-a26f-abc67b7d819d",
+      "position": [
+        960,
+        -90
+      ],
+      "name": "Send the reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $json.email, subject: 'Invoice ' + $json.number + ' is ' + $json.overdue + ' days overdue', template: 'overdue-' + $json.step, data: { number: $json.number, amount: $json.amount, pay_url: $json.pay_url } }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "28d0640a-b3f0-4b68-a581-6844dca138a2",
+      "position": [
+        1200,
+        -90
+      ],
+      "name": "Record the step",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/invoices",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $('Which step is due?').item.json.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ last_reminder_step: $('Which step is due?').item.json.step, last_reminder_at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "96fbefc6-3619-4e39-a5bd-15e65425b541",
+      "position": [
+        960,
+        90
+      ],
+      "name": "Escalation message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => ({ json: { id: i.json.id, channel: \"#finance\", level: \"warn\", text: \"Invoice \" + i.json.number + \" (\" + i.json.email + \", \" + i.json.amount + \") is \" + i.json.overdue + \" days overdue after three reminders. It needs a call.\" } }));"
+      }
+    },
+    {
+      "id": "f3bc8a96-49f6-4bf6-abe8-24df7358149d",
+      "position": [
+        1200,
+        90
+      ],
+      "name": "Hand to a person",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1bc9658f-4841-4f01-aa08-6e03d91749d1",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Mark escalated",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/invoices",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $('Escalation message').item.json.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ last_reminder_step: 21, status: 'escalated' }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "09:00 daily": {
+      "main": [
+        [
+          {
+            "node": "Open invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open invoices": {
+      "main": [
+        [
+          {
+            "node": "Which step is due?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Which step is due?": {
+      "main": [
+        [
+          {
+            "node": "Still a reminder?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still a reminder?": {
+      "main": [
+        [
+          {
+            "node": "Send the reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Escalation message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the reminder": {
+      "main": [
+        [
+          {
+            "node": "Record the step",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalation message": {
+      "main": [
+        [
+          {
+            "node": "Hand to a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hand to a person": {
+      "main": [
+        [
+          {
+            "node": "Mark escalated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

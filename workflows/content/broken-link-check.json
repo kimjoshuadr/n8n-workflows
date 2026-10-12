@@ -1,0 +1,284 @@
+{
+  "name": "SEO · Broken link check",
+  "nodes": [
+    {
+      "id": "1899a43d-f976-47a6-add6-a7c84a792a69",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## SEO · Broken link check\nEvery Sunday night, visits each page in the sitemap list and reports the ones that no longer load, with the status each returned.\n\n**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
+      }
+    },
+    {
+      "id": "64bf7497-7acb-4077-ac69-ddb08c528331",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Sunday 23:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 23 * * 0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "8fa0038a-a8b3-4563-aa94-abf2505256d6",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Pages to check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/site_pages",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "f6a14775-0815-4ee8-a343-bc8acbc85627",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Visit the page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "690182e4-2c28-4f58-a0fd-666bed0f6d85",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Find the broken ones",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const pages = $(\"Pages to check\").all();\nconst results = $input.all().map((item, i) => ({ url: pages[i]?.json.url, status: item.json.statusCode ?? 0 })).filter((r) => r.url);\nconst broken = results.filter((r) => r.status === 0 || r.status >= 400);\nreturn [{ json: { checked: results.length, broken, any: broken.length > 0, text: broken.length + \" of \" + results.length + \" pages are broken:\\n\" + broken.map((b) => \"- \" + b.url + \" (\" + (b.status || \"no response\") + \")\").join(\"\\n\") } }];"
+      }
+    },
+    {
+      "id": "450bc51c-1ede-4a2f-ae89-2fbba4be183c",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Any broken?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cb0ed925-8588-45a1-a4c2-bfe199fdbc84",
+              "leftValue": "={{ $json.any }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "8b399977-3748-4f85-a978-495a85a9dd35",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "Report them",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: '#website', text: ':link: ' + $json.text }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "457c27ef-751e-4d52-a4d3-dd43cc695c91",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Save the run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/link_checks",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ checked: $('Find the broken ones').first().json.checked, broken: $('Find the broken ones').first().json.broken.length, at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "Sunday 23:00": {
+      "main": [
+        [
+          {
+            "node": "Pages to check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pages to check": {
+      "main": [
+        [
+          {
+            "node": "Visit the page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Visit the page": {
+      "main": [
+        [
+          {
+            "node": "Find the broken ones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find the broken ones": {
+      "main": [
+        [
+          {
+            "node": "Any broken?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any broken?": {
+      "main": [
+        [
+          {
+            "node": "Report them",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save the run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report them": {
+      "main": [
+        [
+          {
+            "node": "Save the run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

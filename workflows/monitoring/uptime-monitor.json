@@ -1,0 +1,251 @@
+{
+  "name": "Monitoring · Uptime checks",
+  "nodes": [
+    {
+      "id": "59e5e93c-2ace-49b5-add9-3535944a2fcc",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Monitoring · Uptime checks\nChecks each site every five minutes, alerts after two failures in a row, and reports how long it was down once it recovers.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/monitoring`"
+      }
+    },
+    {
+      "id": "f70bf48d-283c-4a2c-aaae-ab4901535896",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Every 5 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a59acde9-ea44-4855-a081-a100d1ac6563",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Sites to watch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/monitors",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "1fabe702-b581-4673-ad5c-e47b93ef8aad",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Request the site",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b8d7f84e-5c1d-41fd-a7d1-1442adc92d5b",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Decide the state",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const monitors = $(\"Sites to watch\").all();\nreturn $input.all().map((item, i) => {\n  const m = monitors[i]?.json;\n  if (!m?.url) return null;\n  const status = item.json.statusCode ?? 0;\n  const up = status >= 200 && status < 400;\n  const failures = up ? 0 : (m.failures ?? 0) + 1;\n  // Two in a row before it counts as down: one slow response is not an outage.\n  const state = up ? \"up\" : failures >= 2 ? \"down\" : (m.state ?? \"up\");\n  const changed = state !== (m.state ?? \"up\");\n  const downSince = state === \"down\" ? (m.down_since ?? new Date().toISOString()) : null;\n  const minutesDown = changed && state === \"up\" && m.down_since ? Math.round((Date.now() - new Date(m.down_since).getTime()) / 60000) : null;\n  return { json: { id: m.id, name: m.name ?? m.url, url: m.url, status, state, failures, changed, down_since: downSince, minutes_down: minutesDown } };\n}).filter(Boolean);"
+      }
+    },
+    {
+      "id": "b14e6c12-3537-4eca-afb3-6e53b4eab7c5",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Save the state",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/monitors",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $json.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ state: $json.state, failures: $json.failures, down_since: $json.down_since, checked_at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "2f6e9f36-8e0c-4e5a-ac57-36920a51e703",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "Alerts for changes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $(\"Decide the state\").all().map((i) => i.json).filter((m) => m.changed).map((m) => ({ json: { level: m.state === \"down\" ? \"critical\" : \"info\", text: m.state === \"down\" ? m.name + \" is down (\" + (m.status || \"no response\") + \"). \" + m.url : m.name + \" is back up after \" + m.minutes_down + \" min.\" } }));"
+      }
+    },
+    {
+      "id": "747d0dc2-60f6-4abf-a7c2-6331437b5a66",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Alert",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Every 5 minutes": {
+      "main": [
+        [
+          {
+            "node": "Sites to watch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sites to watch": {
+      "main": [
+        [
+          {
+            "node": "Request the site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request the site": {
+      "main": [
+        [
+          {
+            "node": "Decide the state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide the state": {
+      "main": [
+        [
+          {
+            "node": "Save the state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the state": {
+      "main": [
+        [
+          {
+            "node": "Alerts for changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alerts for changes": {
+      "main": [
+        [
+          {
+            "node": "Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

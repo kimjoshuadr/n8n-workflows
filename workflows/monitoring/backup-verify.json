@@ -1,0 +1,271 @@
+{
+  "name": "Monitoring · Backup verification",
+  "nodes": [
+    {
+      "id": "54ef98a1-a6cf-4c04-a991-b88fce26e535",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Monitoring · Backup verification\nChecks every morning that last night's backup exists, is recent and is not suspiciously small. A backup nobody checks is a hope, not a backup.\n\n**Needs:** BACKUP_API_KEY, BACKUP_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/monitoring`"
+      }
+    },
+    {
+      "id": "d007aa63-704a-47a3-aa9d-0b700c3ee5a8",
+      "position": [
+        0,
+        0
+      ],
+      "name": "07:00 daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5f339966-959f-4f0a-a227-de22b1941b87",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Latest backup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BACKUP_BASE_URL }}/backups/latest",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.BACKUP_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "5c2c7251-15f2-4c2b-a44a-90d626ad57f2",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Judge it",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const b = $input.first().json;\nconst problems = [];\nif (!b || b.error || !b.created_at) problems.push(\"no backup could be found\");\nelse {\n  const hours = (Date.now() - new Date(b.created_at).getTime()) / 36e5;\n  if (hours > 26) problems.push(\"the newest backup is \" + Math.round(hours) + \" hours old\");\n  if (b.status && b.status !== \"completed\") problems.push(\"its status is \" + b.status);\n  if (b.previous_size_bytes && b.size_bytes < b.previous_size_bytes * 0.7) problems.push(\"it is \" + Math.round((1 - b.size_bytes / b.previous_size_bytes) * 100) + \"% smaller than the one before\");\n  if (!b.size_bytes) problems.push(\"it is empty\");\n}\nreturn [{ json: { ok: problems.length === 0, problems, size_mb: b?.size_bytes ? Math.round(b.size_bytes / 1048576) : null, created_at: b?.created_at ?? null } }];"
+      }
+    },
+    {
+      "id": "0041fe8d-71ce-41b5-a6b5-d8191398cc3f",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Record the check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/backup_checks",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ok: $json.ok, problems: $json.problems, size_mb: $json.size_mb, at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "5f142642-a0b0-4e32-ab76-cec30b3474b5",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Healthy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "713f6750-ad2d-47a4-aae7-bde38ef1070b",
+              "leftValue": "={{ $('Judge it').first().json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "159934da-6978-44d6-aa83-559f35ebfa5a",
+      "position": [
+        1200,
+        -90
+      ],
+      "name": "Problem message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return [{ json: { level: \"critical\", text: \"Backup check failed: \" + $(\"Judge it\").first().json.problems.join(\"; \") + \".\" } }];"
+      }
+    },
+    {
+      "id": "75c2aee0-bc43-4937-a984-edd41e74d3f2",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Alert",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "cacf1624-b0bc-44a2-afb7-aa87114c3d1f",
+      "position": [
+        1200,
+        90
+      ],
+      "name": "All good",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "07:00 daily": {
+      "main": [
+        [
+          {
+            "node": "Latest backup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Latest backup": {
+      "main": [
+        [
+          {
+            "node": "Judge it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge it": {
+      "main": [
+        [
+          {
+            "node": "Record the check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record the check": {
+      "main": [
+        [
+          {
+            "node": "Healthy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Healthy?": {
+      "main": [
+        [
+          {
+            "node": "All good",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Problem message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Problem message": {
+      "main": [
+        [
+          {
+            "node": "Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

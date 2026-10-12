@@ -1,0 +1,222 @@
+{
+  "name": "Block · Save a remote file to storage",
+  "nodes": [
+    {
+      "id": "f1f37d43-3aa5-4f07-a15c-f5375f74e1dd",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Save a remote file to storage\nRecords a file under a name derived from its own address, so the same file fetched twice is stored once.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, STORAGE_API_KEY, STORAGE_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+      }
+    },
+    {
+      "id": "7365d2e3-10c4-48e3-a242-5679c55b636f",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "4a8806df-2c98-4674-a789-3ea70ce8acac",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Name it",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => {\n  const url = String(item.json.url ?? \"\");\n  let h = 0; for (const c of url) h = (h * 31 + c.charCodeAt(0)) >>> 0;\n  const ext = (/\\.([a-z0-9]{2,5})(?:\\?|$)/i.exec(url)?.[1] ?? \"bin\").toLowerCase();\n  return { json: { url, key: \"files/\" + h.toString(16).padStart(8, \"0\") + \".\" + ext } };\n});"
+      }
+    },
+    {
+      "id": "b72669aa-59b6-44de-a337-75fa7c6da333",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Claim the name",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/stored_files",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "={{ 'key' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ key: $json.key, source: $json.url }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "e1db9b96-99b8-4460-a710-5f7abfb94805",
+      "position": [
+        720,
+        0
+      ],
+      "name": "New file?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2b30a432-0123-4d1f-ab19-cd595c413721",
+              "leftValue": "={{ !!$json.key }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "8ceaf464-815e-4fc6-ae54-2b3764a0e754",
+      "position": [
+        960,
+        -90
+      ],
+      "name": "Copy to storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.STORAGE_BASE_URL }}/copy",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.STORAGE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source_url: $json.source, key: $json.key }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "83f99df7-c607-4679-ac8a-392aeb49c2c6",
+      "position": [
+        960,
+        90
+      ],
+      "name": "Already stored",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Name it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Name it": {
+      "main": [
+        [
+          {
+            "node": "Claim the name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim the name": {
+      "main": [
+        [
+          {
+            "node": "New file?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New file?": {
+      "main": [
+        [
+          {
+            "node": "Copy to storage",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Already stored",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

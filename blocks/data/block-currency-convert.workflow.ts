@@ -1,0 +1,120 @@
+import { workflow, node, links } from '@n8n-as-code/transformer';
+
+// <workflow-map>
+// Workflow : Block · Convert a currency amount
+// Nodes   : 4  |  Connections: 2
+//
+// NODE INDEX
+// ──────────────────────────────────────────────────────────────────
+// Property name                    Node type (short)         Flags
+// AboutThisWorkflow                  stickyNote
+// WhenCalled                         executeWorkflowTrigger
+// TodaySRate                         httpRequest                [onError→regular] [retry]
+// Convert                            code
+//
+// ROUTING MAP
+// ──────────────────────────────────────────────────────────────────
+// WhenCalled
+//    → TodaySRate
+//      → Convert
+// </workflow-map>
+
+// =====================================================================
+// METADATA DU WORKFLOW
+// =====================================================================
+
+@workflow({
+    id: undefined,
+    name: 'Block · Convert a currency amount',
+    active: undefined,
+    settings: { executionOrder: 'v1', errorWorkflow: '__WF:error-handler__' },
+})
+export class BlockConvertACurrencyAmountWorkflow {
+    // =====================================================================
+    // CONFIGURATION DES NOEUDS
+    // =====================================================================
+
+    @node({
+        id: 'af6c0d6b-1356-4993-a26a-4726d9bcc5f0',
+        name: 'About this workflow',
+        type: 'n8n-nodes-base.stickyNote',
+        version: 1,
+        position: [-40, -300],
+    })
+    AboutThisWorkflow = {
+        width: 620,
+        height: 220,
+        content: `## Block · Convert a currency amount
+Converts an amount with today's rate, rounds like money, and says so when the rate could not be fetched instead of returning a wrong number.
+
+**Needs:** RATES_BASE_URL
+**Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/data\``,
+    };
+
+    @node({
+        id: 'ebe25fb7-4a24-45b5-ac09-7d05b40a2dcc',
+        name: 'When called',
+        type: 'n8n-nodes-base.executeWorkflowTrigger',
+        version: 1.1,
+        position: [0, 0],
+    })
+    WhenCalled = {
+        inputSource: 'passthrough',
+    };
+
+    @node({
+        id: 'b8eae34c-eba4-46dd-a24f-bfcfa705a611',
+        name: "Today's rate",
+        type: 'n8n-nodes-base.httpRequest',
+        version: 4.2,
+        position: [240, 0],
+        onError: 'continueRegularOutput',
+        retryOnFail: true,
+        maxTries: 3,
+        waitBetweenTries: 1000,
+    })
+    TodaySRate = {
+        method: 'GET',
+        url: '={{ $env.RATES_BASE_URL }}/latest',
+        options: {
+            timeout: 15000,
+        },
+        sendQuery: true,
+        queryParameters: {
+            parameters: [
+                {
+                    name: 'from',
+                    value: '={{ $json.from }}',
+                },
+                {
+                    name: 'to',
+                    value: '={{ $json.to }}',
+                },
+            ],
+        },
+    };
+
+    @node({
+        id: 'f0da4299-28e6-4bb4-af0c-d9a913e8d62b',
+        name: 'Convert',
+        type: 'n8n-nodes-base.code',
+        version: 2,
+        position: [480, 0],
+    })
+    Convert = {
+        jsCode: `const req = $("When called").first().json;
+const rate = $input.first().json.rates?.[req.to];
+if (typeof rate !== "number") return [{ json: { ...req, converted: null, ok: false, reason: "No rate available for " + req.from + " to " + req.to } }];
+return [{ json: { ...req, rate, converted: Math.round(req.amount * rate * 100) / 100, ok: true } }];`,
+    };
+
+    // =====================================================================
+    // ROUTAGE ET CONNEXIONS
+    // =====================================================================
+
+    @links()
+    defineRouting() {
+        this.WhenCalled.out(0).to(this.TodaySRate.in(0));
+        this.TodaySRate.out(0).to(this.Convert.in(0));
+    }
+}

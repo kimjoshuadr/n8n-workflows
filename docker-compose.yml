@@ -1,0 +1,27 @@
+# A throwaway n8n and a mock of every external service, for running the tests.
+# Nothing here talks to a real account: `docker compose down -v` removes it all.
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    ports: ["5679:5678"]
+    env_file: [.env.test]
+    environment:
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_RUNNERS_ENABLED: "true"
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
+      EXECUTIONS_DATA_SAVE_ON_ERROR: all
+      GENERIC_TIMEZONE: UTC
+    volumes: ["n8n_data:/home/node/.n8n"]
+    depends_on: [mocks]
+  mocks:
+    image: node:22-alpine
+    working_dir: /app
+    command: node server.mjs
+    volumes: ["./mocks:/app:ro"]
+    ports: ["4010:4010"]
+
+volumes:
+  n8n_data:

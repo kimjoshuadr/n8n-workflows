@@ -1,0 +1,164 @@
+{
+  "name": "Block · Validate and answer with field errors",
+  "nodes": [
+    {
+      "id": "b052e856-0c08-4e89-afbc-cfc69872af79",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Validate and answer with field errors\nChecks a payload against simple rules and answers with exactly which fields were wrong, so the form can show it.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/intake`"
+      }
+    },
+    {
+      "id": "a22a6b5c-3fa2-4b9b-a448-d581475e0233",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Submitted",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "block-validate",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "afb4a648-5bf0-40dc-a0df-90259b086281"
+    },
+    {
+      "id": "c548a1ea-6522-400e-a1fd-010b91401e49",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Check the fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const v = $input.first().json.body ?? {};\nconst errors = {};\nif (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(String(v.email ?? \"\"))) errors.email = \"Enter a valid email address\";\nif (String(v.name ?? \"\").trim().length < 2) errors.name = \"Enter your name\";\nif (v.phone && !/^\\+?[0-9 ()-]{7,20}$/.test(String(v.phone))) errors.phone = \"Enter a valid phone number\";\nreturn [{ json: { valid: Object.keys(errors).length === 0, errors } }];"
+      }
+    },
+    {
+      "id": "7b856a40-290d-4ae8-a098-0511a8a5c6e7",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8ba548b6-353c-474e-a581-189fba03a955",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "109b75e3-637b-45e5-a075-b00913761e78",
+      "position": [
+        720,
+        -90
+      ],
+      "name": "Accepted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "cca6c7be-894e-4b91-ad0e-104610355658",
+      "position": [
+        720,
+        90
+      ],
+      "name": "Field errors",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, errors: $json.errors }) }}",
+        "options": {
+          "responseCode": 422
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Submitted": {
+      "main": [
+        [
+          {
+            "node": "Check the fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the fields": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "node": "Accepted",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Field errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

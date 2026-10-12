@@ -1,0 +1,223 @@
+{
+  "name": "Reliability · Error handler",
+  "nodes": [
+    {
+      "id": "0581a7c1-2c3e-4a26-a395-ec868269b126",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Reliability · Error handler\nCatches a failure in any workflow, logs it, and alerts once per distinct error per hour so a broken loop cannot flood the channel.\n\n**Needs:** ALERT_CHANNEL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
+      }
+    },
+    {
+      "id": "dce5f972-b3db-473f-adb8-7414b84ad45b",
+      "position": [
+        0,
+        0
+      ],
+      "name": "On workflow error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "99310d67-a0d8-47ab-a8e1-df3139244ad2",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Describe the failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const e = $input.first().json;\nconst workflow = e.workflow?.name ?? \"Unknown workflow\";\nconst node = e.execution?.lastNodeExecuted ?? \"unknown node\";\nconst message = String(e.execution?.error?.message ?? e.trigger?.error?.message ?? \"No message\").slice(0, 500);\nconst hour = new Date().toISOString().slice(0, 13);\nreturn [{ json: {\n  workflow, node, message,\n  execution_id: e.execution?.id ?? null,\n  execution_url: e.execution?.url ?? null,\n  fingerprint: [workflow, node, message.slice(0, 80), hour].join(\"|\"),\n  at: new Date().toISOString(),\n} }];"
+      }
+    },
+    {
+      "id": "d2475f31-7b58-4456-a438-515d78ab10c9",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Log the error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/workflow_errors",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=ignore-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "={{ 'fingerprint' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "5485f3d1-55dd-4cfa-af7c-1c94460243ff",
+      "position": [
+        720,
+        0
+      ],
+      "name": "First time this hour?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1b52a6e5-2630-4b58-a577-9ce45358a32c",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c8d93d0f-8888-4d65-a12f-33ac1fd0c634",
+      "position": [
+        960,
+        -90
+      ],
+      "name": "Alert the team",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  channel: $env.ALERT_CHANNEL,\n  text: ':rotating_light: ' + $('Describe the failure').first().json.workflow + ' failed at \"' + $('Describe the failure').first().json.node + '\": ' + $('Describe the failure').first().json.message\n}) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "70793f10-e5f6-42c6-ae4d-08413c8b661b",
+      "position": [
+        960,
+        90
+      ],
+      "name": "Already alerted",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "On workflow error": {
+      "main": [
+        [
+          {
+            "node": "Describe the failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Describe the failure": {
+      "main": [
+        [
+          {
+            "node": "Log the error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log the error": {
+      "main": [
+        [
+          {
+            "node": "First time this hour?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First time this hour?": {
+      "main": [
+        [
+          {
+            "node": "Alert the team",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Already alerted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

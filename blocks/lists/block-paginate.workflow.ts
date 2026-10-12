@@ -1,0 +1,209 @@
+import { workflow, node, links } from '@n8n-as-code/transformer';
+
+// <workflow-map>
+// Workflow : Block · Read every page of an API
+// Nodes   : 7  |  Connections: 6
+//
+// NODE INDEX
+// ──────────────────────────────────────────────────────────────────
+// Property name                    Node type (short)         Flags
+// AboutThisWorkflow                  stickyNote
+// RunManually                        manualTrigger
+// Start                              set
+// FetchAPage                         httpRequest                [retry]
+// KeepGoing                          code
+// MorePages                          if
+// AllPages                           code
+//
+// ROUTING MAP
+// ──────────────────────────────────────────────────────────────────
+// RunManually
+//    → Start
+//      → FetchAPage
+//        → KeepGoing
+//          → MorePages
+//            → FetchAPage (↩ loop)
+//           .out(1) → AllPages
+// </workflow-map>
+
+// =====================================================================
+// METADATA DU WORKFLOW
+// =====================================================================
+
+@workflow({
+    id: undefined,
+    name: 'Block · Read every page of an API',
+    active: undefined,
+    settings: { executionOrder: 'v1', errorWorkflow: '__WF:error-handler__' },
+})
+export class BlockReadEveryPageOfAnApiWorkflow {
+    // =====================================================================
+    // CONFIGURATION DES NOEUDS
+    // =====================================================================
+
+    @node({
+        id: '17410f38-e647-4a42-a94d-ad1ef8f36b35',
+        name: 'About this workflow',
+        type: 'n8n-nodes-base.stickyNote',
+        version: 1,
+        position: [-40, -300],
+    })
+    AboutThisWorkflow = {
+        width: 620,
+        height: 220,
+        content: `## Block · Read every page of an API
+Follows a cursor until the API says there is no more, with a hard stop so a broken API cannot loop forever.
+
+**Needs:** CRM_API_KEY, CRM_BASE_URL
+**Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/lists\``,
+    };
+
+    @node({
+        id: 'a6375e38-88d6-44f6-a8dc-7aa41e3eb61a',
+        name: 'Run manually',
+        type: 'n8n-nodes-base.manualTrigger',
+        version: 1,
+        position: [0, 0],
+    })
+    RunManually = {};
+
+    @node({
+        id: 'a4174e41-48e6-41ec-ac46-1148b669127c',
+        name: 'Start',
+        type: 'n8n-nodes-base.set',
+        version: 3.4,
+        position: [240, 0],
+    })
+    Start = {
+        assignments: {
+            assignments: [
+                {
+                    id: '2c53e0b5-6cbf-4653-a70c-3765271ff6e2',
+                    name: 'cursor',
+                    value: "={{ '' }}",
+                    type: 'string',
+                },
+                {
+                    id: 'dfb816c9-a378-4470-a662-fd69fbd20999',
+                    name: 'page',
+                    value: '={{ 0 }}',
+                    type: 'string',
+                },
+            ],
+        },
+        includeOtherFields: false,
+        options: {},
+    };
+
+    @node({
+        id: '7aa05ad2-834b-4a5f-abb1-c21fe8c6f93c',
+        name: 'Fetch a page',
+        type: 'n8n-nodes-base.httpRequest',
+        version: 4.2,
+        position: [480, 0],
+        retryOnFail: true,
+        maxTries: 3,
+        waitBetweenTries: 1000,
+    })
+    FetchAPage = {
+        method: 'GET',
+        url: '={{ $env.CRM_BASE_URL }}/contacts',
+        options: {
+            timeout: 15000,
+        },
+        sendHeaders: true,
+        headerParameters: {
+            parameters: [
+                {
+                    name: 'Authorization',
+                    value: "={{ 'Bearer ' + $env.CRM_API_KEY }}",
+                },
+            ],
+        },
+        sendQuery: true,
+        queryParameters: {
+            parameters: [
+                {
+                    name: 'after',
+                    value: '={{ $json.cursor }}',
+                },
+                {
+                    name: 'limit',
+                    value: "={{ '100' }}",
+                },
+            ],
+        },
+    };
+
+    @node({
+        id: '416d8ef4-a10f-43db-ac2c-55621d161a9c',
+        name: 'Keep going?',
+        type: 'n8n-nodes-base.code',
+        version: 2,
+        position: [720, 0],
+    })
+    KeepGoing = {
+        jsCode: `const res = $input.first().json;
+const page = Number($("Start").first().json.page) + $runIndex + 1;
+return [{ json: { items: res.results ?? [], cursor: res.next ?? "", page, more: !!res.next && page < 50 } }];`,
+    };
+
+    @node({
+        id: 'c56b62ca-8ace-4d72-ad27-1e3ce56cd02c',
+        name: 'More pages?',
+        type: 'n8n-nodes-base.if',
+        version: 2.2,
+        position: [960, 0],
+    })
+    MorePages = {
+        conditions: {
+            options: {
+                caseSensitive: true,
+                leftValue: '',
+                typeValidation: 'loose',
+                version: 2,
+            },
+            conditions: [
+                {
+                    id: 'ed87faa1-b3a5-47fd-a3e5-e88a9d48dd9e',
+                    leftValue: '={{ $json.more }}',
+                    rightValue: '',
+                    operator: {
+                        type: 'boolean',
+                        operation: 'true',
+                        singleValue: true,
+                    },
+                },
+            ],
+            combinator: 'and',
+        },
+        options: {},
+    };
+
+    @node({
+        id: '6fe76243-960b-4b63-a672-6d8d69ee45e0',
+        name: 'All pages',
+        type: 'n8n-nodes-base.code',
+        version: 2,
+        position: [1200, 0],
+    })
+    AllPages = {
+        jsCode: `const all = [];
+for (let i = 0; ; i++) { try { all.push(...$("Keep going?").first(0, i).json.items); } catch (e) { break; } }
+return [{ json: { total: all.length, items: all } }];`,
+    };
+
+    // =====================================================================
+    // ROUTAGE ET CONNEXIONS
+    // =====================================================================
+
+    @links()
+    defineRouting() {
+        this.RunManually.out(0).to(this.Start.in(0));
+        this.Start.out(0).to(this.FetchAPage.in(0));
+        this.FetchAPage.out(0).to(this.KeepGoing.in(0));
+        this.KeepGoing.out(0).to(this.MorePages.in(0));
+        this.MorePages.out(0).to(this.FetchAPage.in(0));
+        this.MorePages.out(1).to(this.AllPages.in(0));
+    }
+}

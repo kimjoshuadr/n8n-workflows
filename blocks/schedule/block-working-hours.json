@@ -1,0 +1,63 @@
+{
+  "name": "Block · Working hours gate",
+  "nodes": [
+    {
+      "id": "8ce2e84b-6c05-4db1-afe8-c1e33b483998",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Working hours gate\nTells a caller whether now is inside working hours in a given time zone, so messages to people wait for the morning.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/schedule`"
+      }
+    },
+    {
+      "id": "5b99faa1-deb2-4fa1-ac27-cee2502a44ea",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "5e79154c-7c94-43ab-ad23-b7720503427a",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Is it working hours?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => {\n  const { timezone = \"UTC\", start = 9, end = 18, at } = item.json;\n  const when = at ? new Date(at) : new Date();\n  const parts = Object.fromEntries(new Intl.DateTimeFormat(\"en-GB\", { timeZone: timezone, weekday: \"short\", hour: \"numeric\", hour12: false }).formatToParts(when).map((p) => [p.type, p.value]));\n  const hour = Number(parts.hour) % 24;\n  const weekday = ![\"Sat\", \"Sun\"].includes(parts.weekday);\n  return { json: { ...item.json, local_hour: hour, weekday, open: weekday && hour >= start && hour < end } };\n});"
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Is it working hours?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

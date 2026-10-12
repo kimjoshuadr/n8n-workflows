@@ -1,0 +1,223 @@
+{
+  "name": "Block · Templated email",
+  "nodes": [
+    {
+      "id": "eb5632a9-3959-4e04-a0a5-0c11b647df15",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Templated email\nOne place to send an email from: fills a template, refuses to send with a placeholder left unfilled.\n\n**Needs:** EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/notify`"
+      }
+    },
+    {
+      "id": "6b47409a-4454-4a99-a978-ef50174df98b",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "35e8a58f-2759-4770-a724-fcdf6b28c1f4",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Fill the template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => {\n  const { to, subject, body, data = {} } = item.json;\n  const fill = (s) => String(s ?? \"\").replace(/{{\\s*(\\w+)\\s*}}/g, (m, k) => (data[k] === undefined || data[k] === null ? m : String(data[k])));\n  const out = { to, subject: fill(subject), text: fill(body) };\n  const unfilled = [...(out.subject + out.text).matchAll(/{{\\s*(\\w+)\\s*}}/g)].map((m) => m[1]);\n  return { json: { ...out, unfilled, ready: unfilled.length === 0 && !!to } };\n});"
+      }
+    },
+    {
+      "id": "d7a5ac31-1188-4015-a330-b96f686905fe",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Ready to send?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "89cf5f47-ba83-44e8-a3d4-fab35a839aee",
+              "leftValue": "={{ $json.ready }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "094f1562-bd7c-4de6-ab93-a31f9c07baac",
+      "position": [
+        720,
+        -90
+      ],
+      "name": "Send",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $json.to, subject: $json.subject, text: $json.text }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "a19e9332-07d8-4ece-a6a9-dc5f20f37db9",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Sent",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1d28585d-7429-43c0-a063-2e6eebb5b158",
+              "name": "sent",
+              "value": "={{ true }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "d5b32bf5-641b-4a2c-a514-b919cd01d922",
+      "position": [
+        720,
+        90
+      ],
+      "name": "Held back",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2c081bd6-f05b-4700-aef1-a579bc924424",
+              "name": "sent",
+              "value": "={{ false }}",
+              "type": "string"
+            },
+            {
+              "id": "d14583a3-85a5-4862-ae99-7e33f9185816",
+              "name": "reason",
+              "value": "={{ 'Unfilled placeholders: ' + $json.unfilled.join(', ') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Fill the template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fill the template": {
+      "main": [
+        [
+          {
+            "node": "Ready to send?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ready to send?": {
+      "main": [
+        [
+          {
+            "node": "Send",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Held back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send": {
+      "main": [
+        [
+          {
+            "node": "Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

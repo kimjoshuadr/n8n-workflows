@@ -1,0 +1,210 @@
+{
+  "name": "Block · Has this changed since last time?",
+  "nodes": [
+    {
+      "id": "172aaace-5e4d-46ba-aeff-9ab4fb7772d7",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Has this changed since last time?\nCompares a record with the copy stored last run and reports which fields changed, so downstream work only happens on a real change.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+      }
+    },
+    {
+      "id": "02c67ad5-888a-4e3a-a8f4-bb6bba708814",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "5fb4ec90-8354-4a87-a45d-c8790a5615ab",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Last copy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/snapshots",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{ 'eq.' + $json.key }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "692aaa04-53ea-44f6-ac2d-d448361b6deb",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Compare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const now = $(\"When called\").first().json;\nconst before = $input.first().json.data ?? null;\nconst fields = Object.keys({ ...(before ?? {}), ...now.data });\nconst changed = before === null ? fields : fields.filter((f) => JSON.stringify(before[f]) !== JSON.stringify(now.data[f]));\nreturn [{ json: { key: now.key, data: now.data, first_seen: before === null, changed, has_changes: changed.length > 0 } }];"
+      }
+    },
+    {
+      "id": "62205f27-328b-4074-a301-b75394c0ecbc",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Store this copy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/snapshots",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "={{ 'key' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ key: $json.key, data: $json.data }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "4672e0d3-5b8e-4b68-abb9-3ed657a11084",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Answer",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bd00b1f0-d370-4b9b-a75a-9fe3fd5bfedd",
+              "name": "has_changes",
+              "value": "={{ $('Compare').first().json.has_changes }}",
+              "type": "string"
+            },
+            {
+              "id": "0d63e140-efcb-4619-a94e-5b03f11e0f7b",
+              "name": "changed",
+              "value": "={{ $('Compare').first().json.changed.join(',') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Last copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last copy": {
+      "main": [
+        [
+          {
+            "node": "Compare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare": {
+      "main": [
+        [
+          {
+            "node": "Store this copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store this copy": {
+      "main": [
+        [
+          {
+            "node": "Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

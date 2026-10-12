@@ -1,0 +1,343 @@
+{
+  "name": "Feedback · Route survey scores",
+  "nodes": [
+    {
+      "id": "d2d5c522-1d65-401d-a092-20fa7db33549",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -480
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Feedback · Route survey scores\nSends each survey score where it is useful: unhappy customers to a person today, happy ones to a review request, and every score to the record.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
+      }
+    },
+    {
+      "id": "3bf32680-1d50-4e50-a4ea-2c42277b3137",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Survey answered",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "survey-answered",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "51071e31-36b1-4285-a5c4-d23e2635170f"
+    },
+    {
+      "id": "339cf1ef-a31e-4620-aec3-ae2b0f1a003d",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Read the score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body ?? {};\nconst score = Number(b.score);\nif (!Number.isInteger(score) || score < 0 || score > 10) throw new Error(\"Score must be an integer from 0 to 10\");\nreturn [{ json: { email: String(b.email ?? \"\").toLowerCase(), score, comment: String(b.comment ?? \"\").slice(0, 1000), group: score <= 6 ? \"detractor\" : score >= 9 ? \"promoter\" : \"passive\" } }];"
+      }
+    },
+    {
+      "id": "66dfdaed-cb42-48de-acc5-47de7847afbe",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Record it",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/nps_responses",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $json.email, score: $json.score, comment: $json.comment, group: $json.group, at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "d50b1c61-e2bd-472a-a71a-00c0ab501795",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Which group?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3373643e-4ff0-4ebb-a531-4f90f5cf782e",
+                    "leftValue": "={{ $('Read the score').first().json.group === 'detractor' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "detractor"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "87c70797-f5ea-4fbc-a02e-2abc7c646ad2",
+                    "leftValue": "={{ $('Read the score').first().json.group === 'promoter' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "promoter"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      }
+    },
+    {
+      "id": "455d6e26-f5f7-40a8-a4fb-dfff6fcf7d0e",
+      "position": [
+        960,
+        -180
+      ],
+      "name": "Open a ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HELPDESK_BASE_URL }}/tickets",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ subject: 'Unhappy customer (score ' + $('Read the score').first().json.score + ')', from: $('Read the score').first().json.email, body: $('Read the score').first().json.comment, priority: 'high', team: 'success' }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "af2e9c76-4151-4385-ab0a-1504598d4940",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "Detractor message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const s = $(\"Read the score\").first().json;\nreturn [{ json: { level: \"warn\", text: s.email + \" scored us \" + s.score + \"/10\" + (s.comment ? \": \\\"\" + s.comment.slice(0, 200) + \"\\\"\" : \" with no comment\") + \". A ticket is open.\" } }];"
+      }
+    },
+    {
+      "id": "6d03c695-f7ee-491c-aa6d-71266ca951b3",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Tell customer success",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "cdf61384-7b85-4098-ad49-2bfa6d5847bc",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Invite a public review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $('Read the score').first().json.email, subject: 'Thank you. Would you share that?', template: 'review-invite' }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "f5ff5b9f-7408-4f49-a854-41a69502410a",
+      "position": [
+        960,
+        180
+      ],
+      "name": "Recorded only",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Survey answered": {
+      "main": [
+        [
+          {
+            "node": "Read the score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the score": {
+      "main": [
+        [
+          {
+            "node": "Record it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record it": {
+      "main": [
+        [
+          {
+            "node": "Which group?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Which group?": {
+      "main": [
+        [
+          {
+            "node": "Open a ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invite a public review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Recorded only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open a ticket": {
+      "main": [
+        [
+          {
+            "node": "Detractor message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detractor message": {
+      "main": [
+        [
+          {
+            "node": "Tell customer success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

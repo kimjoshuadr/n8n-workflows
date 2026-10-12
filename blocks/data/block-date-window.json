@@ -1,0 +1,63 @@
+{
+  "name": "Block · Yesterday, in the business's time zone",
+  "nodes": [
+    {
+      "id": "a5254f94-a7c1-4bea-a1ca-67e83033e36a",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Yesterday, in the business's time zone\nWorks out the start and end of 'yesterday' or 'last week' in a named time zone, which is where most reporting bugs come from.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+      }
+    },
+    {
+      "id": "ecabe2a8-aa01-4d73-a0c9-4c24de4029b1",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "36c6925c-c358-4890-a608-46b34193941d",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Window",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => {\n  const { timezone = \"UTC\", period = \"yesterday\", at } = item.json;\n  const now = at ? DateTime.fromISO(at, { zone: \"utc\" }).setZone(timezone) : DateTime.now().setZone(timezone);\n  const start = period === \"last_week\" ? now.startOf(\"week\").minus({ weeks: 1 }) : now.startOf(\"day\").minus({ days: 1 });\n  const end = period === \"last_week\" ? start.plus({ weeks: 1 }) : start.plus({ days: 1 });\n  return { json: { ...item.json, from: start.toUTC().toISO(), to: end.toUTC().toISO(), label: start.toFormat(\"yyyy-LL-dd\") } };\n});"
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

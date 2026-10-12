@@ -1,0 +1,377 @@
+{
+  "name": "Brand · Mention monitor",
+  "nodes": [
+    {
+      "id": "fd7adbcf-5839-4c98-a544-b11917a87adf",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Brand · Mention monitor\nChecks hourly for new mentions of the brand, and raises the negative ones straight away with the text and the link.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SEARCH_API_KEY, SEARCH_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
+      }
+    },
+    {
+      "id": "783f890a-1f56-4274-a82b-85b36463e9ff",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Hourly",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "1f6f7a17-4b0b-477e-aedd-db2ce240958a",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Search for mentions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SEARCH_BASE_URL }}/mentions",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SEARCH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: 'YourBrand', since_hours: 2 }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "5aa5a603-f41c-4f9a-aa3b-de47c512dc3c",
+      "position": [
+        480,
+        0
+      ],
+      "name": "One item per mention",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return ($input.first().json.mentions ?? []).filter((m) => m.url && m.text).map((m) => ({ json: { url: m.url, text: String(m.text).slice(0, 1500), author: m.author ?? \"unknown\" } }));"
+      }
+    },
+    {
+      "id": "0d4086c4-ba23-454c-a9bf-93759237988d",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Claim as seen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/seen_mentions",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "={{ 'url' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ url: $json.url, text: $json.text, author: $json.author }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "9f0e05e0-d6d4-41ba-a9e4-7c45edf88955",
+      "position": [
+        960,
+        0
+      ],
+      "name": "New mention?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0af0568a-5483-443d-a949-162ab3b25f45",
+              "leftValue": "={{ !!$json.url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "709e6a7c-db85-41d5-a448-3325ef6a0625",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "Read the tone",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: \"[task:classify] Classify a public mention of a brand. Reply with JSON: { label: string, urgent: boolean, sentiment: 'negative'|'neutral'|'positive' }.\" },\n    { role: \"user\", content: $json.text }\n  ]\n}) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "a33254dd-9d01-4f63-afb8-8192e282cd8a",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Read the verdict",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const before = $(\"New mention?\").all();\nconst out = [];\nfor (const [i, item] of $input.all().entries()) {\n  let reply = {\"sentiment\":\"unknown\"};\n  let parse_error = false;\n  try {\n    reply = JSON.parse(item.json.choices[0].message.content);\n  } catch (e) {\n    parse_error = true;\n  }\n  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "c611beb0-43ce-4506-ae34-bb8a59e94758",
+      "position": [
+        1680,
+        0
+      ],
+      "name": "Needs attention?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9f752473-dabe-43f0-ab0a-a87aeeda6155",
+              "leftValue": "={{ $json.sentiment === 'negative' || $json.sentiment === 'unknown' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "111a576d-cccd-4ada-af8f-6d8381d791be",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Write the alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => ({ json: { channel: \"#brand\", level: \"warn\", text: (i.json.sentiment === \"unknown\" ? \"Unclassified\" : \"Negative\") + \" mention by \" + i.json.author + \": \\\"\" + i.json.text.slice(0, 240) + \"\\\" \" + i.json.url } }));"
+      }
+    },
+    {
+      "id": "a257aad1-dddc-44ca-ad56-a889b9f0f97b",
+      "position": [
+        2160,
+        0
+      ],
+      "name": "Raise it",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Hourly": {
+      "main": [
+        [
+          {
+            "node": "Search for mentions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search for mentions": {
+      "main": [
+        [
+          {
+            "node": "One item per mention",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per mention": {
+      "main": [
+        [
+          {
+            "node": "Claim as seen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim as seen": {
+      "main": [
+        [
+          {
+            "node": "New mention?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New mention?": {
+      "main": [
+        [
+          {
+            "node": "Read the tone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the tone": {
+      "main": [
+        [
+          {
+            "node": "Read the verdict",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the verdict": {
+      "main": [
+        [
+          {
+            "node": "Needs attention?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs attention?": {
+      "main": [
+        [
+          {
+            "node": "Write the alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the alert": {
+      "main": [
+        [
+          {
+            "node": "Raise it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

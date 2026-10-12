@@ -1,0 +1,368 @@
+{
+  "name": "People · New hire onboarding",
+  "nodes": [
+    {
+      "id": "83ae19e9-d3a2-435b-abae-ccca80e2d98c",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## People · New hire onboarding\nWhen someone is hired, creates their checklist, books their first-week meetings, tells the people who need to act, and sends the welcome email on the right morning.\n\n**Needs:** CALENDAR_API_KEY, CALENDAR_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
+      }
+    },
+    {
+      "id": "8113f1d6-a5f3-49f6-ae85-f81d6ba7f5b2",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Hire confirmed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hire-confirmed",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "44ca58c7-e7c5-4bbd-a832-5923bf9dfcda"
+    },
+    {
+      "id": "1a62c906-18bd-447c-ac2f-9912c625a41d",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Read the hire",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const h = $input.first().json.body ?? {};\nif (!h.email || !h.start_date) throw new Error(\"A hire needs an email and a start date\");\nreturn [{ json: { employee_id: String(h.id ?? h.email), email: String(h.email).toLowerCase(), name: h.name ?? \"New hire\", role: h.role ?? \"\", manager: h.manager_email ?? null, start_date: h.start_date, remote: h.remote === true, scope: \"hire\", key: String(h.id ?? h.email) } }];"
+      }
+    },
+    {
+      "id": "65548fa8-317c-4ea7-a95f-d6b42eaa3634",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Seen before?",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:idempotency-guard__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7170f6de-c6ea-4cea-a13f-bc9d478fd1f7",
+      "position": [
+        720,
+        0
+      ],
+      "name": "New hire?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fc31d1b4-3200-4c6c-a4c2-071a88240df8",
+              "leftValue": "={{ !$json.duplicate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "40b8a0dc-f966-4500-a35d-ffd255c93d5c",
+      "position": [
+        960,
+        -90
+      ],
+      "name": "Build the checklist",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const h = $input.first().json;\nconst day = (offset) => new Date(new Date(h.start_date).getTime() + offset * 864e5).toISOString().slice(0, 10);\nconst tasks = [\n  { owner: \"it\", task: \"Create accounts and order a laptop\", due: day(-5) },\n  { owner: \"it\", task: h.remote ? \"Ship the laptop\" : \"Prepare a desk\", due: day(-3) },\n  { owner: \"hr\", task: \"Send the contract and collect documents\", due: day(-7) },\n  { owner: \"manager\", task: \"Write the 30-day plan\", due: day(-1) },\n  { owner: \"manager\", task: \"First one-to-one\", due: day(0) },\n  { owner: \"hr\", task: \"Day 30 check-in\", due: day(30) },\n];\nreturn tasks.map((t) => ({ json: { ...t, employee_id: h.employee_id, employee: h.name, status: \"open\" } }));"
+      }
+    },
+    {
+      "id": "00c9cf76-60fb-4b61-a133-14df519df8c2",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "Save the task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/onboarding_tasks",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "dcae3ec7-e95d-47e4-adbc-f00f76c29366",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Book first-day welcome",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CALENDAR_BASE_URL }}/bookings",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CALENDAR_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: 'Welcome, ' + $('New hire?').first().json.name, start: $('New hire?').first().json.start_date + 'T09:30:00', attendees: [$('New hire?').first().json.email, $('New hire?').first().json.manager].filter(Boolean) }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "6de40182-e2bc-4e5e-a6a3-53f294f5ebf2",
+      "position": [
+        1680,
+        0
+      ],
+      "name": "Schedule the welcome email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $('New hire?').first().json.email, subject: 'Welcome aboard, ' + $('New hire?').first().json.name, template: 'welcome-new-hire', send_at: $('New hire?').first().json.start_date + 'T08:00:00', data: { role: $('New hire?').first().json.role } }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "executeOnce": true
+    },
+    {
+      "id": "272112a1-ed06-441c-a9d3-18023bfc6f3e",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Team message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const h = $(\"New hire?\").first().json;\nreturn [{ json: { channel: \"#people\", level: \"info\", text: h.name + \" (\" + h.role + \") starts on \" + h.start_date + \". Six onboarding tasks are assigned to IT, HR and their manager.\" } }];"
+      }
+    },
+    {
+      "id": "5bec1bc9-bc60-400c-af8f-490bf7c8691a",
+      "position": [
+        2160,
+        0
+      ],
+      "name": "Tell the team",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e7aa6956-3546-4538-a9d7-551909492b49",
+      "position": [
+        960,
+        90
+      ],
+      "name": "Already set up",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Hire confirmed": {
+      "main": [
+        [
+          {
+            "node": "Read the hire",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the hire": {
+      "main": [
+        [
+          {
+            "node": "Seen before?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seen before?": {
+      "main": [
+        [
+          {
+            "node": "New hire?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New hire?": {
+      "main": [
+        [
+          {
+            "node": "Build the checklist",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Already set up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the checklist": {
+      "main": [
+        [
+          {
+            "node": "Save the task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the task": {
+      "main": [
+        [
+          {
+            "node": "Book first-day welcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book first-day welcome": {
+      "main": [
+        [
+          {
+            "node": "Schedule the welcome email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule the welcome email": {
+      "main": [
+        [
+          {
+            "node": "Team message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Team message": {
+      "main": [
+        [
+          {
+            "node": "Tell the team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

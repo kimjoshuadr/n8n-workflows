@@ -1,0 +1,572 @@
+{
+  "name": "Content pipeline · Research and draft",
+  "nodes": [
+    {
+      "id": "cbdcd577-5b47-48cc-ab91-bbec0af34eeb",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Content pipeline · Research and draft\nTakes the next topic off the list, researches it, drafts the article, and asks a person to approve it. Nothing is published from here.\n\n**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SEARCH_API_KEY, SEARCH_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/content-pipeline`"
+      }
+    },
+    {
+      "id": "0d978302-c53c-4e6b-a20e-6a90f5e40a83",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Weekdays 07:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6314bcf4-9b57-446a-a723-b46098e2bcbc",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Next topic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/content_topics",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "={{ 'eq.queued' }}"
+            },
+            {
+              "name": "limit",
+              "value": "={{ '1' }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "5bb76069-560f-4701-a855-641b3a766e57",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Is there one?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f51cd303-5533-400e-ad5c-f340f751b332",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7d858916-a729-409f-abf6-41376f9d71e2",
+      "position": [
+        720,
+        -90
+      ],
+      "name": "Claim the topic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/content_topics",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $json.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'drafting' }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "d3ac425a-e1bc-494a-add7-70e6f4f1885f",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Research",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SEARCH_BASE_URL }}/search",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SEARCH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: $('Is there one?').first().json.topic, max_results: 5 }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "1e64b3ba-f22f-4d17-ac6b-1a969d4c1058",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "Collect sources",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const t = $(\"Is there one?\").first().json;\nconst results = ($input.first().json.results ?? []).slice(0, 5);\nreturn [{ json: { topic_id: t.id, topic: t.topic, sources: results.map((r) => ({ title: r.title, url: r.url })), notes: results.map((r) => \"- \" + r.title + \": \" + String(r.content ?? \"\").slice(0, 400)).join(\"\\n\") } }];"
+      }
+    },
+    {
+      "id": "a642d55a-764b-4c6f-a2bd-7c8be9a76bf0",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Outline",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: \"[task:outline] Write an article outline as JSON: { title: string, sections: string[], keywords: string[] }. Use only facts found in the research notes.\" },\n    { role: \"user\", content: 'Topic: ' + $json.topic + '\\n\\nResearch notes:\\n' + ($json.notes || '(none)') }\n  ]\n}) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "7006d8a4-39a7-470a-a65a-0c1014a71cf6",
+      "position": [
+        1680,
+        0
+      ],
+      "name": "Read the outline",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const before = $(\"Collect sources\").all();\nconst out = [];\nfor (const [i, item] of $input.all().entries()) {\n  let reply = {\"title\":null,\"sections\":[],\"keywords\":[]};\n  let parse_error = false;\n  try {\n    reply = JSON.parse(item.json.choices[0].message.content);\n  } catch (e) {\n    parse_error = true;\n  }\n  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "7abc4d7f-5b9f-4451-a167-84dd9078c1cc",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Usable outline?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3a91b1aa-fbe4-4cf7-ac56-b94cada24ba4",
+              "leftValue": "={{ !$json.parse_error && $json.sections.length >= 2 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7d71d3bc-6809-43b8-ae2a-f11aa165edca",
+      "position": [
+        2160,
+        -90
+      ],
+      "name": "Write the draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  messages: [\n    { role: \"system\", content: \"[task:draft] Write the article in Markdown from this outline. Plain language, no invented statistics, cite only the sources listed.\" },\n    { role: \"user\", content: JSON.stringify({ title: $json.title, sections: $json.sections, sources: $json.sources }) }\n  ]\n}) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "18d3527e-aff3-483c-a15c-2ce30a62dee4",
+      "position": [
+        2400,
+        0
+      ],
+      "name": "Save the draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/content_drafts",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ topic_id: $('Usable outline?').first().json.topic_id, title: $('Usable outline?').first().json.title, keywords: $('Usable outline?').first().json.keywords, sources: $('Usable outline?').first().json.sources, body: $json.choices[0].message.content, status: 'awaiting_approval', created_at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "1f860db6-5ddb-4767-a6ac-e203553b5a11",
+      "position": [
+        2640,
+        0
+      ],
+      "name": "Ask for approval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: '#content', text: ':memo: Draft ready for review: \"' + $json.title + '\"', draft_id: $json.id, actions: ['approve', 'reject'] }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "445a2090-f167-40c6-a5eb-f181b8dbe0f3",
+      "position": [
+        2160,
+        90
+      ],
+      "name": "Return the topic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/content_topics",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $json.topic_id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'needs_brief' }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "a3d9e506-67df-42bb-afd9-49294a675833",
+      "position": [
+        720,
+        90
+      ],
+      "name": "Queue is empty",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Weekdays 07:00": {
+      "main": [
+        [
+          {
+            "node": "Next topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Next topic": {
+      "main": [
+        [
+          {
+            "node": "Is there one?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is there one?": {
+      "main": [
+        [
+          {
+            "node": "Claim the topic",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Queue is empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim the topic": {
+      "main": [
+        [
+          {
+            "node": "Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research": {
+      "main": [
+        [
+          {
+            "node": "Collect sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect sources": {
+      "main": [
+        [
+          {
+            "node": "Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outline": {
+      "main": [
+        [
+          {
+            "node": "Read the outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the outline": {
+      "main": [
+        [
+          {
+            "node": "Usable outline?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Usable outline?": {
+      "main": [
+        [
+          {
+            "node": "Write the draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return the topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the draft": {
+      "main": [
+        [
+          {
+            "node": "Save the draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the draft": {
+      "main": [
+        [
+          {
+            "node": "Ask for approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

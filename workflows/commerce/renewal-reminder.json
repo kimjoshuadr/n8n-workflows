@@ -1,0 +1,219 @@
+{
+  "name": "Subscriptions · Renewal reminders",
+  "nodes": [
+    {
+      "id": "b2a7687c-efa6-4565-a1c3-68f28ce1b514",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Subscriptions · Renewal reminders\nTells subscribers a week before an annual renewal, once, with the amount and the date, so the charge is never a surprise.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
+      }
+    },
+    {
+      "id": "1edddb14-9cdf-4006-a0e2-d1a2e31e0f3c",
+      "position": [
+        0,
+        0
+      ],
+      "name": "08:00 daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ad792b75-15ae-418c-ac43-2afaa3873c22",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Active subscriptions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/subscriptions",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "={{ 'eq.active' }}"
+            },
+            {
+              "name": "interval",
+              "value": "={{ 'eq.year' }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "a75161ec-ba9d-4a9c-ac63-bdef70d7803f",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Renewing in a week",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const now = Date.now();\nreturn $input.all().map((i) => i.json).filter((s) => s.email && s.renews_at).filter((s) => {\n  const days = (new Date(s.renews_at).getTime() - now) / 864e5;\n  return days > 0 && days <= 7 && s.reminded_for !== s.renews_at;\n}).map((json) => ({ json }));"
+      }
+    },
+    {
+      "id": "a23c2148-c86f-40f1-a64c-d266c6082ec6",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Send the notice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $json.email, subject: 'Your plan renews on ' + $json.renews_at.slice(0, 10), template: 'renewal-notice', data: { amount: $json.amount, currency: $json.currency, renews_at: $json.renews_at, manage_url: $json.manage_url } }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "af87ac3d-445b-4495-a5df-98a64360233b",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Mark reminded",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/subscriptions",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $('Renewing in a week').item.json.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ reminded_for: $('Renewing in a week').item.json.renews_at }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "08:00 daily": {
+      "main": [
+        [
+          {
+            "node": "Active subscriptions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Active subscriptions": {
+      "main": [
+        [
+          {
+            "node": "Renewing in a week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Renewing in a week": {
+      "main": [
+        [
+          {
+            "node": "Send the notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the notice": {
+      "main": [
+        [
+          {
+            "node": "Mark reminded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

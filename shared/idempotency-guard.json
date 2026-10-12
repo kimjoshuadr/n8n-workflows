@@ -1,0 +1,149 @@
+{
+  "name": "Reliability · Idempotency guard",
+  "nodes": [
+    {
+      "id": "b0ad604f-dd81-43ad-a81b-0f5c81eef252",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Reliability · Idempotency guard\nAnswers one question for a caller: has this event been handled before? Webhooks are delivered more than once; this is what makes that safe.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
+      }
+    },
+    {
+      "id": "c47be24e-4697-4571-a345-0057e8485a07",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "04c7cece-c13f-45d1-a348-92716649141a",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Build the key",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => {\n  const { scope, key } = item.json;\n  if (!scope || !key) throw new Error(\"idempotency-guard needs { scope, key }\");\n  return { json: { ...item.json, idempotency_key: scope + \":\" + key } };\n});"
+      }
+    },
+    {
+      "id": "76375043-ec78-48c8-a260-7ac720ad762e",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Claim the key",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/idempotency_keys",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=ignore-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "={{ 'idempotency_key' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ idempotency_key: $json.idempotency_key, claimed_at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "0441a50f-c140-4915-a28e-80ed5a31574f",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const before = $(\"Build the key\").all();\nreturn $input.all().map((item, i) => {\n  const rows = Array.isArray(item.json.body) ? item.json.body : [];\n  return { json: { ...before[i].json, duplicate: rows.length === 0 } };\n});"
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Build the key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the key": {
+      "main": [
+        [
+          {
+            "node": "Claim the key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim the key": {
+      "main": [
+        [
+          {
+            "node": "Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

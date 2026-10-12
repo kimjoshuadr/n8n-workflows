@@ -1,0 +1,36 @@
+# Builds the library, checks the build is what was committed, validates every
+# workflow against n8n's node schemas, then runs every test case on a real n8n.
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build, and fail if the committed files are stale
+        run: |
+          npm run build
+          git diff --exit-code -- systems workflows blocks shared
+      - run: npm run validate
+      - name: Start n8n and the mock services
+        run: |
+          docker compose up -d
+          for i in $(seq 1 60); do curl -sf localhost:5679/healthz && break; sleep 3; done
+      - run: npm test
+      - if: failure()
+        run: docker compose logs --tail 200

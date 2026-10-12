@@ -1,0 +1,480 @@
+{
+  "name": "Reliability · Dead letter replay",
+  "nodes": [
+    {
+      "id": "51390283-77d8-4658-aa4a-4c9496c50dfb",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Reliability · Dead letter replay\nEvery fifteen minutes, sends parked work back to where it came from. Gives up after five attempts and says so.\n\n**Needs:** ALERT_CHANNEL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
+      }
+    },
+    {
+      "id": "6ecb0768-be6a-4159-a068-fb9249e95080",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Every 15 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6a15b899-4292-4e3e-a405-18955e12daa3",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Fetch pending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/dead_letters",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "={{ 'eq.pending' }}"
+            },
+            {
+              "name": "limit",
+              "value": "={{ '50' }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "0c44ea74-afca-4e70-ad7a-3ff08337ff46",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Anything parked?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "212c49fc-794e-4c2b-a04b-e30f7f0254e3",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c5a6514a-7420-408c-a335-87a1788a469c",
+      "position": [
+        720,
+        -90
+      ],
+      "name": "One at a time",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "bfcc7750-e770-4975-a5c6-377cae385ed5",
+      "position": [
+        960,
+        -90
+      ],
+      "name": "Replay",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.replay_url }}",
+        "options": {
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "6f01597d-3c98-4da9-ae45-030a01f29c64",
+      "position": [
+        1200,
+        -90
+      ],
+      "name": "Mark replayed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/dead_letters",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $('One at a time').item.json.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'replayed', replayed_at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "67836a8c-6504-4ce2-ac59-61302733c1a3",
+      "position": [
+        1200,
+        90
+      ],
+      "name": "Count the attempt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const row = $(\"One at a time\").first().json;\nconst attempts = (row.attempts ?? 0) + 1;\nreturn [{ json: { id: row.id, source: row.source, attempts, status: attempts >= 5 ? \"abandoned\" : \"pending\" } }];"
+      }
+    },
+    {
+      "id": "3b850c43-2ea9-4152-a0be-a0641276bcc8",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Record the attempt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/dead_letters",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ 'eq.' + $json.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ attempts: $json.attempts, status: $json.status }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "ec7c9f2e-de30-4425-ab48-9b405ba33dee",
+      "position": [
+        1680,
+        0
+      ],
+      "name": "Given up?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4a494e35-6919-4f34-abbb-2e464b0a0208",
+              "leftValue": "={{ $('Count the attempt').item.json.status === 'abandoned' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "03924ad1-204a-44ab-a577-a6aff4c8d80f",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Escalate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $env.ALERT_CHANNEL, text: ':red_circle: Gave up replaying an item from ' + $('Count the attempt').item.json.source + ' after 5 attempts. It needs a person.' }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "97169698-2ba2-4889-a68a-c87ed3d1d9fe",
+      "position": [
+        720,
+        90
+      ],
+      "name": "Nothing to do",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "1575c803-49ba-44ae-ac96-cc9c062eb19f",
+      "position": [
+        960,
+        90
+      ],
+      "name": "All replayed",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Every 15 minutes": {
+      "main": [
+        [
+          {
+            "node": "Fetch pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch pending": {
+      "main": [
+        [
+          {
+            "node": "Anything parked?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything parked?": {
+      "main": [
+        [
+          {
+            "node": "One at a time",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing to do",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One at a time": {
+      "main": [
+        [
+          {
+            "node": "All replayed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Replay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replay": {
+      "main": [
+        [
+          {
+            "node": "Mark replayed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Count the attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark replayed": {
+      "main": [
+        [
+          {
+            "node": "One at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count the attempt": {
+      "main": [
+        [
+          {
+            "node": "Record the attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record the attempt": {
+      "main": [
+        [
+          {
+            "node": "Given up?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Given up?": {
+      "main": [
+        [
+          {
+            "node": "Escalate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "One at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalate": {
+      "main": [
+        [
+          {
+            "node": "One at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

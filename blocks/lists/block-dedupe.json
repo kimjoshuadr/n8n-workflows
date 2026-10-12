@@ -1,0 +1,63 @@
+{
+  "name": "Block · Remove duplicates by key",
+  "nodes": [
+    {
+      "id": "bf9b9d5f-1f68-4ddd-a99f-cface78f59d8",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Remove duplicates by key\nKeeps the first of each item sharing a key, after normalising it, so 'A@B.co ' and 'a@b.co' count as one.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/lists`"
+      }
+    },
+    {
+      "id": "4d049c42-e445-4984-a4a3-5ddd95c6eef5",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "6b31badf-295d-40d1-a620-97f91112f0c9",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Dedupe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const seen = new Set();\nconst out = [];\nfor (const item of $input.all()) {\n  const key = String(item.json.email ?? item.json.key ?? \"\").trim().toLowerCase();\n  if (!key || seen.has(key)) continue;\n  seen.add(key);\n  out.push({ json: { ...item.json, email: item.json.email ? key : undefined } });\n}\nreturn out;"
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Dedupe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

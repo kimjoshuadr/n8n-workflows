@@ -1,0 +1,231 @@
+{
+  "name": "Block · Read every page of an API",
+  "nodes": [
+    {
+      "id": "17410f38-e647-4a42-a94d-ad1ef8f36b35",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Read every page of an API\nFollows a cursor until the API says there is no more, with a hard stop so a broken API cannot loop forever.\n\n**Needs:** CRM_API_KEY, CRM_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/lists`"
+      }
+    },
+    {
+      "id": "a6375e38-88d6-44f6-a8dc-7aa41e3eb61a",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "a4174e41-48e6-41ec-ac46-1148b669127c",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Start",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2c53e0b5-6cbf-4653-a70c-3765271ff6e2",
+              "name": "cursor",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "dfb816c9-a378-4470-a662-fd69fbd20999",
+              "name": "page",
+              "value": "={{ 0 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "7aa05ad2-834b-4a5f-abb1-c21fe8c6f93c",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Fetch a page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.CRM_BASE_URL }}/contacts",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "after",
+              "value": "={{ $json.cursor }}"
+            },
+            {
+              "name": "limit",
+              "value": "={{ '100' }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "416d8ef4-a10f-43db-ac2c-55621d161a9c",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Keep going?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const res = $input.first().json;\nconst page = Number($(\"Start\").first().json.page) + $runIndex + 1;\nreturn [{ json: { items: res.results ?? [], cursor: res.next ?? \"\", page, more: !!res.next && page < 50 } }];"
+      }
+    },
+    {
+      "id": "c56b62ca-8ace-4d72-ad27-1e3ce56cd02c",
+      "position": [
+        960,
+        0
+      ],
+      "name": "More pages?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ed87faa1-b3a5-47fd-a3e5-e88a9d48dd9e",
+              "leftValue": "={{ $json.more }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6fe76243-960b-4b63-a672-6d8d69ee45e0",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "All pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const all = [];\nfor (let i = 0; ; i++) { try { all.push(...$(\"Keep going?\").first(0, i).json.items); } catch (e) { break; } }\nreturn [{ json: { total: all.length, items: all } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Fetch a page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch a page": {
+      "main": [
+        [
+          {
+            "node": "Keep going?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep going?": {
+      "main": [
+        [
+          {
+            "node": "More pages?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "More pages?": {
+      "main": [
+        [
+          {
+            "node": "Fetch a page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "All pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

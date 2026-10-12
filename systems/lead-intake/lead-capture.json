@@ -1,0 +1,724 @@
+{
+  "name": "Lead intake · Capture and qualify",
+  "nodes": [
+    {
+      "id": "549c8d4c-ba23-4c76-addc-c83ea6c21eb5",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -480
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Lead intake · Capture and qualify\nTakes an enquiry from any form, rejects junk, ignores repeats, has a model score the fit, then files it in the CRM and sends the right first reply.\n\n**Needs:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/lead-intake`"
+      }
+    },
+    {
+      "id": "127eeb0a-9aa4-4821-a24a-80655ccff3a8",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Enquiry form",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "5f08c07c-aaaf-48ae-abb5-df5afa14171f"
+    },
+    {
+      "id": "aa61cc86-3bf7-4447-abea-98977e1e3fbe",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Validate and normalise",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body ?? {};\nconst email = String(b.email ?? \"\").trim().toLowerCase();\nconst message = String(b.message ?? \"\").trim();\nconst errors = [];\nif (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) errors.push(\"email\");\nif (message.length < 10) errors.push(\"message\");\nif (b.website) errors.push(\"honeypot\"); // a field people never see and bots always fill\nreturn [{ json: {\n  valid: errors.length === 0, errors,\n  email, message: message.slice(0, 4000),\n  name: String(b.name ?? \"\").trim() || email.split(\"@\")[0],\n  company: String(b.company ?? \"\").trim() || null,\n  source: String(b.source ?? \"website\"),\n  received_at: new Date().toISOString(),\n  scope: \"lead\", key: email + \":\" + new Date().toISOString().slice(0, 10),\n} }];"
+      }
+    },
+    {
+      "id": "55e315b0-6a2d-4aee-aa71-2dfb2f7083a9",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8ba548b6-353c-474e-a581-189fba03a955",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "8c1243a3-8901-49f3-a3bc-6e040c7d1793",
+      "position": [
+        720,
+        -90
+      ],
+      "name": "Reject",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, errors: $json.errors }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "f82c68bd-9675-41ea-a438-266d7b203bfc",
+      "position": [
+        720,
+        90
+      ],
+      "name": "Accept",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
+        "options": {
+          "responseCode": 202
+        }
+      }
+    },
+    {
+      "id": "cb38c108-b6bb-41b0-a7c1-ca12827eb1f1",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Seen today?",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:idempotency-guard__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "484090ee-2ad1-445d-a35b-fcf6f6c07145",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "New enquiry?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "288983a7-7f6c-402d-adc8-3a9d688acaba",
+              "leftValue": "={{ !$json.duplicate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f9fcfca1-1a5e-4ffa-aae7-9b1ba6b96ec5",
+      "position": [
+        1440,
+        -90
+      ],
+      "name": "Ignore the repeat",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "cc820227-ebdb-4dbc-a4cf-ef476f8846d5",
+      "position": [
+        1440,
+        90
+      ],
+      "name": "Score the fit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: \"[task:qualify-lead] You qualify inbound enquiries for a services business. Reply with JSON: { score: 0-100, fit: boolean, reason: string, missing: string[] }. Judge only what the message says.\" },\n    { role: \"user\", content: 'From: ' + $json.name + ($json.company ? ' at ' + $json.company : '') + '\\n\\n' + $json.message }\n  ]\n}) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f70ba5b3-c2fa-4477-a6df-1e4807e155a8",
+      "position": [
+        1680,
+        0
+      ],
+      "name": "Read the verdict",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const before = $(\"New enquiry?\").all();\nconst out = [];\nfor (const [i, item] of $input.all().entries()) {\n  let reply = {\"score\":null,\"fit\":null,\"reason\":\"Model reply could not be read\"};\n  let parse_error = false;\n  try {\n    reply = JSON.parse(item.json.choices[0].message.content);\n  } catch (e) {\n    parse_error = true;\n  }\n  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "1fd176ed-891d-42d2-a506-e7f5fafff42a",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Save the lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/leads",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $json.email, name: $json.name, company: $json.company, message: $json.message, source: $json.source, score: $json.score, fit: $json.fit, reason: $json.reason, status: $json.fit === true ? 'qualified' : $json.fit === false ? 'nurture' : 'review', follow_ups: 0, booked: false, received_at: $json.received_at }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "96387c07-809f-4736-ab50-800416ac1815",
+      "position": [
+        2160,
+        0
+      ],
+      "name": "Which path?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f31c1791-8e33-42a2-aaaf-628217d41dbf",
+                    "leftValue": "={{ $('Read the verdict').first().json.fit === true }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "qualified"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "83363f52-94f1-4c02-ae95-d300a8f99015",
+                    "leftValue": "={{ $('Read the verdict').first().json.fit === false }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "nurture"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      }
+    },
+    {
+      "id": "a1550c62-a3e9-4c64-a632-b5d902f9843d",
+      "position": [
+        2400,
+        -180
+      ],
+      "name": "Create CRM contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/crm/v3/objects/contacts",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: { email: $('Read the verdict').first().json.email, firstname: $('Read the verdict').first().json.name, company: $('Read the verdict').first().json.company, lead_score: $('Read the verdict').first().json.score, lifecyclestage: 'salesqualifiedlead' } }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "5860cb02-4698-49cf-a6d1-8e9d7882a9c5",
+      "position": [
+        2640,
+        -180
+      ],
+      "name": "Send booking link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $('Read the verdict').first().json.email, subject: 'Thanks, ' + $('Read the verdict').first().json.name + '. Pick a time', template: 'booking-link', data: { name: $('Read the verdict').first().json.name } }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "609f23f9-3710-4f7e-a58a-80b926d98383",
+      "position": [
+        3120,
+        0
+      ],
+      "name": "Tell sales",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "663c54de-75b2-4efd-a828-c21ef7eb72ad",
+      "position": [
+        2880,
+        -90
+      ],
+      "name": "Park for replay",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:dead-letter__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7580ab32-bf68-492d-a401-ba882e17b120",
+      "position": [
+        2400,
+        0
+      ],
+      "name": "Send nurture email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $('Read the verdict').first().json.email, subject: 'Thanks for getting in touch', template: 'nurture-1', data: { name: $('Read the verdict').first().json.name, missing: $('Read the verdict').first().json.missing } }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "82b17333-2b87-4b3a-a6ed-71285d9719ec",
+      "position": [
+        2640,
+        0
+      ],
+      "name": "Ask a person to look",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e9629457-ca9d-4e21-a1be-87326bccf3ea",
+      "position": [
+        2880,
+        90
+      ],
+      "name": "Sales message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const l = $(\"Read the verdict\").first().json;\nreturn [{ json: { text: \"New qualified lead: \" + l.name + (l.company ? \" (\" + l.company + \")\" : \"\") + \", score \" + l.score + \". \" + l.reason, level: \"info\" } }];"
+      }
+    },
+    {
+      "id": "e031261a-9abb-4162-ac2c-f04818bcb876",
+      "position": [
+        2400,
+        180
+      ],
+      "name": "Review message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const l = $(\"Read the verdict\").first().json;\nreturn [{ json: { text: \"A lead needs a human look (\" + l.email + \"): \" + l.reason, level: \"warn\" } }];"
+      }
+    },
+    {
+      "id": "a1de55a1-b747-41a0-a585-6af424e56e24",
+      "position": [
+        2640,
+        180
+      ],
+      "name": "Dead letter payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const l = $(\"Read the verdict\").first().json;\nreturn [{ json: { source: \"lead-capture\", reason: \"CRM contact could not be created\", payload: l } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Enquiry form": {
+      "main": [
+        [
+          {
+            "node": "Validate and normalise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and normalise": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "node": "Accept",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accept": {
+      "main": [
+        [
+          {
+            "node": "Seen today?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seen today?": {
+      "main": [
+        [
+          {
+            "node": "New enquiry?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New enquiry?": {
+      "main": [
+        [
+          {
+            "node": "Score the fit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignore the repeat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score the fit": {
+      "main": [
+        [
+          {
+            "node": "Read the verdict",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the verdict": {
+      "main": [
+        [
+          {
+            "node": "Save the lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the lead": {
+      "main": [
+        [
+          {
+            "node": "Which path?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Which path?": {
+      "main": [
+        [
+          {
+            "node": "Create CRM contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send nurture email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Review message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create CRM contact": {
+      "main": [
+        [
+          {
+            "node": "Send booking link",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dead letter payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send booking link": {
+      "main": [
+        [
+          {
+            "node": "Sales message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sales message": {
+      "main": [
+        [
+          {
+            "node": "Tell sales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dead letter payload": {
+      "main": [
+        [
+          {
+            "node": "Park for replay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review message": {
+      "main": [
+        [
+          {
+            "node": "Ask a person to look",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

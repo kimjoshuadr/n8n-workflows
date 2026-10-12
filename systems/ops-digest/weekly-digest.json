@@ -1,0 +1,489 @@
+{
+  "name": "Ops digest · Weekly summary",
+  "nodes": [
+    {
+      "id": "6ab9d680-e485-4f91-a487-84a6c16fd33e",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Ops digest · Weekly summary\nEvery Monday, gathers the week's numbers from sales, orders, support and the site, compares them with the week before, and sends one readable summary.\n\n**Needs:** ANALYTICS_API_KEY, ANALYTICS_BASE_URL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/ops-digest`"
+      }
+    },
+    {
+      "id": "b2cbae22-9d4c-4f91-af96-2bae0e3600f4",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Monday 08:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 8 * * 1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "53f3aaa9-f418-4aa7-a424-a53ff11e08c4",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/leads",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "received_at",
+              "value": "={{ 'gte.' + $now.minus({ days: 14 }).toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "90762edf-a548-48b3-a5c2-564f1f34cd20",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Orders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/orders",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "created_at",
+              "value": "={{ 'gte.' + $now.minus({ days: 14 }).toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "0ddb7501-5085-40cf-a518-95b7e31fab71",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Support",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/support_log",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "at",
+              "value": "={{ 'gte.' + $now.minus({ days: 14 }).toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c10bcb57-446e-42ae-a90b-ab78d94dac30",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Site traffic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.ANALYTICS_BASE_URL }}/insights/trend",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.ANALYTICS_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "event",
+              "value": "={{ '$pageview' }}"
+            },
+            {
+              "name": "date_from",
+              "value": "={{ '-14d' }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "635da5aa-34a8-4aef-a80a-d70b0f2abecc",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "Work out the week",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const weekAgo = Date.now() - 7 * 864e5;\nconst rows = (name) => { try { return $(name).all().map((i) => i.json).filter((r) => r && !r.error); } catch (e) { return null; } };\nconst split = (list, field) => {\n  const cur = list.filter((r) => new Date(r[field]).getTime() >= weekAgo);\n  return [cur, list.filter((r) => new Date(r[field]).getTime() < weekAgo)];\n};\nconst change = (now, before) => (before ? Math.round(((now - before) / before) * 100) : null);\nconst metric = (label, now, before, unit = \"\") => ({ label, now, before, change: change(now, before), unit });\nconst out = [];\nconst unavailable = [];\n\nconst leads = rows(\"Leads\")?.filter((r) => r.received_at);\nif (leads) { const [c, p] = split(leads, \"received_at\"); out.push(metric(\"New leads\", c.length, p.length)); out.push(metric(\"Qualified leads\", c.filter((l) => l.fit === true).length, p.filter((l) => l.fit === true).length)); } else unavailable.push(\"leads\");\n\nconst orders = rows(\"Orders\")?.filter((r) => r.created_at);\nif (orders) { const [c, p] = split(orders, \"created_at\"); const sum = (l) => Math.round(l.reduce((s, o) => s + Number(o.total ?? 0), 0)); out.push(metric(\"Orders\", c.length, p.length)); out.push(metric(\"Revenue\", sum(c), sum(p))); } else unavailable.push(\"orders\");\n\nconst support = rows(\"Support\")?.filter((r) => r.at);\nif (support) { const [c, p] = split(support, \"at\"); const rate = (l) => (l.length ? Math.round((l.filter((s) => s.answered).length / l.length) * 100) : 0); out.push(metric(\"Support conversations\", c.length, p.length)); out.push(metric(\"Answered by the agent\", rate(c), rate(p), \"%\")); } else unavailable.push(\"support\");\n\nconst traffic = $(\"Site traffic\").first()?.json?.result?.[0]?.data;\nif (Array.isArray(traffic) && traffic.length >= 14) { const s = (a) => a.reduce((x, y) => x + y, 0); out.push(metric(\"Site visits\", s(traffic.slice(-7)), s(traffic.slice(-14, -7)))); } else unavailable.push(\"site traffic\");\n\nconst lines = out.map((m) => m.label + \": \" + m.now + m.unit + (m.change === null ? \"\" : \" (\" + (m.change >= 0 ? \"+\" : \"\") + m.change + \"% on last week)\"));\nreturn [{ json: { metrics: out, unavailable, table: lines.join(\"\\n\"), week_of: new Date(weekAgo).toISOString().slice(0, 10) } }];"
+      }
+    },
+    {
+      "id": "b2f0ee23-8279-4608-ac96-f15e51b2cf10",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Write the summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  messages: [\n    { role: \"system\", content: \"[task:summarise] Write a four-sentence summary of this week's numbers for a business owner. Say what moved most and what deserves attention. Use only the numbers given. Do not invent causes.\" },\n    { role: \"user\", content: $json.table + ($json.unavailable.length ? '\\nUnavailable this week: ' + $json.unavailable.join(', ') : '') }\n  ]\n}) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "99be993a-d78a-4dcf-a48f-4a5405f08564",
+      "position": [
+        1680,
+        0
+      ],
+      "name": "Compose",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const w = $(\"Work out the week\").first().json;\nconst summary = $input.first().json.choices?.[0]?.message?.content ?? \"(The written summary is unavailable this week. The numbers are below.)\";\nconst note = w.unavailable.length ? \"\\n\\nNot included, because the source did not answer: \" + w.unavailable.join(\", \") + \".\" : \"\";\nreturn [{ json: { subject: \"Week of \" + w.week_of, text: summary + \"\\n\\n\" + w.table + note } }];"
+      }
+    },
+    {
+      "id": "0043e746-634d-4b10-ad1a-0762ad46d5e4",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Post to the channel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: '#weekly', text: '*' + $json.subject + '*\\n' + $json.text }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "3dc25152-556c-4195-a8f4-3cf8314a708e",
+      "position": [
+        2160,
+        0
+      ],
+      "name": "Email the owner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: 'owner@example.com', subject: $('Compose').first().json.subject, text: $('Compose').first().json.text }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "986b4855-5540-4b83-aa75-8c9939ef8d1f",
+      "position": [
+        2400,
+        0
+      ],
+      "name": "Check in",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/heartbeats",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ 'eq.weekly-digest' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ last_seen: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Monday 08:30": {
+      "main": [
+        [
+          {
+            "node": "Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leads": {
+      "main": [
+        [
+          {
+            "node": "Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orders": {
+      "main": [
+        [
+          {
+            "node": "Support",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Support": {
+      "main": [
+        [
+          {
+            "node": "Site traffic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Site traffic": {
+      "main": [
+        [
+          {
+            "node": "Work out the week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Work out the week": {
+      "main": [
+        [
+          {
+            "node": "Write the summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the summary": {
+      "main": [
+        [
+          {
+            "node": "Compose",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose": {
+      "main": [
+        [
+          {
+            "node": "Post to the channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to the channel": {
+      "main": [
+        [
+          {
+            "node": "Email the owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email the owner": {
+      "main": [
+        [
+          {
+            "node": "Check in",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

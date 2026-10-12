@@ -1,0 +1,446 @@
+{
+  "name": "Payments · Daily reconciliation",
+  "nodes": [
+    {
+      "id": "e43a88b1-c1da-468d-a0ea-8790748dbf5a",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Payments · Daily reconciliation\nEach morning, compares yesterday's charges at the processor with the ledger and reports anything on one side and not the other.\n\n**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, PAYMENTS_API_KEY, PAYMENTS_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
+      }
+    },
+    {
+      "id": "7d600885-f91c-4cc3-af82-fbd7ba4b927c",
+      "position": [
+        0,
+        0
+      ],
+      "name": "06:00 daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c5917dc6-e8fc-478c-aee8-ae164a00f7dd",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Processor charges",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.PAYMENTS_BASE_URL }}/charges",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.PAYMENTS_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "created_gte",
+              "value": "={{ $now.minus({ days: 1 }).startOf('day').toSeconds() }}"
+            },
+            {
+              "name": "created_lt",
+              "value": "={{ $now.startOf('day').toSeconds() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "632b65b5-be2c-4acd-a058-db7eae07c639",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Ledger lines",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/ledger",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "kind",
+              "value": "={{ 'eq.payment' }}"
+            },
+            {
+              "name": "at",
+              "value": "={{ 'gte.' + $now.minus({ days: 1 }).startOf('day').toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "id": "6c6469bd-515b-4991-a575-2aa0cf2cd9df",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Compare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const charges = ($(\"Processor charges\").first().json.data ?? []).filter((c) => c.paid !== false);\nconst ledger = $input.all().map((i) => i.json).filter((l) => l.charge_id);\nconst byCharge = new Map(ledger.map((l) => [l.charge_id, l]));\nconst seen = new Set();\nconst issues = [];\nfor (const c of charges) {\n  const l = byCharge.get(c.id);\n  seen.add(c.id);\n  if (!l) issues.push({ charge_id: c.id, kind: \"missing_in_ledger\", processor_amount: c.amount / 100 });\n  else if (Math.round(l.amount * 100) !== c.amount) issues.push({ charge_id: c.id, kind: \"amount_mismatch\", processor_amount: c.amount / 100, ledger_amount: l.amount });\n}\nfor (const l of ledger) if (!seen.has(l.charge_id)) issues.push({ charge_id: l.charge_id, kind: \"missing_at_processor\", ledger_amount: l.amount });\nreturn [{ json: { checked: charges.length, issues, clean: issues.length === 0, total: charges.reduce((s, c) => s + c.amount, 0) / 100 } }];"
+      }
+    },
+    {
+      "id": "1ac26b73-71a4-402f-a332-4804406f7c4f",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Books agree?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6ad9315d-1aa2-4567-a265-0861ce46dcbb",
+              "leftValue": "={{ $json.clean }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5e722fa8-bb0e-49f9-a03c-dc00632cb69c",
+      "position": [
+        1200,
+        -90
+      ],
+      "name": "Post all clear",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: '#finance', text: ':white_check_mark: Reconciled ' + $json.checked + ' charges, ' + $json.total + ' total. Ledger matches.' }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "f651870d-db74-4847-ae11-2d8699a41978",
+      "position": [
+        1200,
+        90
+      ],
+      "name": "One item per issue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.first().json.issues.map((json) => ({ json: { ...json, found_at: new Date().toISOString(), status: \"open\" } }));"
+      }
+    },
+    {
+      "id": "5aec6bc4-13fd-4e1a-a9d4-15b8d2ece623",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Record the issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/reconciliation_issues",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "bc5376cf-8aa8-4c91-a159-fb684999e867",
+      "position": [
+        1680,
+        0
+      ],
+      "name": "Mismatch message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const r = $(\"Compare\").first().json;\nreturn [{ json: { channel: \"#finance\", level: \"critical\", text: r.issues.length + \" of \" + r.checked + \" charges do not match the ledger: \" + r.issues.map((i) => i.charge_id + \" (\" + i.kind + \")\").join(\", \") } }];"
+      }
+    },
+    {
+      "id": "af4a34ba-439e-4109-aba9-7dc7789a4510",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Alert finance",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "72c516a4-1e98-46a0-ac10-4f4bf0c09399",
+      "position": [
+        2160,
+        0
+      ],
+      "name": "Check in",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.DB_BASE_URL }}/heartbeats",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ 'eq.payment-reconcile' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ last_seen: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "06:00 daily": {
+      "main": [
+        [
+          {
+            "node": "Processor charges",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processor charges": {
+      "main": [
+        [
+          {
+            "node": "Ledger lines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ledger lines": {
+      "main": [
+        [
+          {
+            "node": "Compare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare": {
+      "main": [
+        [
+          {
+            "node": "Books agree?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Books agree?": {
+      "main": [
+        [
+          {
+            "node": "Post all clear",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "One item per issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post all clear": {
+      "main": [
+        [
+          {
+            "node": "Check in",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per issue": {
+      "main": [
+        [
+          {
+            "node": "Record the issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record the issue": {
+      "main": [
+        [
+          {
+            "node": "Mismatch message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mismatch message": {
+      "main": [
+        [
+          {
+            "node": "Alert finance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert finance": {
+      "main": [
+        [
+          {
+            "node": "Check in",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

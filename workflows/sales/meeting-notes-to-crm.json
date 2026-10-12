@@ -1,0 +1,495 @@
+{
+  "name": "CRM · Meeting notes and next steps",
+  "nodes": [
+    {
+      "id": "d9c05372-4544-44d9-a9cc-9c718f98e3ff",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## CRM · Meeting notes and next steps\nTurns a call transcript into a CRM note and dated follow-up tasks, and asks a person when it cannot tell who owns a task.\n\n**Needs:** CRM_API_KEY, CRM_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
+      }
+    },
+    {
+      "id": "89d5d99b-d1a8-4be2-acb3-2a0c5160c8f2",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Transcript ready",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "transcript-ready",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "55e84f32-124e-485e-a0ac-1f0e24ded91a"
+    },
+    {
+      "id": "4ed514a7-68d5-4a4e-aba2-eb3705ee0a9b",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Read the transcript",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body ?? {};\nconst text = String(b.transcript ?? \"\");\nreturn [{ json: { deal_id: String(b.deal_id ?? \"\"), title: b.title ?? \"Call\", transcript: text.slice(0, 24000), too_short: text.split(/\\s+/).length < 40 } }];"
+      }
+    },
+    {
+      "id": "38b511b8-9151-4494-afdb-05daa8bbed60",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Enough to summarise?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c983206a-777b-4b15-abc2-569539a8b8f4",
+              "leftValue": "={{ !$json.too_short }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b7667011-3f07-4670-a9b3-91645c7912fa",
+      "position": [
+        720,
+        -90
+      ],
+      "name": "Extract",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: \"[task:meeting-notes] From this call transcript reply with JSON: { summary: string (max 120 words), decisions: string[], actions: [{ task: string, owner: string|null, due: 'YYYY-MM-DD'|null }] }. Only include what was actually said.\" },\n    { role: \"user\", content: $json.transcript }\n  ]\n}) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "a31fe1e3-10bc-4f72-a5ab-0a5bd295c83a",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Read the notes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const before = $(\"Read the transcript\").all();\nconst out = [];\nfor (const [i, item] of $input.all().entries()) {\n  let reply = {\"summary\":\"\",\"decisions\":[],\"actions\":[]};\n  let parse_error = false;\n  try {\n    reply = JSON.parse(item.json.choices[0].message.content);\n  } catch (e) {\n    parse_error = true;\n  }\n  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "60ceff31-c889-4a0c-af71-0b80b800d015",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "Readable?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "79f7e742-64c9-4856-a8e4-9766e817be53",
+              "leftValue": "={{ !$json.parse_error && $json.summary.length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d39c264b-f7d0-43a8-a2e1-01ab7848ca1c",
+      "position": [
+        1440,
+        -90
+      ],
+      "name": "Add the CRM note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/crm/v3/objects/notes",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ deal_id: $json.deal_id, body: $json.summary + '\\n\\nDecisions:\\n' + ($json.decisions ?? []).map(d => '- ' + d).join('\\n') }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "349fdf55-f0a1-4531-a182-fcc3961c229d",
+      "position": [
+        1680,
+        -90
+      ],
+      "name": "One item per action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const n = $(\"Readable?\").first().json;\nreturn (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_id: n.deal_id, task: a.task, owner: a.owner ?? null, due: a.due ?? null } }));"
+      }
+    },
+    {
+      "id": "f0d17471-7e3f-4050-a0b2-0fa9abdfacc6",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Has an owner?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "379fd8a5-a6bf-48db-a1fe-e6fa6cc70941",
+              "leftValue": "={{ !!$json.owner }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "755e768e-965a-4deb-a5ff-f00904cf9125",
+      "position": [
+        2160,
+        -90
+      ],
+      "name": "Create the task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/crm/v3/objects/tasks",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ deal_id: $json.deal_id, subject: $json.task, owner: $json.owner, due: $json.due }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "ac3c0469-71fd-410e-ae46-f48a618093f7",
+      "position": [
+        2160,
+        90
+      ],
+      "name": "Unowned message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return [{ json: { level: \"warn\", text: $input.all().length + \" action(s) from the call have no clear owner: \" + $input.all().map((i) => i.json.task).join(\"; \") } }];"
+      }
+    },
+    {
+      "id": "fc89948a-14d3-421d-abb9-e40604311a8d",
+      "position": [
+        2400,
+        0
+      ],
+      "name": "Ask who owns them",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6061f6ba-43ec-4201-a4ce-aadc9ed24909",
+      "position": [
+        1440,
+        90
+      ],
+      "name": "Unreadable message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return [{ json: { level: \"warn\", text: \"Notes could not be extracted from \\\"\" + $(\"Read the transcript\").first().json.title + \"\\\". The transcript is attached to the deal for a manual read.\" } }];"
+      }
+    },
+    {
+      "id": "3ef2c099-2440-4a09-aa9b-d9cb64bcd115",
+      "position": [
+        1680,
+        90
+      ],
+      "name": "Flag for a manual read",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "379a765f-8821-40df-a491-92e8e494382f",
+      "position": [
+        720,
+        90
+      ],
+      "name": "Too short to summarise",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Transcript ready": {
+      "main": [
+        [
+          {
+            "node": "Read the transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the transcript": {
+      "main": [
+        [
+          {
+            "node": "Enough to summarise?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enough to summarise?": {
+      "main": [
+        [
+          {
+            "node": "Extract",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Too short to summarise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract": {
+      "main": [
+        [
+          {
+            "node": "Read the notes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the notes": {
+      "main": [
+        [
+          {
+            "node": "Readable?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Readable?": {
+      "main": [
+        [
+          {
+            "node": "Add the CRM note",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unreadable message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add the CRM note": {
+      "main": [
+        [
+          {
+            "node": "One item per action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per action": {
+      "main": [
+        [
+          {
+            "node": "Has an owner?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has an owner?": {
+      "main": [
+        [
+          {
+            "node": "Create the task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unowned message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unreadable message": {
+      "main": [
+        [
+          {
+            "node": "Flag for a manual read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unowned message": {
+      "main": [
+        [
+          {
+            "node": "Ask who owns them",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

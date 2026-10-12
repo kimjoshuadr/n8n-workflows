@@ -1,0 +1,370 @@
+{
+  "name": "Inventory · Supplier stock sync",
+  "nodes": [
+    {
+      "id": "61c149c3-46c2-4f6b-aa5c-d0c2d4ec5952",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Inventory · Supplier stock sync\nPulls the supplier's stock feed every two hours and updates the store only for products whose quantity changed, refusing a feed that looks wrong.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL, SUPPLIER_API_KEY, SUPPLIER_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
+      }
+    },
+    {
+      "id": "447e4632-3745-453f-a3f2-83bd7b5e479d",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Every 2 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "0e51cb14-7698-48f7-a7f9-0ac5229504f9",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Supplier feed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPPLIER_BASE_URL }}/stock",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SUPPLIER_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "9720d664-fa72-4670-ae31-77520b4f6081",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Last known stock",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/stock_snapshot",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "id": "3de44985-b2c5-4819-a7cb-cebef1a8d8be",
+      "position": [
+        720,
+        0
+      ],
+      "name": "What changed?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const feed = ($(\"Supplier feed\").first().json.items ?? []).filter((i) => i.sku && Number.isFinite(Number(i.quantity)));\nconst known = new Map($input.all().map((i) => i.json).filter((r) => r.sku).map((r) => [r.sku, r.quantity]));\nconst changes = feed.map((i) => ({ sku: String(i.sku), quantity: Number(i.quantity), before: known.get(String(i.sku)) ?? null })).filter((c) => c.before !== c.quantity);\nconst zeroed = changes.filter((c) => c.quantity === 0 && c.before > 0).length;\n// A feed that empties most of the catalogue at once is far more likely to be broken than true.\nconst suspicious = feed.length === 0 || (known.size >= 10 && zeroed / known.size > 0.5);\nreturn [{ json: { feed_size: feed.length, changes, suspicious, zeroed } }];"
+      }
+    },
+    {
+      "id": "43f83472-acbb-4a4d-a086-39d595c2683a",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Feed looks sane?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c79a2e39-a9ae-4123-aa69-282e42d9ed0e",
+              "leftValue": "={{ !$json.suspicious }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6d094bfd-caaf-496a-acc9-3aa3327f20e9",
+      "position": [
+        1200,
+        -90
+      ],
+      "name": "One item per change",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.first().json.changes.map((json) => ({ json }));"
+      }
+    },
+    {
+      "id": "69e1eaac-4590-4059-a49d-b85c2cb45bfc",
+      "position": [
+        1440,
+        -90
+      ],
+      "name": "Update the store",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SHOP_BASE_URL }}/inventory_levels/set",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SHOP_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ sku: $json.sku, available: $json.quantity }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "652c313e-7013-4265-acb5-944180336c23",
+      "position": [
+        1680,
+        0
+      ],
+      "name": "Update the snapshot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/stock_snapshot",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "={{ 'sku' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ sku: $('One item per change').item.json.sku, quantity: $('One item per change').item.json.quantity, at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "e8a82eec-5026-487f-aa42-b3d9e3f8fb35",
+      "position": [
+        1200,
+        90
+      ],
+      "name": "Refused message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nreturn [{ json: { level: \"critical\", text: \"Supplier stock feed refused: \" + (r.feed_size === 0 ? \"it was empty\" : r.zeroed + \" products went to zero at once\") + \". The store was not changed. Check the feed.\" } }];"
+      }
+    },
+    {
+      "id": "3b1cb19e-2f5b-4e5d-ad1c-f494891c8d60",
+      "position": [
+        1440,
+        90
+      ],
+      "name": "Alert",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Every 2 hours": {
+      "main": [
+        [
+          {
+            "node": "Supplier feed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supplier feed": {
+      "main": [
+        [
+          {
+            "node": "Last known stock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last known stock": {
+      "main": [
+        [
+          {
+            "node": "What changed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "What changed?": {
+      "main": [
+        [
+          {
+            "node": "Feed looks sane?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feed looks sane?": {
+      "main": [
+        [
+          {
+            "node": "One item per change",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refused message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per change": {
+      "main": [
+        [
+          {
+            "node": "Update the store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update the store": {
+      "main": [
+        [
+          {
+            "node": "Update the snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refused message": {
+      "main": [
+        [
+          {
+            "node": "Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

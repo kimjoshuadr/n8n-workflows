@@ -1,0 +1,393 @@
+{
+  "name": "Finance · Supplier invoice intake",
+  "nodes": [
+    {
+      "id": "b82bc863-c3b5-4db8-aada-a4e84786912b",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Finance · Supplier invoice intake\nReads a supplier invoice with a model, checks the arithmetic and the duplicate history itself, and files it or sends it for review.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
+      }
+    },
+    {
+      "id": "2d441b15-b385-429f-aa5b-7bed507d0641",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Invoice received",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "invoice-received",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "c031b77e-c01d-4e46-aaaf-47b5aae59510"
+    },
+    {
+      "id": "03e231f0-d86d-4ba5-a2de-0b0b5a10f8bb",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Read the upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body ?? {};\nreturn [{ json: { file_url: b.file_url ?? null, text: String(b.text ?? \"\").slice(0, 12000), received_from: b.from ?? null } }];"
+      }
+    },
+    {
+      "id": "be6efcea-4980-4068-ab30-c0b58ec2b4e2",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Extract the fields",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: \"[task:extract] Extract from this supplier invoice. Reply with JSON: { vendor: string, invoice_number: string, total: number, currency: string, due_date: 'YYYY-MM-DD', confidence: 0-1 }. Use null for anything not present. Do not guess.\" },\n    { role: \"user\", content: $json.text }\n  ]\n}) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "d19b84c8-153d-4c12-a0ec-264645de9250",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Read the fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const before = $(\"Read the upload\").all();\nconst out = [];\nfor (const [i, item] of $input.all().entries()) {\n  let reply = {\"vendor\":null,\"invoice_number\":null,\"total\":null,\"confidence\":0};\n  let parse_error = false;\n  try {\n    reply = JSON.parse(item.json.choices[0].message.content);\n  } catch (e) {\n    parse_error = true;\n  }\n  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "92aa97fc-c57f-4b53-ae7f-ce0206030bf0",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Seen this invoice?",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/supplier_invoices",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "vendor",
+              "value": "={{ 'eq.' + $json.vendor }}"
+            },
+            {
+              "name": "invoice_number",
+              "value": "={{ 'eq.' + $json.invoice_number }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "10a82e1d-ac43-4aa1-ae61-c8eff25bac77",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "Check it",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const f = $(\"Read the fields\").first().json;\nconst duplicate = $input.all().some((i) => i.json.invoice_number);\nconst problems = [];\nif (f.parse_error) problems.push(\"the model reply could not be read\");\nif (!f.vendor || !f.invoice_number) problems.push(\"vendor or invoice number missing\");\nif (typeof f.total !== \"number\" || !(f.total > 0)) problems.push(\"total is missing or not positive\");\nif (f.due_date && Number.isNaN(Date.parse(f.due_date))) problems.push(\"due date is not a date\");\nif ((f.confidence ?? 0) < 0.8) problems.push(\"low confidence (\" + (f.confidence ?? 0) + \")\");\nif (duplicate) problems.push(\"an invoice with this number from this vendor already exists\");\nreturn [{ json: { ...f, duplicate, problems, ok: problems.length === 0 } }];"
+      }
+    },
+    {
+      "id": "7ca9ce37-ace8-4cee-aeb4-4e3144e09c43",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Clean?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f9865d9d-1d89-460c-a60d-10222963f4e9",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "cd45c33b-3b28-49ba-ae08-c9d3cc192e7f",
+      "position": [
+        1680,
+        -90
+      ],
+      "name": "File it",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/supplier_invoices",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ vendor: $json.vendor, invoice_number: $json.invoice_number, total: $json.total, currency: $json.currency, due_date: $json.due_date, file_url: $json.file_url, status: 'awaiting_payment', at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "c799b624-8903-400f-a667-8b17653a9225",
+      "position": [
+        1680,
+        90
+      ],
+      "name": "Queue for review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/invoice_review",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ file_url: $json.file_url, extracted: { vendor: $json.vendor, invoice_number: $json.invoice_number, total: $json.total }, problems: $json.problems, at: $now.toISO() }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "06b8e197-286b-4745-ae65-385155019379",
+      "position": [
+        1920,
+        0
+      ],
+      "name": "Review message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const f = $(\"Clean?\").first().json;\nreturn [{ json: { channel: \"#finance\", level: \"warn\", text: \"An invoice\" + (f.vendor ? \" from \" + f.vendor : \"\") + \" needs a manual check: \" + f.problems.join(\"; \") + \".\" } }];"
+      }
+    },
+    {
+      "id": "6d3870fe-3a81-410a-a75d-811f7a71ab28",
+      "position": [
+        2160,
+        0
+      ],
+      "name": "Tell finance",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Invoice received": {
+      "main": [
+        [
+          {
+            "node": "Read the upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the upload": {
+      "main": [
+        [
+          {
+            "node": "Extract the fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract the fields": {
+      "main": [
+        [
+          {
+            "node": "Read the fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the fields": {
+      "main": [
+        [
+          {
+            "node": "Seen this invoice?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seen this invoice?": {
+      "main": [
+        [
+          {
+            "node": "Check it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check it": {
+      "main": [
+        [
+          {
+            "node": "Clean?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean?": {
+      "main": [
+        [
+          {
+            "node": "File it",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Queue for review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue for review": {
+      "main": [
+        [
+          {
+            "node": "Review message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review message": {
+      "main": [
+        [
+          {
+            "node": "Tell finance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

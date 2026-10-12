@@ -1,0 +1,234 @@
+{
+  "name": "Block · Limit actions per key per hour",
+  "nodes": [
+    {
+      "id": "ed49f3e2-6332-4b97-ace8-778814ba3891",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Limit actions per key per hour\nAnswers whether a key (a user, an IP, a customer) is still under its hourly limit, and counts the attempt.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
+      }
+    },
+    {
+      "id": "34f3edb1-256a-48bb-a696-3d6ab172a696",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "50c28140-dbf5-4e8a-aafe-fded0ba360f0",
+      "position": [
+        240,
+        0
+      ],
+      "name": "This hour's bucket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => ({ json: { ...i.json, limit: i.json.limit ?? 5, bucket: i.json.key + \":\" + new Date().toISOString().slice(0, 13) } }));"
+      }
+    },
+    {
+      "id": "5589a8f5-8015-481b-af5e-180d6874f8d5",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Read the count",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.DB_BASE_URL }}/throttle",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "bucket",
+              "value": "={{ 'eq.' + $json.bucket }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "476bcae2-c494-44ba-ae25-066f7ad5f163",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Decide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const req = $(\"This hour's bucket\").first().json;\nconst count = Number($input.first().json.count ?? 0);\nreturn [{ json: { ...req, count: count + 1, allowed: count < req.limit } }];"
+      }
+    },
+    {
+      "id": "b12cd4bf-990b-42d7-a31d-22fe96b96da7",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Count the attempt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/throttle",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "={{ 'bucket' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ bucket: $json.bucket, count: $json.count }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "7c828451-7e60-4ebc-ae4f-59b487b09bde",
+      "position": [
+        1200,
+        0
+      ],
+      "name": "Answer",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "410f3ca5-db24-4aad-a779-0f07feb9b8dd",
+              "name": "allowed",
+              "value": "={{ $('Decide').first().json.allowed }}",
+              "type": "string"
+            },
+            {
+              "id": "caa55494-501a-40b0-a115-c03aaf309557",
+              "name": "count",
+              "value": "={{ $('Decide').first().json.count }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "This hour's bucket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "This hour's bucket": {
+      "main": [
+        [
+          {
+            "node": "Read the count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the count": {
+      "main": [
+        [
+          {
+            "node": "Decide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide": {
+      "main": [
+        [
+          {
+            "node": "Count the attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count the attempt": {
+      "main": [
+        [
+          {
+            "node": "Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

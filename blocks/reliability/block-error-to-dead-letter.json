@@ -1,0 +1,167 @@
+{
+  "name": "Block · Failed call to dead letter",
+  "nodes": [
+    {
+      "id": "b843b00e-d3c8-4e7f-a7fa-58f6506f91b8",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Failed call to dead letter\nThe pattern for any write that must not be lost: try, and if it still fails after retries, park the payload.\n\n**Needs:** CRM_API_KEY, CRM_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
+      }
+    },
+    {
+      "id": "f926bffd-0efb-47d3-a188-8e3e832bf0aa",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "8994304c-1331-49ba-a684-cb91f6605386",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Write",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/records",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "c680c7f1-b0b3-4157-aa36-c6641f2ae8da",
+      "position": [
+        480,
+        -90
+      ],
+      "name": "Written",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ef638737-2cb8-4035-a720-a485e8da0920",
+              "name": "written",
+              "value": "={{ true }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "de58dd76-675d-41bf-a078-0e3a638df254",
+      "position": [
+        480,
+        90
+      ],
+      "name": "Wrap",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return [{ json: { source: \"block-error-to-dead-letter\", reason: \"CRM write failed after retries\", payload: $(\"When called\").first().json } }];"
+      }
+    },
+    {
+      "id": "488d432c-1910-4073-adf6-37c6fc4262d1",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Park it",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:dead-letter__"
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write": {
+      "main": [
+        [
+          {
+            "node": "Written",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wrap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wrap": {
+      "main": [
+        [
+          {
+            "node": "Park it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

@@ -1,0 +1,446 @@
+{
+  "name": "Community ops · Member onboarding",
+  "nodes": [
+    {
+      "id": "5272c6f9-c9a3-4a27-a309-8982c71da519",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Community ops · Member onboarding\nWelcomes a new member, gives them the starter role, records them, and flags accounts created minutes ago for a moderator to look at.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/community-ops`"
+      }
+    },
+    {
+      "id": "e059afcd-3601-4e69-a3d7-22b8df581ab1",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Member joined",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "member-joined",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "6e6bf0fc-804f-4050-a9da-a756b5aef125"
+    },
+    {
+      "id": "4e0dec90-ac80-41e2-aae3-0d4a1ecea46e",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Read the member",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const m = $input.first().json.body ?? {};\nconst created = m.user?.created_at ? new Date(m.user.created_at).getTime() : null;\nconst ageDays = created ? (Date.now() - created) / 864e5 : null;\nreturn [{ json: { user_id: String(m.user?.id), username: m.user?.username ?? \"new member\", guild_id: String(m.guild_id), bot: !!m.user?.bot, account_age_days: ageDays === null ? null : Math.floor(ageDays), suspicious: ageDays !== null && ageDays < 1, scope: \"member-joined\", key: m.guild_id + \":\" + m.user?.id } }];"
+      }
+    },
+    {
+      "id": "95ec3f75-8384-49d8-ad60-1bbc0cc3124c",
+      "position": [
+        480,
+        0
+      ],
+      "name": "A person?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "125b1fb0-66b3-4459-ae26-eeb5531ab86c",
+              "leftValue": "={{ !$json.bot }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "be2489a8-0193-46f5-a5fb-d07430bde7d3",
+      "position": [
+        720,
+        -90
+      ],
+      "name": "Seen before?",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:idempotency-guard__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d7a1aae2-1f8e-4e2c-a079-20ff98850948",
+      "position": [
+        960,
+        0
+      ],
+      "name": "First join?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a50052a4-c487-47a8-a08d-359ddeb5e712",
+              "leftValue": "={{ !$json.duplicate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "536eb07d-1ee8-4cbd-a0a3-203e85d5e5c5",
+      "position": [
+        1200,
+        -90
+      ],
+      "name": "Save the member",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/members",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ user_id: $json.user_id, username: $json.username, guild_id: $json.guild_id, joined_at: $now.toISO(), suspicious: $json.suspicious }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "fdae915b-fb3a-4004-a837-e8f949ed2232",
+      "position": [
+        1440,
+        0
+      ],
+      "name": "Brand new account?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5b17c6cc-bb28-4d4b-a1db-2e82e1ad31d0",
+              "leftValue": "={{ $('First join?').first().json.suspicious }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b12e7464-4f69-488e-a292-1c3b581452fc",
+      "position": [
+        1680,
+        -90
+      ],
+      "name": "Review message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const m = $(\"First join?\").first().json;\nreturn [{ json: { channel: \"#mods\", level: \"warn\", text: m.username + \" joined with an account under a day old. Held without a role until someone checks.\" } }];"
+      }
+    },
+    {
+      "id": "425e4729-319a-47e8-a6b2-aed0b4428eb9",
+      "position": [
+        1920,
+        -90
+      ],
+      "name": "Ask a moderator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "4c0f6157-2935-4fea-ac74-bebd537606a0",
+      "position": [
+        1680,
+        90
+      ],
+      "name": "Give starter role",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_BASE_URL }}/guilds/roles/assign",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DISCORD_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ guild_id: $('First join?').first().json.guild_id, user_id: $('First join?').first().json.user_id, role: 'member' }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "99234657-a229-41b2-a4fa-81f0ea228f12",
+      "position": [
+        1920,
+        90
+      ],
+      "name": "Welcome them",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_BASE_URL }}/channels/welcome/messages",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DISCORD_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: 'Welcome <@' + $('First join?').first().json.user_id + '>! Start in #introductions, and read #rules before posting.' }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "5e0c8e26-6be8-4648-a7bc-de87547925fb",
+      "position": [
+        720,
+        90
+      ],
+      "name": "Ignore bots",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "dee8a18f-0d90-45db-a501-62c0fecef08f",
+      "position": [
+        1200,
+        90
+      ],
+      "name": "Rejoined",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Member joined": {
+      "main": [
+        [
+          {
+            "node": "Read the member",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the member": {
+      "main": [
+        [
+          {
+            "node": "A person?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "A person?": {
+      "main": [
+        [
+          {
+            "node": "Seen before?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignore bots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seen before?": {
+      "main": [
+        [
+          {
+            "node": "First join?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First join?": {
+      "main": [
+        [
+          {
+            "node": "Save the member",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rejoined",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the member": {
+      "main": [
+        [
+          {
+            "node": "Brand new account?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brand new account?": {
+      "main": [
+        [
+          {
+            "node": "Review message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Give starter role",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review message": {
+      "main": [
+        [
+          {
+            "node": "Ask a moderator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Give starter role": {
+      "main": [
+        [
+          {
+            "node": "Welcome them",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

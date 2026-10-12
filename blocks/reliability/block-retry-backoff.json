@@ -1,0 +1,298 @@
+{
+  "name": "Block · Retry with growing waits",
+  "nodes": [
+    {
+      "id": "34dea2df-0ab1-4b70-a8ac-24a09f6d2a18",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -390
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Retry with growing waits\nCalls an address up to four times, waiting longer each time, and reports clearly whether it finally worked.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
+      }
+    },
+    {
+      "id": "c524340f-bc14-4db8-a123-97eff6b962e4",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "569708b4-c93f-4fc8-a8a1-d06a965f239c",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Begin",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f2dfff98-e961-45c1-aa07-b8a7b3fa7ae9",
+              "name": "url",
+              "value": "={{ $json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "278f0b2d-1256-46f5-a2b3-70c309c7e453",
+              "name": "payload",
+              "value": "={{ JSON.stringify($json.payload ?? {}) }}",
+              "type": "string"
+            },
+            {
+              "id": "7a693ed8-e014-4b83-ab26-fae1c5d20d1a",
+              "name": "attempt",
+              "value": "={{ 1 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "3cc0b145-84f2-40a8-a6c0-2017b12a23de",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Try",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "options": {
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify(JSON.parse($json.payload)) }}"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "0e387f0a-d9fb-472d-ac51-aeed0248d14c",
+      "position": [
+        720,
+        -90
+      ],
+      "name": "Worked",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ce05eb7e-217c-455d-a958-079615048771",
+              "name": "ok",
+              "value": "={{ true }}",
+              "type": "string"
+            },
+            {
+              "id": "8640279f-29a6-4574-ae9d-6050a176461c",
+              "name": "attempts",
+              "value": "={{ $('Again?').isExecuted ? $('Again?').last().json.attempt : 1 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "1d5f0688-07b8-4ecd-a0ba-851817c3f923",
+      "position": [
+        720,
+        90
+      ],
+      "name": "Again?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const prev = $(\"Begin\").first().json;\nconst attempt = $runIndex + 2;\nreturn [{ json: { url: prev.url, payload: prev.payload, attempt, give_up: attempt > 4, wait_seconds: Math.min(2 ** (attempt - 1), 30) } }];"
+      }
+    },
+    {
+      "id": "b530af44-cdf7-42ff-a3e9-e5f9eb2f2070",
+      "position": [
+        960,
+        0
+      ],
+      "name": "Attempts left?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "468ddceb-ac8a-43c4-a028-32cf22d7bc55",
+              "leftValue": "={{ !$json.give_up }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a6bd8d77-c15a-4bfd-a13f-66a7d53458d4",
+      "position": [
+        1200,
+        -90
+      ],
+      "name": "Back off",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "webhookId": "26c1b109-5d67-46ed-a7cd-099d9a078077"
+    },
+    {
+      "id": "cc232b8c-c5d2-4e8b-a6b6-c481bc556fee",
+      "position": [
+        1200,
+        90
+      ],
+      "name": "Gave up",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2b4d8a86-1e25-49f8-a5a5-bc1633254161",
+              "name": "ok",
+              "value": "={{ false }}",
+              "type": "string"
+            },
+            {
+              "id": "4dfd2692-2648-4fba-a128-b2db388eea60",
+              "name": "attempts",
+              "value": "={{ 4 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Begin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Begin": {
+      "main": [
+        [
+          {
+            "node": "Try",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Try": {
+      "main": [
+        [
+          {
+            "node": "Worked",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Again?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Again?": {
+      "main": [
+        [
+          {
+            "node": "Attempts left?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attempts left?": {
+      "main": [
+        [
+          {
+            "node": "Back off",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gave up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Back off": {
+      "main": [
+        [
+          {
+            "node": "Try",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

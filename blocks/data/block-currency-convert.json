@@ -1,0 +1,108 @@
+{
+  "name": "Block · Convert a currency amount",
+  "nodes": [
+    {
+      "id": "af6c0d6b-1356-4993-a26a-4726d9bcc5f0",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Block · Convert a currency amount\nConverts an amount with today's rate, rounds like money, and says so when the rate could not be fetched instead of returning a wrong number.\n\n**Needs:** RATES_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+      }
+    },
+    {
+      "id": "ebe25fb7-4a24-45b5-ac09-7d05b40a2dcc",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "b8eae34c-eba4-46dd-a24f-bfcfa705a611",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Today's rate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.RATES_BASE_URL }}/latest",
+        "options": {
+          "timeout": 15000
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "from",
+              "value": "={{ $json.from }}"
+            },
+            {
+              "name": "to",
+              "value": "={{ $json.to }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f0da4299-28e6-4bb4-af0c-d9a913e8d62b",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Convert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const req = $(\"When called\").first().json;\nconst rate = $input.first().json.rates?.[req.to];\nif (typeof rate !== \"number\") return [{ json: { ...req, converted: null, ok: false, reason: \"No rate available for \" + req.from + \" to \" + req.to } }];\nreturn [{ json: { ...req, rate, converted: Math.round(req.amount * rate * 100) / 100, ok: true } }];"
+      }
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Today's rate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Today's rate": {
+      "main": [
+        [
+          {
+            "node": "Convert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "name": "Reliability · Dead letter",
+  "nodes": [
+    {
+      "id": "cba9137a-5af3-48fd-ab6e-522f522b7250",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 220,
+        "content": "## Reliability · Dead letter\nKeeps the payload of work that could not be finished, with the reason, so nothing is lost when a downstream system is down.\n\n**Needs:** ALERT_CHANNEL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
+      }
+    },
+    {
+      "id": "51b1753e-88e4-47c4-ad51-2bc7b034ea35",
+      "position": [
+        0,
+        0
+      ],
+      "name": "When called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "41727648-c0ea-4b8e-a9de-b466b2fd9545",
+      "position": [
+        240,
+        0
+      ],
+      "name": "Wrap the payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => ({ json: {\n  source: item.json.source ?? \"unknown\",\n  replay_url: item.json.replay_url ?? null,\n  reason: String(item.json.reason ?? \"unspecified\").slice(0, 300),\n  payload: item.json.payload ?? {},\n  status: \"pending\",\n  attempts: 0,\n  parked_at: new Date().toISOString(),\n} }));"
+      }
+    },
+    {
+      "id": "f865655c-5809-4329-a2a5-7f7061fbc9b2",
+      "position": [
+        480,
+        0
+      ],
+      "name": "Park it",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DB_BASE_URL }}/dead_letters",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "a3568f07-eb3f-40ed-a9fe-f1ddbb1d0f23",
+      "position": [
+        720,
+        0
+      ],
+      "name": "Say so",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $env.ALERT_CHANNEL, text: ':inbox_tray: Parked 1 item from ' + $('Wrap the payload').item.json.source + ': ' + $('Wrap the payload').item.json.reason }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "When called": {
+      "main": [
+        [
+          {
+            "node": "Wrap the payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wrap the payload": {
+      "main": [
+        [
+          {
+            "node": "Park it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Park it": {
+      "main": [
+        [
+          {
+            "node": "Say so",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}
