@@ -32,16 +32,24 @@ const isTrigger = (n) => /trigger$/i.test(n.type.split(".").pop());
 function testCopy(def, entry) {
   const json = structuredClone(def.json);
   const triggers = json.nodes.filter(isTrigger);
-  const chosen = entry ? triggers.find((n) => n.name === entry) : triggers[0];
+  const hooks = json.nodes.filter((n) => n.type.endsWith(".webhook"));
+  // A webhook entry is kept as it is and called directly; any other trigger is fed through a test webhook.
+  const direct = entry ? hooks.find((n) => n.name === entry) : null;
+  const chosen = direct ?? (entry ? triggers.find((n) => n.name === entry) : triggers[0]);
   if (!chosen) throw new Error(`${def.id}: no trigger named "${entry}"`);
   const tag = `${def.id}${entry ? `-${entry.toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : ""}`;
   json.nodes = json.nodes.map((n) => {
+    if (n === direct) return { ...n, webhookId: `test-${tag}`, parameters: { ...n.parameters, path: `test-${tag}` } };
+    // Another way in that this case does not use: give it a path nothing else has.
+    if (n.type.endsWith(".webhook")) return { ...n, webhookId: `idle-${tag}-${n.id.slice(0, 6)}`, parameters: { ...n.parameters, path: `idle-${tag}-${n.id.slice(0, 6)}` } };
     if (n === chosen) return { id: n.id, name: n.name, type: "n8n-nodes-base.code", typeVersion: 2, position: n.position, parameters: { jsCode: "return ($input.first().json.body.items ?? [{}]).map((json) => ({ json }));" } };
     if (isTrigger(n)) return { id: n.id, name: n.name, type: "n8n-nodes-base.manualTrigger", typeVersion: 1, position: n.position, parameters: {} };
     // Waits are part of the design, not of the test.
     if (n.type.endsWith(".wait")) return { ...n, parameters: { amount: 1, unit: "seconds" } };
     return n;
   });
+  json.name = `[test] ${json.name}${entry ? ` (${entry})` : ""}`;
+  if (direct) return { json, path: `test-${tag}`, method: direct.parameters.httpMethod, direct: true };
   json.nodes.push({
     id: `${chosen.id.slice(0, -4)}0000`,
     name: "Test entry",
@@ -52,7 +60,6 @@ function testCopy(def, entry) {
     parameters: { httpMethod: "POST", path: `test-${tag}`, responseMode: "onReceived", options: {} },
   });
   json.connections["Test entry"] = { main: [[{ node: chosen.name, type: "main", index: 0 }]] };
-  json.name = `[test] ${json.name}${entry ? ` (${entry})` : ""}`;
   return { json, path: `test-${tag}` };
 }
 
@@ -229,12 +236,14 @@ for (const def of defs.filter((d) => !filter || d.id.includes(filter))) {
       const hook = def.json.nodes.find((n) => n.type.endsWith(".webhook")).parameters;
       return { id: ids[def.id], path: hook.path, method: hook.httpMethod, direct: true };
     }
-    const key = c.entry ?? "";
+    // A case with a request and no named entry comes in by the workflow's webhook.
+    const entry = c.entry ?? (c.request ? def.json.nodes.find((n) => n.type.endsWith(".webhook"))?.name : undefined);
+    const key = entry ?? "";
     if (!copies[key]) {
-      const copy = testCopy(def, c.entry);
+      const copy = testCopy(def, entry);
       const made = await n8n("POST", "/workflows", fill(copy.json, ids));
       await n8n("POST", `/workflows/${made.id}/activate`);
-      copies[key] = { id: made.id, path: copy.path };
+      copies[key] = { id: made.id, path: copy.path, method: copy.method, direct: copy.direct };
     }
     return copies[key];
   };

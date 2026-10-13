@@ -1,0 +1,3077 @@
+{
+  "name": "AI content studio · Research to published, voiced and shared",
+  "nodes": [
+    {
+      "id": "ca8044c5-8ef2-43a5-a41b-223998778a92",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -220
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 230,
+        "content": "## AI content studio · Research to published, voiced and shared\nSeven agents take a topic from research to a fact-checked, optimised draft. A person approves it in Slack, then it is published to WordPress with a cover image and an ElevenLabs voice-over, shared to LinkedIn, X and Facebook, and its results in PostHog become next week's topics.\n\n**Platforms:** Supabase, SerpAPI, Claude, Pinecone, OpenAI, Slack, WordPress, ElevenLabs, LinkedIn, X, Facebook, PostHog\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/ai-content-studio`"
+      }
+    },
+    {
+      "id": "f32fa069-1ab5-4ee4-ad4c-1cb493190a46",
+      "name": "Section: Research and outline",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        0
+      ],
+      "parameters": {
+        "width": 4300,
+        "height": 770,
+        "color": 4,
+        "content": "## 1. Research and outline\nSerpAPI finds sources. Points that cite no real source are dropped before anyone writes from them."
+      }
+    },
+    {
+      "id": "93896693-f6c8-4fcb-a77f-a684844262d9",
+      "name": "Section: Write, fact-check, edit, optimise",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        850
+      ],
+      "parameters": {
+        "width": 4100,
+        "height": 770,
+        "color": 5,
+        "content": "## 2. Write, fact-check, edit, optimise\nA different model checks the writer. Unsupported claims get one edit, then the topic goes back."
+      }
+    },
+    {
+      "id": "e72c8ac4-991b-49af-a8c1-4f47a45f386d",
+      "name": "Section: A person decides",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        1700
+      ],
+      "parameters": {
+        "width": 1940,
+        "height": 510,
+        "color": 6,
+        "content": "## 3. A person decides\nNothing below this line runs without a yes."
+      }
+    },
+    {
+      "id": "c0ffb324-ad62-442f-ac0c-ddd8b66cf22e",
+      "name": "Section: Publish, illustrate, voice",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        2290
+      ],
+      "parameters": {
+        "width": 1680,
+        "height": 330,
+        "color": 3,
+        "content": "## 4. Publish, illustrate, voice"
+      }
+    },
+    {
+      "id": "63bedea8-8b71-4f5d-aced-e1b1ae9af680",
+      "name": "Section: Share",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        2700
+      ],
+      "parameters": {
+        "width": 2140,
+        "height": 590,
+        "color": 7,
+        "content": "## 5. Share"
+      }
+    },
+    {
+      "id": "8e205987-3281-45a0-ab18-bd24afc193e6",
+      "name": "Section: Learn from what was read",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        3370
+      ],
+      "parameters": {
+        "width": 2660,
+        "height": 770,
+        "color": 2,
+        "content": "## 6. Learn from what was read"
+      }
+    },
+    {
+      "id": "0463dbc1-2204-4e1c-a3e8-ab0305cecc0d",
+      "position": [
+        0,
+        420
+      ],
+      "name": "Weekdays 07:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "967ddc6f-9013-4e3c-ab3c-0c13b82b093a",
+      "position": [
+        260,
+        420
+      ],
+      "name": "Next topic",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "content_topics",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ 'status=eq.queued&limit=1' }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "f2476f73-8894-4cfe-ab83-b4927643a758",
+      "position": [
+        520,
+        420
+      ],
+      "name": "Is there a topic?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "db8ad273-72ab-439a-a5bb-8a1b22ccd5eb",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1a3d104e-b4a5-4e64-a5a4-f41a4e760454",
+      "position": [
+        780,
+        330
+      ],
+      "name": "Queue is empty",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "de0d9054-fd9e-4a1a-a38c-04393142041d",
+      "position": [
+        780,
+        510
+      ],
+      "name": "Claim the topic",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "content_topics",
+        "filterType": "string",
+        "filterString": "={{ 'id=eq.' + $json.id + '&status=eq.queued' }}",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ 'drafting' }}"
+            },
+            {
+              "fieldId": "started_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "50732d36-5bab-45f5-ad37-77f6aa4e2013",
+      "position": [
+        1040,
+        420
+      ],
+      "name": "Claimed it?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6beb1f25-5410-4168-a394-58d42f6fb69f",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "dddee331-d826-4bf1-a40d-ee638b356236",
+      "position": [
+        1300,
+        330
+      ],
+      "name": "Another run has it",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "cc23d717-8054-47db-abfc-d274deca3144",
+      "position": [
+        1300,
+        510
+      ],
+      "name": "Search the topic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://serpapi.com/search.json' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "serpApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $('Is there a topic?').first().json.topic }}"
+            },
+            {
+              "name": "num",
+              "value": "={{ '10' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "serpApi": {
+          "id": "__CRED:serpapi__",
+          "name": "SerpAPI"
+        }
+      }
+    },
+    {
+      "id": "a6dedc3c-395c-4fdc-a91f-0891ede78616",
+      "position": [
+        1560,
+        420
+      ],
+      "name": "Collect the sources",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const t = $(\"Is there a topic?\").first().json;\nconst found = $input.first().json ?? {};\nconst sources = (found.organic_results ?? []).slice(0, 6).map((r, i) => ({ n: i + 1, title: r.title, url: r.link, says: String(r.snippet ?? \"\").slice(0, 500) }));\nreturn [{ json: { topic_id: t.id, topic: t.topic, audience: t.audience ?? \"business owners\", sources, enough: sources.length >= 2 } }];"
+      }
+    },
+    {
+      "id": "2ce8c95e-f45f-4ea7-a934-8fd376ee980d",
+      "position": [
+        1820,
+        420
+      ],
+      "name": "Enough to write from?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "07f9d9c4-d210-40dd-a6e4-1999a2c80c31",
+              "leftValue": "={{ $json.enough }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "04a5a38d-a155-4c98-a8e0-8cc8ee1d14f1",
+      "position": [
+        2280,
+        290
+      ],
+      "name": "Research agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ topic: $json.topic, audience: $json.audience, sources: $json.sources }) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Research agent in a content studio. From the numbered sources, work out the angle worth taking for this audience and the key points an article should make. Every key point must name the source numbers it rests on. If the sources disagree, say so. Use nothing that is not in the sources.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "aa9d7d00-3d9e-41ce-ac43-a48667b9d071",
+      "position": [
+        2080,
+        510
+      ],
+      "name": "Claude · research",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "31cd810e-ef53-498e-adc1-899d13b91c01",
+      "position": [
+        2280,
+        510
+      ],
+      "name": "Reason it through",
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "7b861e46-edee-49e1-a6a7-f67dce03e9f4",
+      "position": [
+        2480,
+        510
+      ],
+      "name": "Research notes",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"angle\": \"The angle to take.\",\n  \"key_points\": [\n    {\n      \"point\": \"A point the article should make\",\n      \"sources\": [\n        1,\n        2\n      ]\n    }\n  ]\n}"
+      }
+    },
+    {
+      "id": "7a6ac93d-a39a-47dd-af10-4e7ae73b1f8a",
+      "position": [
+        2740,
+        420
+      ],
+      "name": "Keep the supported points",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const s = $(\"Collect the sources\").first().json;\nconst o = $input.first().json.output;\nconst known = new Set(s.sources.map((x) => x.n));\n// A point that cites no real source is dropped here, before anyone writes from it.\nconst points = (o?.key_points ?? []).filter((p) => p && p.point && Array.isArray(p.sources) && p.sources.length && p.sources.every((n) => known.has(n)));\nreturn [{ json: { ...s, angle: o?.angle ?? null, points, researched: !!o?.angle && points.length >= 2 } }];"
+      }
+    },
+    {
+      "id": "c4bd7947-b03b-4ec6-a8d2-f99daae3f52f",
+      "position": [
+        3200,
+        200
+      ],
+      "name": "Outline agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ topic: $json.topic, audience: $json.audience, angle: $json.angle, points: $json.points }) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Outline agent. Turn the angle and key points into an article outline: a title, four to six section headings, and three search keywords. Search the past articles first and do not propose a title or angle that repeats one of them.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "98de970d-611d-4f0f-a517-0a0bb0fc5a53",
+      "position": [
+        3000,
+        420
+      ],
+      "name": "Claude · outline",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "9d8250b9-6b22-4cb7-ac82-7fb859ce2d4b",
+      "position": [
+        3200,
+        420
+      ],
+      "name": "Past articles",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search the articles already published, to avoid repeating one. Pass the topic.",
+        "pineconeIndex": {
+          "__rl": true,
+          "mode": "id",
+          "value": "content-index"
+        },
+        "topK": 4,
+        "options": {}
+      },
+      "credentials": {
+        "pineconeApi": {
+          "id": "__CRED:pinecone__",
+          "name": "Pinecone"
+        }
+      }
+    },
+    {
+      "id": "3352451b-a52c-42b5-a34e-42a3c4d2f411",
+      "position": [
+        3200,
+        640
+      ],
+      "name": "Embeddings · past articles",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "ed0faa82-2092-4af3-af20-cb28336d65b4",
+      "position": [
+        3400,
+        420
+      ],
+      "name": "Outline",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"title\": \"The article title\",\n  \"sections\": [\n    \"A section heading\"\n  ],\n  \"keywords\": [\n    \"a keyword\"\n  ]\n}"
+      }
+    },
+    {
+      "id": "94ff60bf-e393-4fae-aac4-c74ad9899af6",
+      "position": [
+        3660,
+        420
+      ],
+      "name": "Check the outline",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const r = $(\"Keep the supported points\").first().json;\nconst o = $input.first().json.output;\nconst ok = r.researched && o && typeof o.title === \"string\" && Array.isArray(o.sections) && o.sections.length >= 3;\nreturn [{ json: { ...r, title: ok ? o.title.trim() : null, sections: ok ? o.sections : [], keywords: ok ? (o.keywords ?? []).slice(0, 5) : [], outlined: !!ok } }];"
+      }
+    },
+    {
+      "id": "8a1b781f-9f29-4acc-ae19-bec2d5ef2c50",
+      "position": [
+        3920,
+        420
+      ],
+      "name": "Usable outline?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3a91b1aa-fbe4-4cf7-ac56-b94cada24ba4",
+              "leftValue": "={{ $json.outlined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a1ccefe5-6981-417f-a8c5-7d51064270fd",
+      "position": [
+        100,
+        1050
+      ],
+      "name": "Writer agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ title: $json.title, sections: $json.sections, audience: $json.audience, points: $json.points }) }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "You are the Writer agent. Write the article in Markdown from the outline: 600 to 900 words, plain language, short paragraphs, one H2 per section. Make only the listed key points and cite each with its source number in square brackets, like [2]. Search the house style guide before you start and follow it. No statistics, quotes or names that are not in the key points.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f779c768-1116-4b29-aa12-48e1263a0a3b",
+      "position": [
+        0,
+        1270
+      ],
+      "name": "Claude · writing",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "6416caf6-c4b5-4a47-ae74-2df8b80f188b",
+      "position": [
+        200,
+        1270
+      ],
+      "name": "House style",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search the house style guide: tone, banned phrases, formatting rules.",
+        "pineconeIndex": {
+          "__rl": true,
+          "mode": "id",
+          "value": "content-index"
+        },
+        "topK": 4,
+        "options": {}
+      },
+      "credentials": {
+        "pineconeApi": {
+          "id": "__CRED:pinecone__",
+          "name": "Pinecone"
+        }
+      }
+    },
+    {
+      "id": "df132967-92c2-4318-aa4b-2b3357c30510",
+      "position": [
+        200,
+        1490
+      ],
+      "name": "Embeddings · style",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "61682856-2ade-4c52-a253-7f268638c964",
+      "position": [
+        460,
+        1270
+      ],
+      "name": "Read the article",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const o = $(\"Check the outline\").first().json;\nconst body = typeof $input.first().json.output === \"string\" ? $input.first().json.output.trim() : \"\";\nconst words = body.split(/\\s+/).filter(Boolean).length;\nreturn [{ json: { ...o, body, words, written: words >= 150 } }];"
+      }
+    },
+    {
+      "id": "e86ad36a-39b2-42cb-afa1-9b7e8f538155",
+      "position": [
+        820,
+        1140
+      ],
+      "name": "Fact-check agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ article: $json.body, sources: $json.sources }) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Fact-check agent. You did not write this article. List every factual claim in it: numbers, dates, names, causes, comparisons. For each, say whether the numbered sources support it and which source. Be strict: 'plausible' is not 'supported'.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b5f973ea-182a-40b4-ae0a-c2ef4760431a",
+      "position": [
+        720,
+        1360
+      ],
+      "name": "GPT · fact-check",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "17d62a64-cb86-4c27-ab37-07eb6d479db4",
+      "position": [
+        920,
+        1360
+      ],
+      "name": "Claims",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"claims\": [\n    {\n      \"claim\": \"A factual claim from the article\",\n      \"supported\": true,\n      \"source\": 1\n    }\n  ]\n}"
+      }
+    },
+    {
+      "id": "82ae24b6-041d-4dd8-ae54-bfcad97abdf9",
+      "position": [
+        1180,
+        1270
+      ],
+      "name": "Weigh the claims",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const a = $(\"Read the article\").first().json;\nconst o = $input.first().json.output;\nconst checked = o && Array.isArray(o.claims);\nconst unsupported = checked ? o.claims.filter((c) => c && c.supported !== true).map((c) => c.claim) : [];\n// A citation to a source that does not exist is unsupported whatever the checker said.\nconst cited = [...a.body.matchAll(/\\[(\\d+)\\]/g)].map((m) => Number(m[1]));\nconst phantom = [...new Set(cited.filter((n) => !a.sources.some((s) => s.n === n)))];\nif (phantom.length) unsupported.push(\"cites source \" + phantom.join(\", \") + \", which does not exist\");\nreturn [{ json: { ...a, checked: !!checked, unsupported, clean: !!checked && unsupported.length === 0 && a.written } }];"
+      }
+    },
+    {
+      "id": "36d3ca0c-e75e-46d9-a015-9287eb36fedb",
+      "position": [
+        1440,
+        1270
+      ],
+      "name": "Every claim supported?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "84c77888-90ca-47c1-a2ec-3c56a039c456",
+              "leftValue": "={{ $json.clean }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "03aa2fbb-416c-4810-a61b-8f99d6a1c119",
+      "position": [
+        1700,
+        1270
+      ],
+      "name": "Worth a rewrite?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "77e8781b-a3a3-49dd-a1be-31ceed687567",
+              "leftValue": "={{ $json.checked && $json.written && $json.unsupported.length <= 4 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "142b8906-f589-4f17-ae45-a51d358df8e5",
+      "position": [
+        1960,
+        1140
+      ],
+      "name": "Editor agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ article: $json.body, unsupported: $json.unsupported, sources: $json.sources }) }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "You are the Editor agent. Remove or rewrite every listed unsupported claim so the article says only what the sources support. Change nothing else. Return the full article in Markdown.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "fd276988-f10b-4842-acd7-6a08fa1165d9",
+      "position": [
+        1960,
+        1360
+      ],
+      "name": "Claude · editing",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "02e3da50-fd1b-415b-a6e6-c4e78a495f6c",
+      "position": [
+        2220,
+        1270
+      ],
+      "name": "Recheck the edit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const a = $(\"Worth a rewrite?\").first().json;\nconst body = typeof $input.first().json.output === \"string\" ? $input.first().json.output.trim() : \"\";\nconst words = body.split(/\\s+/).filter(Boolean).length;\nconst cited = [...body.matchAll(/\\[(\\d+)\\]/g)].map((m) => Number(m[1]));\nconst phantom = cited.some((n) => !a.sources.some((s) => s.n === n));\n// The removed claims must be gone: compare on their first few words.\nconst still = a.unsupported.filter((c) => body.toLowerCase().includes(String(c).toLowerCase().split(/\\s+/).slice(0, 6).join(\" \")));\nreturn [{ json: { ...a, body: words >= 150 ? body : a.body, words, edited: true, clean: words >= 150 && !phantom && still.length === 0, unsupported: still } }];"
+      }
+    },
+    {
+      "id": "427ec507-eba4-4d39-ab67-e0f7bd160455",
+      "position": [
+        2480,
+        1270
+      ],
+      "name": "Clean now?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bbbae641-15d5-4a0f-a2bd-f444b06da26f",
+              "leftValue": "={{ $json.clean }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "4c696a95-dd38-4583-a598-8c3d734bbbef",
+      "position": [
+        2840,
+        1050
+      ],
+      "name": "SEO agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ title: $json.title, keywords: $json.keywords, opening: $json.body.slice(0, 600) }) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the SEO agent. Write a meta title (under 60 characters), a meta description (under 155 characters) and a URL slug (lowercase words joined by hyphens) for this article. Describe what the article says; do not oversell it.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "6290254e-3df2-4586-ae65-51f64f04fb9d",
+      "position": [
+        2740,
+        1270
+      ],
+      "name": "GPT · SEO",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "3e300648-507d-4610-a2f7-0f14a124ba51",
+      "position": [
+        2940,
+        1270
+      ],
+      "name": "Meta",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"meta_title\": \"Under 60 characters\",\n  \"meta_description\": \"Under 155 characters\",\n  \"slug\": \"a-url-slug\"\n}"
+      }
+    },
+    {
+      "id": "238c37c2-9d3d-47c8-a49e-78af230c7def",
+      "position": [
+        3200,
+        1180
+      ],
+      "name": "Enforce the limits",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const a = $(\"Clean now?\").isExecuted ? $(\"Clean now?\").first().json : $(\"Every claim supported?\").first().json;\nconst m = $input.first().json.output ?? {};\nconst slugify = (s) => String(s).toLowerCase().normalize(\"NFKD\").replace(/[^a-z0-9]+/g, \"-\").replace(/^-+|-+$/g, \"\").slice(0, 70);\n// Lengths are cut here, so a model that overshoots cannot break the page.\nreturn [{ json: { ...a, meta_title: String(m.meta_title || a.title).slice(0, 60), meta_description: String(m.meta_description || a.angle || \"\").slice(0, 155), slug: slugify(m.slug || a.title) } }];"
+      }
+    },
+    {
+      "id": "658bec1f-f501-4d49-a483-07b833cff87f",
+      "position": [
+        3460,
+        1180
+      ],
+      "name": "Save the draft",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "content_drafts",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "topic_id",
+              "fieldValue": "={{ $json.topic_id }}"
+            },
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $json.title }}"
+            },
+            {
+              "fieldId": "slug",
+              "fieldValue": "={{ $json.slug }}"
+            },
+            {
+              "fieldId": "meta_title",
+              "fieldValue": "={{ $json.meta_title }}"
+            },
+            {
+              "fieldId": "meta_description",
+              "fieldValue": "={{ $json.meta_description }}"
+            },
+            {
+              "fieldId": "keywords",
+              "fieldValue": "={{ $json.keywords }}"
+            },
+            {
+              "fieldId": "sources",
+              "fieldValue": "={{ $json.sources }}"
+            },
+            {
+              "fieldId": "body",
+              "fieldValue": "={{ $json.body }}"
+            },
+            {
+              "fieldId": "words",
+              "fieldValue": "={{ $json.words }}"
+            },
+            {
+              "fieldId": "edited",
+              "fieldValue": "={{ $json.edited === true }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ 'awaiting_approval' }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "763661d8-4a9a-4f23-ab02-a31905ea445c",
+      "position": [
+        3720,
+        1180
+      ],
+      "name": "Ask for approval",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#content' }}"
+        },
+        "text": "={{ ':memo: Draft ready: \"' + $json.title + '\" (' + $json.words + ' words' + ($json.edited ? ', edited after fact-check' : '') + '). Approve or reject draft ' + $json.id + '.' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
+    },
+    {
+      "id": "ce905556-58e6-446f-a6c3-1657cb623837",
+      "position": [
+        2840,
+        1490
+      ],
+      "name": "Could not finish",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const candidates = [\"Recheck the edit\", \"Weigh the claims\", \"Check the outline\", \"Collect the sources\"];\nconst name = candidates.find((n) => $(n).isExecuted);\nconst s = $(name).first().json;\nconst why = !s.enough && name === \"Collect the sources\" ? \"too few sources were found\" : !s.outlined && name === \"Check the outline\" ? \"no usable outline could be made\" : (s.unsupported ?? []).length ? \"claims the sources do not support: \" + s.unsupported.slice(0, 3).join(\"; \") : \"the article could not be written\";\nreturn [{ json: { topic_id: s.topic_id, topic: s.topic, why } }];"
+      }
+    },
+    {
+      "id": "5d0b8259-7b93-470d-ad6b-8552ef36186b",
+      "position": [
+        3200,
+        1360
+      ],
+      "name": "Return the topic",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "content_topics",
+        "filterType": "string",
+        "filterString": "={{ 'id=eq.' + $json.topic_id }}",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ 'needs_brief' }}"
+            },
+            {
+              "fieldId": "note",
+              "fieldValue": "={{ $json.why }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "458199c7-e8ac-42b2-ab14-d334f4053a62",
+      "position": [
+        3460,
+        1360
+      ],
+      "name": "Returned message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const r = $(\"Could not finish\").first().json;\nreturn [{ json: { channel: \"#content\", level: \"warn\", text: \"\\\"\" + r.topic + \"\\\" was sent back for a better brief: \" + r.why + \".\" } }];"
+      }
+    },
+    {
+      "id": "94016080-39c3-4e28-a045-f858fbb2a5a9",
+      "position": [
+        3720,
+        1360
+      ],
+      "name": "Tell the editor",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3f89b47f-083d-4e20-a6ff-a0af59eefdcb",
+      "position": [
+        0,
+        1990
+      ],
+      "name": "Decision",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "content-studio-decision",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "6c577dad-5ff6-47ea-a6aa-11cad33e4e49"
+    },
+    {
+      "id": "d3f98ee9-4896-44db-a00c-f3184f81a302",
+      "position": [
+        260,
+        1990
+      ],
+      "name": "Read the decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body ?? {};\nconst d = b.decision === \"approve\" ? \"approve\" : b.decision === \"reject\" ? \"reject\" : null;\nreturn [{ json: { valid: !!d && !!b.draft_id, decision: d, draft_id: String(b.draft_id ?? \"\"), by: String(b.by ?? \"unknown\"), reason: String(b.reason ?? \"\").slice(0, 500) } }];"
+      }
+    },
+    {
+      "id": "49ffbc3c-db24-4e94-a0d9-3318bc71b07a",
+      "position": [
+        520,
+        1990
+      ],
+      "name": "Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8ba548b6-353c-474e-a581-189fba03a955",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "10e1c2d0-f371-40d3-a27a-a06801ec39b2",
+      "position": [
+        780,
+        1900
+      ],
+      "name": "Bad request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'Need draft_id and decision: approve | reject' }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "9b3e481d-7695-4668-afe4-b04572359e60",
+      "position": [
+        780,
+        2080
+      ],
+      "name": "Take it if pending",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "content_drafts",
+        "filterType": "string",
+        "filterString": "={{ 'id=eq.' + $json.draft_id + '&status=eq.awaiting_approval' }}",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.decision === 'approve' ? 'publishing' : 'rejected' }}"
+            },
+            {
+              "fieldId": "decided_by",
+              "fieldValue": "={{ $json.by }}"
+            },
+            {
+              "fieldId": "decided_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "reason",
+              "fieldValue": "={{ $json.reason }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "bf8e44b7-7a6c-4a9b-a4a7-f386e38f14f4",
+      "position": [
+        1040,
+        1990
+      ],
+      "name": "Awaiting approval?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3a75bed8-d918-40a0-a3b4-807a1bba03c9",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b8754bd1-d965-45ed-a349-3a436112d8f7",
+      "position": [
+        1300,
+        1900
+      ],
+      "name": "Not pending",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'That draft is not awaiting approval' }) }}",
+        "options": {
+          "responseCode": 409
+        }
+      }
+    },
+    {
+      "id": "43df83c4-ac76-4298-a0c3-ea14dbafedea",
+      "position": [
+        1300,
+        2080
+      ],
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b604e61a-1df5-4742-a368-1493d5c22ea0",
+              "leftValue": "={{ $('Read the decision').first().json.decision === 'approve' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "2d05d49f-dc0a-40e2-ab72-056a293de906",
+      "position": [
+        1560,
+        1900
+      ],
+      "name": "Rejected",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, status: 'rejected' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "4080de5e-80bf-4869-a7ad-0faab2fda4d0",
+      "position": [
+        1560,
+        2080
+      ],
+      "name": "Publishing",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, status: 'publishing' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "3f9e1aa5-f2a5-42a1-a9c2-582cc4665259",
+      "position": [
+        0,
+        2490
+      ],
+      "name": "Publish to WordPress",
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "post",
+        "operation": "create",
+        "title": "={{ $('Awaiting approval?').first().json.title }}",
+        "additionalFields": {
+          "content": "={{ $('Awaiting approval?').first().json.body }}",
+          "status": "={{ 'publish' }}"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "wordpressApi": {
+          "id": "__CRED:wordpress__",
+          "name": "WordPress"
+        }
+      }
+    },
+    {
+      "id": "409bf789-00d0-4de5-aa4b-e4036df0a045",
+      "position": [
+        260,
+        2490
+      ],
+      "name": "Mark published",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "content_drafts",
+        "filterType": "string",
+        "filterString": "={{ 'id=eq.' + $('Awaiting approval?').first().json.id }}",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ 'published' }}"
+            },
+            {
+              "fieldId": "post_id",
+              "fieldValue": "={{ String($json.id ?? '') }}"
+            },
+            {
+              "fieldId": "published_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "494a520c-02b3-461e-ab3d-861420c1a73f",
+      "position": [
+        520,
+        2490
+      ],
+      "name": "Make a cover image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.openai.com/v1/images/generations' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-image-1', prompt: 'An editorial illustration, flat shapes, two colours, no text, for an article titled: ' + $('Awaiting approval?').first().json.title, size: '1536x1024', n: 1 }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "bbace7cc-d895-41dc-a24c-ec4f3fd24845",
+      "position": [
+        780,
+        2490
+      ],
+      "name": "Script for the voice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const d = $(\"Awaiting approval?\").first().json;\n// Read aloud: no Markdown marks, no citation numbers, no links.\nconst script = String(d.body).replace(/\\[(\\d+)\\]/g, \"\").replace(/[#*_>`]/g, \"\").replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, \"$1\").replace(/\\n{2,}/g, \"\\n\\n\").trim().slice(0, 4500);\nreturn [{ json: { script, image_url: $input.first().json.data?.[0]?.url ?? null } }];"
+      }
+    },
+    {
+      "id": "b662cb26-9cec-4e05-ae70-2fe5e77f2f47",
+      "position": [
+        1040,
+        2490
+      ],
+      "name": "Record the voice-over",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.elevenlabs.io/v1/text-to-speech/' + 'narrator' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.script, model_id: 'eleven_multilingual_v2' }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED:elevenlabs__",
+          "name": "ElevenLabs API key"
+        }
+      }
+    },
+    {
+      "id": "0de8a26c-ca3e-4f0c-a538-49e5ab6c07e8",
+      "position": [
+        1300,
+        2490
+      ],
+      "name": "Record the assets",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "content_drafts",
+        "filterType": "string",
+        "filterString": "={{ 'id=eq.' + $('Awaiting approval?').first().json.id }}",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "cover_image",
+              "fieldValue": "={{ $('Script for the voice').first().json.image_url }}"
+            },
+            {
+              "fieldId": "has_voice_over",
+              "fieldValue": "={{ !$json.error }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "78d76b15-7d06-4068-acf1-64214f2c2453",
+      "position": [
+        100,
+        2900
+      ],
+      "name": "Social agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ title: $('Awaiting approval?').first().json.title, description: $('Awaiting approval?').first().json.meta_description, opening: String($('Awaiting approval?').first().json.body).slice(0, 800) }) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Social agent. Write one post per network announcing this article. LinkedIn: three short paragraphs, professional. X: under 250 characters. Facebook: two friendly sentences. Say what the article is about; make no claim the article does not make. No hashtags.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c82d29e6-9085-494e-abe7-aa1486ca78b7",
+      "position": [
+        0,
+        3120
+      ],
+      "name": "Claude · social",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "bdee1bb9-3cf2-42a7-a813-900e448a0a0f",
+      "position": [
+        200,
+        3120
+      ],
+      "name": "Posts",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"linkedin\": \"The LinkedIn post\",\n  \"x\": \"The X post\",\n  \"facebook\": \"The Facebook post\"\n}"
+      }
+    },
+    {
+      "id": "ca9d4c1d-bb13-424d-aa62-5aae07e95656",
+      "position": [
+        460,
+        3030
+      ],
+      "name": "Cut each post to length",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const d = $(\"Awaiting approval?\").first().json;\nconst o = $input.first().json.output ?? {};\nconst link = \"https://acme.wordpress.test/\" + d.slug;\nconst plain = \"New on the blog: \" + d.title;\nconst limit = { linkedin: 2800, x: 250, facebook: 1500 };\n// A post the agent did not write falls back to the plain title, so sharing never waits on a model.\nconst post = (network) => String(typeof o[network] === \"string\" && o[network].trim() ? o[network] : plain).slice(0, limit[network]).trim() + \"\\n\" + link;\nreturn [{ json: { linkedin: post(\"linkedin\"), x: post(\"x\"), facebook: post(\"facebook\") } }];"
+      }
+    },
+    {
+      "id": "cfee875e-0c79-450d-afb2-e670a27fa3c7",
+      "position": [
+        720,
+        3030
+      ],
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "post",
+        "operation": "create",
+        "postAs": "organization",
+        "organization": "1234567",
+        "text": "={{ $('Cut each post to length').first().json.linkedin }}",
+        "additionalFields": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "__CRED:linkedin__",
+          "name": "LinkedIn"
+        }
+      }
+    },
+    {
+      "id": "b269b6ef-8edf-4582-a70c-7d6ab6b97b37",
+      "position": [
+        980,
+        3030
+      ],
+      "name": "Post to X",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "parameters": {
+        "resource": "tweet",
+        "operation": "create",
+        "text": "={{ $('Cut each post to length').first().json.x }}",
+        "additionalFields": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "__CRED:x__",
+          "name": "X"
+        }
+      }
+    },
+    {
+      "id": "a7848129-6332-4b72-a0c0-ccad31408c95",
+      "position": [
+        1240,
+        3030
+      ],
+      "name": "Post to Facebook",
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "parameters": {
+        "hostUrl": "graph.facebook.com",
+        "httpRequestMethod": "POST",
+        "graphApiVersion": "v23.0",
+        "node": "acme-page",
+        "edge": "feed",
+        "options": {
+          "queryParameters": {
+            "parameter": [
+              {
+                "name": "message",
+                "value": "={{ $('Cut each post to length').first().json.facebook }}"
+              }
+            ]
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "__CRED:facebook__",
+          "name": "Facebook"
+        }
+      }
+    },
+    {
+      "id": "5376d20e-f617-4b2a-a5ba-c7d9335944cb",
+      "position": [
+        1500,
+        3030
+      ],
+      "name": "Mark shared",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "content_drafts",
+        "filterType": "string",
+        "filterString": "={{ 'id=eq.' + $('Awaiting approval?').first().json.id }}",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "shared_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "d6ec603a-f5ab-485f-a7d2-0cae34e18e46",
+      "position": [
+        1760,
+        3030
+      ],
+      "name": "Say it is live",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#content' }}"
+        },
+        "text": "={{ ':tada: Published and shared: \"' + $('Awaiting approval?').first().json.title + '\"' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
+    },
+    {
+      "id": "41bef5d3-ea29-4964-a2e2-187bacf069d4",
+      "position": [
+        0,
+        3790
+      ],
+      "name": "Friday 16:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 16 * * 5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3ab87678-ac5b-466f-a6fe-a2f28fb1ab1d",
+      "position": [
+        260,
+        3790
+      ],
+      "name": "Published this month",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "content_drafts",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ 'status=eq.published&published_at=gte.' + $now.minus({ days: 30 }).toISO() }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "d3ff5f06-84c1-42af-a7ab-899c4a02f5ca",
+      "position": [
+        520,
+        3790
+      ],
+      "name": "Count the readers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://app.posthog.com/api/projects/@current/query/' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "postHogApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: { kind: 'HogQLQuery', query: \"select count() from events where event = '$pageview' and properties.$pathname = '\" + '/' + $json.slug + \"' and timestamp > now() - interval 30 day\" } }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "postHogApi": {
+          "id": "__CRED:posthog__",
+          "name": "PostHog"
+        }
+      }
+    },
+    {
+      "id": "dcd909b3-59af-4c22-a156-0f0b08b57ec5",
+      "position": [
+        780,
+        3790
+      ],
+      "name": "Rank the articles",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const drafts = $(\"Published this month\").all().map((i) => i.json);\nconst rows = $input.all().map((item, i) => ({ title: drafts[i]?.title, slug: drafts[i]?.slug, keywords: drafts[i]?.keywords ?? [], views: Number(item.json?.results?.[0]?.[0] ?? NaN) })).filter((r) => r.title);\nconst known = rows.filter((r) => Number.isFinite(r.views)).sort((a, b) => b.views - a.views);\nreturn [{ json: { measured: known.length, of: rows.length, best: known.slice(0, 3), worst: known.slice(-3).reverse(), existing: rows.map((r) => r.title) } }];"
+      }
+    },
+    {
+      "id": "2f3e177f-80d8-4e0e-a11e-3e9bfbec2f07",
+      "position": [
+        1040,
+        3790
+      ],
+      "name": "Anything measured?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3220a5c7-5cad-4ff9-a59d-852000440df7",
+              "leftValue": "={{ $json.measured >= 2 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b31d27be-ae77-40b0-a3f8-7b0bf808421f",
+      "position": [
+        1400,
+        3570
+      ],
+      "name": "Strategist agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Strategist agent. From which articles were read most and least, propose three topics for next week. Each must be a clear step on from something that worked, and none may repeat an existing title. Give one sentence of reasoning that refers to the numbers.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "3d80f343-b20d-43d4-a195-d37f5c3f624f",
+      "position": [
+        1300,
+        3790
+      ],
+      "name": "Claude · strategy",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "eb1aea11-e935-483c-a0d0-b0b0a97d934a",
+      "position": [
+        1500,
+        3790
+      ],
+      "name": "Topics",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"topics\": [\n    {\n      \"topic\": \"A topic to write next\",\n      \"why\": \"Why, referring to the numbers\"\n    }\n  ]\n}"
+      }
+    },
+    {
+      "id": "b39dd4d9-5b17-44be-ad27-3b1a52d7413c",
+      "position": [
+        1760,
+        3790
+      ],
+      "name": "Keep the new ones",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const r = $(\"Rank the articles\").first().json;\nconst seen = new Set(r.existing.map((t) => String(t).toLowerCase().trim()));\nconst out = [];\nfor (const t of $input.first().json.output?.topics ?? []) {\n  const key = String(t?.topic ?? \"\").toLowerCase().trim();\n  if (!key || seen.has(key)) continue;\n  seen.add(key);\n  out.push({ json: { topic: t.topic.trim(), why: String(t.why ?? \"\").slice(0, 300) } });\n}\nreturn out.slice(0, 3);"
+      }
+    },
+    {
+      "id": "9bf4bb6c-b4ad-4106-acc8-a829528e06b2",
+      "position": [
+        2020,
+        3790
+      ],
+      "name": "Queue the topic",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "content_topics",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "topic",
+              "fieldValue": "={{ $json.topic }}"
+            },
+            {
+              "fieldId": "note",
+              "fieldValue": "={{ $json.why }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ 'queued' }}"
+            },
+            {
+              "fieldId": "suggested_by",
+              "fieldValue": "={{ 'strategist' }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "552cbdf8-c6a2-4160-a68a-c06e3488afbe",
+      "position": [
+        2280,
+        3790
+      ],
+      "name": "Post next week's topics",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#content' }}"
+        },
+        "text": "={{ ':compass: Queued for next week: ' + $('Keep the new ones').all().map((i) => i.json.topic).join(' · ') }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "executeOnce": true,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
+    },
+    {
+      "id": "0b5d24a0-0017-4b0c-a21d-04511f823593",
+      "position": [
+        1400,
+        4010
+      ],
+      "name": "Too little data yet",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Weekdays 07:00": {
+      "main": [
+        [
+          {
+            "node": "Next topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Next topic": {
+      "main": [
+        [
+          {
+            "node": "Is there a topic?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is there a topic?": {
+      "main": [
+        [
+          {
+            "node": "Claim the topic",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Queue is empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim the topic": {
+      "main": [
+        [
+          {
+            "node": "Claimed it?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claimed it?": {
+      "main": [
+        [
+          {
+            "node": "Search the topic",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Another run has it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search the topic": {
+      "main": [
+        [
+          {
+            "node": "Collect the sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect the sources": {
+      "main": [
+        [
+          {
+            "node": "Enough to write from?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enough to write from?": {
+      "main": [
+        [
+          {
+            "node": "Research agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Could not finish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research agent": {
+      "main": [
+        [
+          {
+            "node": "Keep the supported points",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep the supported points": {
+      "main": [
+        [
+          {
+            "node": "Outline agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outline agent": {
+      "main": [
+        [
+          {
+            "node": "Check the outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the outline": {
+      "main": [
+        [
+          {
+            "node": "Usable outline?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Usable outline?": {
+      "main": [
+        [
+          {
+            "node": "Writer agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Could not finish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Writer agent": {
+      "main": [
+        [
+          {
+            "node": "Read the article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the article": {
+      "main": [
+        [
+          {
+            "node": "Fact-check agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fact-check agent": {
+      "main": [
+        [
+          {
+            "node": "Weigh the claims",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weigh the claims": {
+      "main": [
+        [
+          {
+            "node": "Every claim supported?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every claim supported?": {
+      "main": [
+        [
+          {
+            "node": "SEO agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Worth a rewrite?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO agent": {
+      "main": [
+        [
+          {
+            "node": "Enforce the limits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enforce the limits": {
+      "main": [
+        [
+          {
+            "node": "Save the draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the draft": {
+      "main": [
+        [
+          {
+            "node": "Ask for approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Worth a rewrite?": {
+      "main": [
+        [
+          {
+            "node": "Editor agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Could not finish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Editor agent": {
+      "main": [
+        [
+          {
+            "node": "Recheck the edit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recheck the edit": {
+      "main": [
+        [
+          {
+            "node": "Clean now?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean now?": {
+      "main": [
+        [
+          {
+            "node": "SEO agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Could not finish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Could not finish": {
+      "main": [
+        [
+          {
+            "node": "Return the topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return the topic": {
+      "main": [
+        [
+          {
+            "node": "Returned message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Returned message": {
+      "main": [
+        [
+          {
+            "node": "Tell the editor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision": {
+      "main": [
+        [
+          {
+            "node": "Read the decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the decision": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "node": "Take it if pending",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Bad request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Take it if pending": {
+      "main": [
+        [
+          {
+            "node": "Awaiting approval?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Awaiting approval?": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Publishing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publishing": {
+      "main": [
+        [
+          {
+            "node": "Publish to WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish to WordPress": {
+      "main": [
+        [
+          {
+            "node": "Mark published",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark published": {
+      "main": [
+        [
+          {
+            "node": "Make a cover image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make a cover image": {
+      "main": [
+        [
+          {
+            "node": "Script for the voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Script for the voice": {
+      "main": [
+        [
+          {
+            "node": "Record the voice-over",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record the voice-over": {
+      "main": [
+        [
+          {
+            "node": "Record the assets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record the assets": {
+      "main": [
+        [
+          {
+            "node": "Social agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Social agent": {
+      "main": [
+        [
+          {
+            "node": "Cut each post to length",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cut each post to length": {
+      "main": [
+        [
+          {
+            "node": "Post to LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Post to X",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to X": {
+      "main": [
+        [
+          {
+            "node": "Post to Facebook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Facebook": {
+      "main": [
+        [
+          {
+            "node": "Mark shared",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark shared": {
+      "main": [
+        [
+          {
+            "node": "Say it is live",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Friday 16:00": {
+      "main": [
+        [
+          {
+            "node": "Published this month",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Published this month": {
+      "main": [
+        [
+          {
+            "node": "Count the readers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count the readers": {
+      "main": [
+        [
+          {
+            "node": "Rank the articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rank the articles": {
+      "main": [
+        [
+          {
+            "node": "Anything measured?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything measured?": {
+      "main": [
+        [
+          {
+            "node": "Strategist agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Too little data yet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Strategist agent": {
+      "main": [
+        [
+          {
+            "node": "Keep the new ones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep the new ones": {
+      "main": [
+        [
+          {
+            "node": "Queue the topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue the topic": {
+      "main": [
+        [
+          {
+            "node": "Post next week's topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · research": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Research agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reason it through": {
+      "ai_tool": [
+        [
+          {
+            "node": "Research agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research notes": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Research agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · outline": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Outline agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Past articles": {
+      "ai_tool": [
+        [
+          {
+            "node": "Outline agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings · past articles": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Past articles",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outline": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Outline agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · writing": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Writer agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "House style": {
+      "ai_tool": [
+        [
+          {
+            "node": "Writer agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings · style": {
+      "ai_embedding": [
+        [
+          {
+            "node": "House style",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT · fact-check": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Fact-check agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claims": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Fact-check agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · editing": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Editor agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT · SEO": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SEO agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meta": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "SEO agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · social": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Social agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Posts": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Social agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · strategy": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Strategist agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Topics": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Strategist agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

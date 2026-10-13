@@ -15,7 +15,7 @@
       "name": "Slack",
       "job": "Team chat and alerts",
       "icon": "slack",
-      "workflows": 7
+      "workflows": 8
     },
     "hubspot": {
       "name": "HubSpot",
@@ -39,7 +39,7 @@
       "name": "Supabase",
       "job": "Records and state",
       "icon": "supabase",
-      "workflows": 7
+      "workflows": 8
     },
     "calendly": {
       "name": "Calendly",
@@ -63,25 +63,25 @@
       "name": "WordPress",
       "job": "Website and CMS",
       "icon": "wordpress",
-      "workflows": 0
+      "workflows": 1
     },
     "linkedin": {
       "name": "LinkedIn",
       "job": "Social",
       "icon": "linkedin",
-      "workflows": 0
+      "workflows": 1
     },
     "x": {
       "name": "X",
       "job": "Social",
       "icon": "x",
-      "workflows": 0
+      "workflows": 1
     },
     "facebook": {
       "name": "Facebook",
       "job": "Social",
       "icon": "facebook",
-      "workflows": 0
+      "workflows": 1
     },
     "shopify": {
       "name": "Shopify",
@@ -147,7 +147,7 @@
       "name": "SerpAPI",
       "job": "Web search",
       "icon": "google",
-      "workflows": 1
+      "workflows": 2
     },
     "bamboohr": {
       "name": "BambooHR",
@@ -159,31 +159,31 @@
       "name": "PostHog",
       "job": "Product analytics",
       "icon": "posthog",
-      "workflows": 0
+      "workflows": 1
     },
     "anthropic": {
       "name": "Claude",
       "job": "AI reasoning and writing",
       "icon": "anthropic",
-      "workflows": 2
+      "workflows": 3
     },
     "openai": {
       "name": "OpenAI",
       "job": "AI classification and embeddings",
       "icon": "openai",
-      "workflows": 2
+      "workflows": 3
     },
     "pinecone": {
       "name": "Pinecone",
       "job": "AI knowledge base",
       "icon": "pinecone",
-      "workflows": 2
+      "workflows": 3
     },
     "elevenlabs": {
       "name": "ElevenLabs",
       "job": "AI voice",
       "icon": "elevenlabs",
-      "workflows": 0
+      "workflows": 1
     }
   },
   "systems": [
@@ -216,7 +216,9 @@
       "line": "Research to published article, voice-over and social posts.",
       "problem": "Publishing well takes research, writing, fact-checking, optimising, recording and sharing, and one of them always slips.",
       "outcome": "Agents research, write, fact-check and optimise each piece. A person approves it, then it is published, voiced and shared, and its results come back as next week's brief.",
-      "workflows": []
+      "workflows": [
+        "ai-content-studio"
+      ]
     },
     {
       "id": "ai-back-office",
@@ -3386,6 +3388,1309 @@
               "Unhappy message",
               "Tell the support lead",
               "Recorded"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "AI content studio · Research to published, voiced and shared",
+      "tier": "flagship",
+      "system": "ai-content-studio",
+      "category": "AI agents",
+      "kind": null,
+      "summary": "Seven agents take a topic from research to a fact-checked, optimised draft. A person approves it in Slack, then it is published to WordPress with a cover image and an ElevenLabs voice-over, shared to LinkedIn, X and Facebook, and its results in PostHog become next week's topics.",
+      "source": "reference",
+      "trigger": "scheduleTrigger",
+      "integrations": [
+        "Supabase",
+        "SerpAPI",
+        "Claude",
+        "Pinecone",
+        "OpenAI",
+        "Slack",
+        "WordPress",
+        "ElevenLabs",
+        "LinkedIn",
+        "X",
+        "Facebook",
+        "PostHog"
+      ],
+      "platforms": [
+        "supabase",
+        "serpapi",
+        "anthropic",
+        "pinecone",
+        "openai",
+        "slack",
+        "wordpress",
+        "elevenlabs",
+        "linkedin",
+        "x",
+        "facebook",
+        "posthog"
+      ],
+      "env": [],
+      "calls": [
+        "notify",
+        "error-handler"
+      ],
+      "folder": "systems/ai-content-studio",
+      "nodeCount": 84,
+      "tests": [
+        "a topic is researched, written, fact-checked, optimised and put to a person",
+        "a point that cites a source that does not exist is dropped before writing",
+        "an unsupported claim is edited out, and the draft says it was edited",
+        "when the edit leaves the claim in, the topic goes back and nothing is saved",
+        "a citation to a source that does not exist is caught even when the checker passes it",
+        "with too few sources the topic is returned without a model call",
+        "an empty queue does nothing",
+        "an approved draft is published, illustrated, voiced and shared to three networks",
+        "approving twice publishes once",
+        "a rejection publishes nothing and keeps the reason",
+        "sharing still happens with a plain post when the social model is down",
+        "a malformed decision is a 400",
+        "Friday's topics build on what was read and never repeat a title"
+      ],
+      "story": [
+        {
+          "title": "One topic each weekday",
+          "copy": "The next queued topic is claimed in Supabase with an update that only succeeds once, so two runs cannot draft the same piece.",
+          "nodes": [
+            "Weekdays 07:00",
+            "Next topic",
+            "Is there a topic?",
+            "Queue is empty",
+            "Claim the topic",
+            "Claimed it?",
+            "Another run has it"
+          ]
+        },
+        {
+          "title": "Sources first",
+          "copy": "SerpAPI gathers up to six sources and numbers them. With fewer than two, the topic is sent back instead of written from nothing.",
+          "nodes": [
+            "Search the topic",
+            "Collect the sources",
+            "Enough to write from?"
+          ]
+        },
+        {
+          "title": "A research agent finds the angle",
+          "copy": "Each key point must name the source it rests on. Code then drops any point that cites a source that is not there.",
+          "nodes": [
+            "Research agent",
+            "Claude · research",
+            "Reason it through",
+            "Research notes",
+            "Keep the supported points"
+          ]
+        },
+        {
+          "title": "An outline that does not repeat",
+          "copy": "The outline agent searches the published articles in Pinecone first.",
+          "nodes": [
+            "Outline agent",
+            "Claude · outline",
+            "Past articles",
+            "Embeddings · past articles",
+            "Outline",
+            "Check the outline",
+            "Usable outline?"
+          ]
+        },
+        {
+          "title": "A writer agent drafts it",
+          "copy": "It reads the house style guide from Pinecone and may make only the supported points, citing each by number.",
+          "nodes": [
+            "Writer agent",
+            "Claude · writing",
+            "House style",
+            "Embeddings · style",
+            "Read the article"
+          ]
+        },
+        {
+          "title": "A different model fact-checks it",
+          "copy": "Every claim is listed and marked supported or not. A citation to a source that does not exist is caught in code.",
+          "nodes": [
+            "Fact-check agent",
+            "GPT · fact-check",
+            "Claims",
+            "Weigh the claims",
+            "Every claim supported?"
+          ]
+        },
+        {
+          "title": "One edit, then back for a brief",
+          "copy": "An editor agent removes what was not supported. Code checks the removed claims are really gone. If not, the topic returns with the reason.",
+          "nodes": [
+            "Worth a rewrite?",
+            "Editor agent",
+            "Claude · editing",
+            "Recheck the edit",
+            "Clean now?",
+            "Could not finish",
+            "Return the topic",
+            "Returned message",
+            "Tell the editor"
+          ]
+        },
+        {
+          "title": "Optimised, saved, and put to a person",
+          "copy": "An SEO agent writes the meta text; code cuts it to length. The draft waits in Supabase and Slack asks for a decision.",
+          "nodes": [
+            "SEO agent",
+            "GPT · SEO",
+            "Meta",
+            "Enforce the limits",
+            "Save the draft",
+            "Ask for approval"
+          ]
+        },
+        {
+          "title": "A person says yes or no",
+          "copy": "The decision takes the draft only if it is still pending, so a second click publishes nothing.",
+          "nodes": [
+            "Decision",
+            "Read the decision",
+            "Valid?",
+            "Bad request",
+            "Take it if pending",
+            "Awaiting approval?",
+            "Not pending",
+            "Approved?",
+            "Rejected",
+            "Publishing"
+          ]
+        },
+        {
+          "title": "Published, illustrated and voiced",
+          "copy": "WordPress gets the article. OpenAI makes a cover image and ElevenLabs reads it aloud. Either can fail without unpublishing anything.",
+          "nodes": [
+            "Publish to WordPress",
+            "Mark published",
+            "Make a cover image",
+            "Script for the voice",
+            "Record the voice-over",
+            "Record the assets"
+          ]
+        },
+        {
+          "title": "Shared, one network at a time",
+          "copy": "A social agent writes three posts and code cuts each to its network's limit. LinkedIn, X and Facebook are posted one after another, and one failing does not stop the next.",
+          "nodes": [
+            "Social agent",
+            "Claude · social",
+            "Posts",
+            "Cut each post to length",
+            "Post to LinkedIn",
+            "Post to X",
+            "Post to Facebook",
+            "Mark shared",
+            "Say it is live"
+          ]
+        },
+        {
+          "title": "Friday: what was actually read",
+          "copy": "PostHog counts readers per article. A strategist agent proposes three topics that build on what worked, and code refuses any that repeat a title.",
+          "nodes": [
+            "Friday 16:00",
+            "Published this month",
+            "Count the readers",
+            "Rank the articles",
+            "Anything measured?",
+            "Strategist agent",
+            "Claude · strategy",
+            "Topics",
+            "Keep the new ones",
+            "Queue the topic",
+            "Post next week's topics",
+            "Too little data yet"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Weekdays 07:00",
+            "kind": "trigger",
+            "x": 0,
+            "y": 420
+          },
+          {
+            "id": "Next topic",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 260,
+            "y": 420
+          },
+          {
+            "id": "Is there a topic?",
+            "kind": "branch",
+            "x": 520,
+            "y": 420
+          },
+          {
+            "id": "Queue is empty",
+            "kind": "end",
+            "x": 780,
+            "y": 330
+          },
+          {
+            "id": "Claim the topic",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 780,
+            "y": 510
+          },
+          {
+            "id": "Claimed it?",
+            "kind": "branch",
+            "x": 1040,
+            "y": 420
+          },
+          {
+            "id": "Another run has it",
+            "kind": "end",
+            "x": 1300,
+            "y": 330
+          },
+          {
+            "id": "Search the topic",
+            "kind": "http",
+            "platform": "serpapi",
+            "x": 1300,
+            "y": 510
+          },
+          {
+            "id": "Collect the sources",
+            "kind": "code",
+            "x": 1560,
+            "y": 420
+          },
+          {
+            "id": "Enough to write from?",
+            "kind": "branch",
+            "x": 1820,
+            "y": 420
+          },
+          {
+            "id": "Research agent",
+            "kind": "agent",
+            "x": 2280,
+            "y": 290
+          },
+          {
+            "id": "Claude · research",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 2080,
+            "y": 510
+          },
+          {
+            "id": "Reason it through",
+            "kind": "part",
+            "x": 2280,
+            "y": 510
+          },
+          {
+            "id": "Research notes",
+            "kind": "part",
+            "x": 2480,
+            "y": 510
+          },
+          {
+            "id": "Keep the supported points",
+            "kind": "code",
+            "x": 2740,
+            "y": 420
+          },
+          {
+            "id": "Outline agent",
+            "kind": "agent",
+            "x": 3200,
+            "y": 200
+          },
+          {
+            "id": "Claude · outline",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 3000,
+            "y": 420
+          },
+          {
+            "id": "Past articles",
+            "kind": "part",
+            "platform": "pinecone",
+            "x": 3200,
+            "y": 420
+          },
+          {
+            "id": "Embeddings · past articles",
+            "kind": "part",
+            "platform": "openai",
+            "x": 3200,
+            "y": 640
+          },
+          {
+            "id": "Outline",
+            "kind": "part",
+            "x": 3400,
+            "y": 420
+          },
+          {
+            "id": "Check the outline",
+            "kind": "code",
+            "x": 3660,
+            "y": 420
+          },
+          {
+            "id": "Usable outline?",
+            "kind": "branch",
+            "x": 3920,
+            "y": 420
+          },
+          {
+            "id": "Writer agent",
+            "kind": "agent",
+            "x": 100,
+            "y": 1050
+          },
+          {
+            "id": "Claude · writing",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 0,
+            "y": 1270
+          },
+          {
+            "id": "House style",
+            "kind": "part",
+            "platform": "pinecone",
+            "x": 200,
+            "y": 1270
+          },
+          {
+            "id": "Embeddings · style",
+            "kind": "part",
+            "platform": "openai",
+            "x": 200,
+            "y": 1490
+          },
+          {
+            "id": "Read the article",
+            "kind": "code",
+            "x": 460,
+            "y": 1270
+          },
+          {
+            "id": "Fact-check agent",
+            "kind": "agent",
+            "x": 820,
+            "y": 1140
+          },
+          {
+            "id": "GPT · fact-check",
+            "kind": "part",
+            "platform": "openai",
+            "x": 720,
+            "y": 1360
+          },
+          {
+            "id": "Claims",
+            "kind": "part",
+            "x": 920,
+            "y": 1360
+          },
+          {
+            "id": "Weigh the claims",
+            "kind": "code",
+            "x": 1180,
+            "y": 1270
+          },
+          {
+            "id": "Every claim supported?",
+            "kind": "branch",
+            "x": 1440,
+            "y": 1270
+          },
+          {
+            "id": "Worth a rewrite?",
+            "kind": "branch",
+            "x": 1700,
+            "y": 1270
+          },
+          {
+            "id": "Editor agent",
+            "kind": "agent",
+            "x": 1960,
+            "y": 1140
+          },
+          {
+            "id": "Claude · editing",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 1960,
+            "y": 1360
+          },
+          {
+            "id": "Recheck the edit",
+            "kind": "code",
+            "x": 2220,
+            "y": 1270
+          },
+          {
+            "id": "Clean now?",
+            "kind": "branch",
+            "x": 2480,
+            "y": 1270
+          },
+          {
+            "id": "SEO agent",
+            "kind": "agent",
+            "x": 2840,
+            "y": 1050
+          },
+          {
+            "id": "GPT · SEO",
+            "kind": "part",
+            "platform": "openai",
+            "x": 2740,
+            "y": 1270
+          },
+          {
+            "id": "Meta",
+            "kind": "part",
+            "x": 2940,
+            "y": 1270
+          },
+          {
+            "id": "Enforce the limits",
+            "kind": "code",
+            "x": 3200,
+            "y": 1180
+          },
+          {
+            "id": "Save the draft",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 3460,
+            "y": 1180
+          },
+          {
+            "id": "Ask for approval",
+            "kind": "app",
+            "platform": "slack",
+            "x": 3720,
+            "y": 1180
+          },
+          {
+            "id": "Could not finish",
+            "kind": "code",
+            "x": 2840,
+            "y": 1490
+          },
+          {
+            "id": "Return the topic",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 3200,
+            "y": 1360
+          },
+          {
+            "id": "Returned message",
+            "kind": "code",
+            "x": 3460,
+            "y": 1360
+          },
+          {
+            "id": "Tell the editor",
+            "kind": "call",
+            "x": 3720,
+            "y": 1360
+          },
+          {
+            "id": "Decision",
+            "kind": "trigger",
+            "x": 0,
+            "y": 1990
+          },
+          {
+            "id": "Read the decision",
+            "kind": "code",
+            "x": 260,
+            "y": 1990
+          },
+          {
+            "id": "Valid?",
+            "kind": "branch",
+            "x": 520,
+            "y": 1990
+          },
+          {
+            "id": "Bad request",
+            "kind": "respond",
+            "x": 780,
+            "y": 1900
+          },
+          {
+            "id": "Take it if pending",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 780,
+            "y": 2080
+          },
+          {
+            "id": "Awaiting approval?",
+            "kind": "branch",
+            "x": 1040,
+            "y": 1990
+          },
+          {
+            "id": "Not pending",
+            "kind": "respond",
+            "x": 1300,
+            "y": 1900
+          },
+          {
+            "id": "Approved?",
+            "kind": "branch",
+            "x": 1300,
+            "y": 2080
+          },
+          {
+            "id": "Rejected",
+            "kind": "respond",
+            "x": 1560,
+            "y": 1900
+          },
+          {
+            "id": "Publishing",
+            "kind": "respond",
+            "x": 1560,
+            "y": 2080
+          },
+          {
+            "id": "Publish to WordPress",
+            "kind": "app",
+            "platform": "wordpress",
+            "x": 0,
+            "y": 2490
+          },
+          {
+            "id": "Mark published",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 260,
+            "y": 2490
+          },
+          {
+            "id": "Make a cover image",
+            "kind": "http",
+            "platform": "openai",
+            "x": 520,
+            "y": 2490
+          },
+          {
+            "id": "Script for the voice",
+            "kind": "code",
+            "x": 780,
+            "y": 2490
+          },
+          {
+            "id": "Record the voice-over",
+            "kind": "http",
+            "platform": "elevenlabs",
+            "x": 1040,
+            "y": 2490
+          },
+          {
+            "id": "Record the assets",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1300,
+            "y": 2490
+          },
+          {
+            "id": "Social agent",
+            "kind": "agent",
+            "x": 100,
+            "y": 2900
+          },
+          {
+            "id": "Claude · social",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 0,
+            "y": 3120
+          },
+          {
+            "id": "Posts",
+            "kind": "part",
+            "x": 200,
+            "y": 3120
+          },
+          {
+            "id": "Cut each post to length",
+            "kind": "code",
+            "x": 460,
+            "y": 3030
+          },
+          {
+            "id": "Post to LinkedIn",
+            "kind": "app",
+            "platform": "linkedin",
+            "x": 720,
+            "y": 3030
+          },
+          {
+            "id": "Post to X",
+            "kind": "app",
+            "platform": "x",
+            "x": 980,
+            "y": 3030
+          },
+          {
+            "id": "Post to Facebook",
+            "kind": "app",
+            "platform": "facebook",
+            "x": 1240,
+            "y": 3030
+          },
+          {
+            "id": "Mark shared",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1500,
+            "y": 3030
+          },
+          {
+            "id": "Say it is live",
+            "kind": "app",
+            "platform": "slack",
+            "x": 1760,
+            "y": 3030
+          },
+          {
+            "id": "Friday 16:00",
+            "kind": "trigger",
+            "x": 0,
+            "y": 3790
+          },
+          {
+            "id": "Published this month",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 260,
+            "y": 3790
+          },
+          {
+            "id": "Count the readers",
+            "kind": "http",
+            "platform": "posthog",
+            "x": 520,
+            "y": 3790
+          },
+          {
+            "id": "Rank the articles",
+            "kind": "code",
+            "x": 780,
+            "y": 3790
+          },
+          {
+            "id": "Anything measured?",
+            "kind": "branch",
+            "x": 1040,
+            "y": 3790
+          },
+          {
+            "id": "Strategist agent",
+            "kind": "agent",
+            "x": 1400,
+            "y": 3570
+          },
+          {
+            "id": "Claude · strategy",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 1300,
+            "y": 3790
+          },
+          {
+            "id": "Topics",
+            "kind": "part",
+            "x": 1500,
+            "y": 3790
+          },
+          {
+            "id": "Keep the new ones",
+            "kind": "code",
+            "x": 1760,
+            "y": 3790
+          },
+          {
+            "id": "Queue the topic",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2020,
+            "y": 3790
+          },
+          {
+            "id": "Post next week's topics",
+            "kind": "app",
+            "platform": "slack",
+            "x": 2280,
+            "y": 3790
+          },
+          {
+            "id": "Too little data yet",
+            "kind": "end",
+            "x": 1400,
+            "y": 4010
+          }
+        ],
+        "edges": [
+          {
+            "from": "Weekdays 07:00",
+            "to": "Next topic",
+            "out": 0
+          },
+          {
+            "from": "Next topic",
+            "to": "Is there a topic?",
+            "out": 0
+          },
+          {
+            "from": "Is there a topic?",
+            "to": "Claim the topic",
+            "out": 0
+          },
+          {
+            "from": "Claim the topic",
+            "to": "Claimed it?",
+            "out": 0
+          },
+          {
+            "from": "Claimed it?",
+            "to": "Search the topic",
+            "out": 0
+          },
+          {
+            "from": "Search the topic",
+            "to": "Collect the sources",
+            "out": 0
+          },
+          {
+            "from": "Collect the sources",
+            "to": "Enough to write from?",
+            "out": 0
+          },
+          {
+            "from": "Enough to write from?",
+            "to": "Research agent",
+            "out": 0
+          },
+          {
+            "from": "Research agent",
+            "to": "Keep the supported points",
+            "out": 0
+          },
+          {
+            "from": "Keep the supported points",
+            "to": "Outline agent",
+            "out": 0
+          },
+          {
+            "from": "Outline agent",
+            "to": "Check the outline",
+            "out": 0
+          },
+          {
+            "from": "Check the outline",
+            "to": "Usable outline?",
+            "out": 0
+          },
+          {
+            "from": "Is there a topic?",
+            "to": "Queue is empty",
+            "out": 1
+          },
+          {
+            "from": "Claimed it?",
+            "to": "Another run has it",
+            "out": 1
+          },
+          {
+            "from": "Enough to write from?",
+            "to": "Could not finish",
+            "out": 1
+          },
+          {
+            "from": "Usable outline?",
+            "to": "Writer agent",
+            "out": 0
+          },
+          {
+            "from": "Writer agent",
+            "to": "Read the article",
+            "out": 0
+          },
+          {
+            "from": "Read the article",
+            "to": "Fact-check agent",
+            "out": 0
+          },
+          {
+            "from": "Fact-check agent",
+            "to": "Weigh the claims",
+            "out": 0
+          },
+          {
+            "from": "Weigh the claims",
+            "to": "Every claim supported?",
+            "out": 0
+          },
+          {
+            "from": "Every claim supported?",
+            "to": "SEO agent",
+            "out": 0
+          },
+          {
+            "from": "SEO agent",
+            "to": "Enforce the limits",
+            "out": 0
+          },
+          {
+            "from": "Enforce the limits",
+            "to": "Save the draft",
+            "out": 0
+          },
+          {
+            "from": "Save the draft",
+            "to": "Ask for approval",
+            "out": 0
+          },
+          {
+            "from": "Usable outline?",
+            "to": "Could not finish",
+            "out": 1
+          },
+          {
+            "from": "Every claim supported?",
+            "to": "Worth a rewrite?",
+            "out": 1
+          },
+          {
+            "from": "Worth a rewrite?",
+            "to": "Editor agent",
+            "out": 0
+          },
+          {
+            "from": "Editor agent",
+            "to": "Recheck the edit",
+            "out": 0
+          },
+          {
+            "from": "Recheck the edit",
+            "to": "Clean now?",
+            "out": 0
+          },
+          {
+            "from": "Clean now?",
+            "to": "SEO agent",
+            "out": 0
+          },
+          {
+            "from": "Worth a rewrite?",
+            "to": "Could not finish",
+            "out": 1
+          },
+          {
+            "from": "Clean now?",
+            "to": "Could not finish",
+            "out": 1
+          },
+          {
+            "from": "Could not finish",
+            "to": "Return the topic",
+            "out": 0
+          },
+          {
+            "from": "Return the topic",
+            "to": "Returned message",
+            "out": 0
+          },
+          {
+            "from": "Returned message",
+            "to": "Tell the editor",
+            "out": 0
+          },
+          {
+            "from": "Decision",
+            "to": "Read the decision",
+            "out": 0
+          },
+          {
+            "from": "Read the decision",
+            "to": "Valid?",
+            "out": 0
+          },
+          {
+            "from": "Valid?",
+            "to": "Take it if pending",
+            "out": 0
+          },
+          {
+            "from": "Take it if pending",
+            "to": "Awaiting approval?",
+            "out": 0
+          },
+          {
+            "from": "Awaiting approval?",
+            "to": "Approved?",
+            "out": 0
+          },
+          {
+            "from": "Approved?",
+            "to": "Publishing",
+            "out": 0
+          },
+          {
+            "from": "Publishing",
+            "to": "Publish to WordPress",
+            "out": 0
+          },
+          {
+            "from": "Publish to WordPress",
+            "to": "Mark published",
+            "out": 0
+          },
+          {
+            "from": "Mark published",
+            "to": "Make a cover image",
+            "out": 0
+          },
+          {
+            "from": "Make a cover image",
+            "to": "Script for the voice",
+            "out": 0
+          },
+          {
+            "from": "Script for the voice",
+            "to": "Record the voice-over",
+            "out": 0
+          },
+          {
+            "from": "Record the voice-over",
+            "to": "Record the assets",
+            "out": 0
+          },
+          {
+            "from": "Record the assets",
+            "to": "Social agent",
+            "out": 0
+          },
+          {
+            "from": "Social agent",
+            "to": "Cut each post to length",
+            "out": 0
+          },
+          {
+            "from": "Cut each post to length",
+            "to": "Post to LinkedIn",
+            "out": 0
+          },
+          {
+            "from": "Post to LinkedIn",
+            "to": "Post to X",
+            "out": 0
+          },
+          {
+            "from": "Post to X",
+            "to": "Post to Facebook",
+            "out": 0
+          },
+          {
+            "from": "Post to Facebook",
+            "to": "Mark shared",
+            "out": 0
+          },
+          {
+            "from": "Mark shared",
+            "to": "Say it is live",
+            "out": 0
+          },
+          {
+            "from": "Valid?",
+            "to": "Bad request",
+            "out": 1
+          },
+          {
+            "from": "Awaiting approval?",
+            "to": "Not pending",
+            "out": 1
+          },
+          {
+            "from": "Approved?",
+            "to": "Rejected",
+            "out": 1
+          },
+          {
+            "from": "Friday 16:00",
+            "to": "Published this month",
+            "out": 0
+          },
+          {
+            "from": "Published this month",
+            "to": "Count the readers",
+            "out": 0
+          },
+          {
+            "from": "Count the readers",
+            "to": "Rank the articles",
+            "out": 0
+          },
+          {
+            "from": "Rank the articles",
+            "to": "Anything measured?",
+            "out": 0
+          },
+          {
+            "from": "Anything measured?",
+            "to": "Strategist agent",
+            "out": 0
+          },
+          {
+            "from": "Strategist agent",
+            "to": "Keep the new ones",
+            "out": 0
+          },
+          {
+            "from": "Keep the new ones",
+            "to": "Queue the topic",
+            "out": 0
+          },
+          {
+            "from": "Queue the topic",
+            "to": "Post next week's topics",
+            "out": 0
+          },
+          {
+            "from": "Anything measured?",
+            "to": "Too little data yet",
+            "out": 1
+          },
+          {
+            "from": "Claude · research",
+            "to": "Research agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Reason it through",
+            "to": "Research agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Research notes",
+            "to": "Research agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Claude · outline",
+            "to": "Outline agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Past articles",
+            "to": "Outline agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Embeddings · past articles",
+            "to": "Past articles",
+            "out": 0,
+            "part": "embedding"
+          },
+          {
+            "from": "Outline",
+            "to": "Outline agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Claude · writing",
+            "to": "Writer agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "House style",
+            "to": "Writer agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Embeddings · style",
+            "to": "House style",
+            "out": 0,
+            "part": "embedding"
+          },
+          {
+            "from": "GPT · fact-check",
+            "to": "Fact-check agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Claims",
+            "to": "Fact-check agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Claude · editing",
+            "to": "Editor agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "GPT · SEO",
+            "to": "SEO agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Meta",
+            "to": "SEO agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Claude · social",
+            "to": "Social agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Posts",
+            "to": "Social agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Claude · strategy",
+            "to": "Strategist agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Topics",
+            "to": "Strategist agent",
+            "out": 0,
+            "part": "outputParser"
+          }
+        ],
+        "sections": [
+          {
+            "title": "Research and outline",
+            "nodes": [
+              "Weekdays 07:00",
+              "Next topic",
+              "Is there a topic?",
+              "Queue is empty",
+              "Claim the topic",
+              "Claimed it?",
+              "Another run has it",
+              "Search the topic",
+              "Collect the sources",
+              "Enough to write from?",
+              "Research agent",
+              "Keep the supported points",
+              "Outline agent",
+              "Check the outline",
+              "Usable outline?"
+            ]
+          },
+          {
+            "title": "Write, fact-check, edit, optimise",
+            "nodes": [
+              "Writer agent",
+              "Read the article",
+              "Fact-check agent",
+              "Weigh the claims",
+              "Every claim supported?",
+              "Worth a rewrite?",
+              "Editor agent",
+              "Recheck the edit",
+              "Clean now?",
+              "SEO agent",
+              "Enforce the limits",
+              "Save the draft",
+              "Ask for approval",
+              "Could not finish",
+              "Return the topic",
+              "Returned message",
+              "Tell the editor"
+            ]
+          },
+          {
+            "title": "A person decides",
+            "nodes": [
+              "Decision",
+              "Read the decision",
+              "Valid?",
+              "Bad request",
+              "Take it if pending",
+              "Awaiting approval?",
+              "Not pending",
+              "Approved?",
+              "Rejected",
+              "Publishing"
+            ]
+          },
+          {
+            "title": "Publish, illustrate, voice",
+            "nodes": [
+              "Publish to WordPress",
+              "Mark published",
+              "Make a cover image",
+              "Script for the voice",
+              "Record the voice-over",
+              "Record the assets"
+            ]
+          },
+          {
+            "title": "Share",
+            "nodes": [
+              "Social agent",
+              "Cut each post to length",
+              "Post to LinkedIn",
+              "Post to X",
+              "Post to Facebook",
+              "Mark shared",
+              "Say it is live"
+            ]
+          },
+          {
+            "title": "Learn from what was read",
+            "nodes": [
+              "Friday 16:00",
+              "Published this month",
+              "Count the readers",
+              "Rank the articles",
+              "Anything measured?",
+              "Strategist agent",
+              "Keep the new ones",
+              "Queue the topic",
+              "Post next week's topics",
+              "Too little data yet"
             ]
           }
         ]
