@@ -15,7 +15,7 @@
       "name": "Slack",
       "job": "Team chat and alerts",
       "icon": "slack",
-      "workflows": 6
+      "workflows": 7
     },
     "hubspot": {
       "name": "HubSpot",
@@ -39,7 +39,7 @@
       "name": "Supabase",
       "job": "Records and state",
       "icon": "supabase",
-      "workflows": 6
+      "workflows": 7
     },
     "calendly": {
       "name": "Calendly",
@@ -57,7 +57,7 @@
       "name": "Zendesk",
       "job": "Helpdesk",
       "icon": "zendesk",
-      "workflows": 0
+      "workflows": 1
     },
     "wordpress": {
       "name": "WordPress",
@@ -87,13 +87,13 @@
       "name": "Shopify",
       "job": "Store",
       "icon": "shopify",
-      "workflows": 0
+      "workflows": 1
     },
     "stripe": {
       "name": "Stripe",
       "job": "Payments",
       "icon": "stripe",
-      "workflows": 0
+      "workflows": 1
     },
     "quickbooks": {
       "name": "QuickBooks",
@@ -111,7 +111,7 @@
       "name": "Typeform",
       "job": "Forms",
       "icon": "typeform",
-      "workflows": 1
+      "workflows": 2
     },
     "mailchimp": {
       "name": "Mailchimp",
@@ -165,19 +165,19 @@
       "name": "Claude",
       "job": "AI reasoning and writing",
       "icon": "anthropic",
-      "workflows": 1
+      "workflows": 2
     },
     "openai": {
       "name": "OpenAI",
       "job": "AI classification and embeddings",
       "icon": "openai",
-      "workflows": 1
+      "workflows": 2
     },
     "pinecone": {
       "name": "Pinecone",
       "job": "AI knowledge base",
       "icon": "pinecone",
-      "workflows": 1
+      "workflows": 2
     },
     "elevenlabs": {
       "name": "ElevenLabs",
@@ -197,6 +197,35 @@
       "workflows": [
         "ai-sales-team"
       ]
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "AI support desk",
+      "folder": "systems/ai-support-desk",
+      "line": "A triage agent, four specialists and a judge on every ticket.",
+      "problem": "Support answers the same questions all day, the hard tickets wait behind them, and nobody checks what was actually sent.",
+      "outcome": "Each ticket is triaged, answered by an agent that looks the facts up, judged by a second model, and audited overnight. Refunds follow a written policy and uncertain tickets reach a person with the facts attached.",
+      "workflows": [
+        "ai-support-desk"
+      ]
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "AI content studio",
+      "folder": "systems/ai-content-studio",
+      "line": "Research to published article, voice-over and social posts.",
+      "problem": "Publishing well takes research, writing, fact-checking, optimising, recording and sharing, and one of them always slips.",
+      "outcome": "Agents research, write, fact-check and optimise each piece. A person approves it, then it is published, voiced and shared, and its results come back as next week's brief.",
+      "workflows": []
+    },
+    {
+      "id": "ai-back-office",
+      "name": "AI back office",
+      "folder": "systems/ai-back-office",
+      "line": "Invoices, receipts and bank lines, read, matched and questioned.",
+      "problem": "Bookkeeping is typing what a document already says, then finding the one line that does not match.",
+      "outcome": "Documents are read by a model and checked by arithmetic, bank lines are matched, anomalies are raised, and finance can ask questions in Slack and get answers from the books.",
+      "workflows": []
     },
     {
       "id": "lead-intake",
@@ -1898,6 +1927,1465 @@
               "Count the funnel",
               "Analyst agent",
               "Post the weekly report"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "AI support desk · Triage, specialists and a judge",
+      "tier": "flagship",
+      "system": "ai-support-desk",
+      "category": "AI agents",
+      "kind": null,
+      "summary": "A triage agent routes each Zendesk ticket to a specialist agent that can read Shopify, Stripe or the knowledge base. A separate judge checks every answer before it is sent, refunds are decided by a written policy in code, and anything uncertain reaches a person with the facts already gathered.",
+      "source": "reference",
+      "trigger": "zendeskTrigger",
+      "integrations": [
+        "Zendesk",
+        "OpenAI",
+        "Claude",
+        "Shopify",
+        "Supabase",
+        "Stripe",
+        "Pinecone",
+        "Slack",
+        "Typeform"
+      ],
+      "platforms": [
+        "zendesk",
+        "openai",
+        "anthropic",
+        "shopify",
+        "supabase",
+        "stripe",
+        "pinecone",
+        "slack",
+        "typeform"
+      ],
+      "env": [],
+      "calls": [
+        "idempotency-guard",
+        "notify",
+        "error-handler"
+      ],
+      "folder": "systems/ai-support-desk",
+      "nodeCount": 93,
+      "tests": [
+        "an order question is looked up in Shopify, judged and answered",
+        "legal language goes straight to a person and no specialist is asked",
+        "a small refund inside the policy is made in Stripe and added to the reply",
+        "a refund over the limit is never made by the agents",
+        "an answer the judge rejects is handed over with the unsent draft",
+        "a promise is caught in code even when the judge passes it",
+        "a technical question is answered from the knowledge base",
+        "with the models down, the ticket still reaches a person",
+        "the same ticket delivered twice is answered once",
+        "the nightly audit grades every refunded answer and names the poor ones",
+        "Monday's gaps are grouped and posted",
+        "a week with no handovers posts an all clear without a model call",
+        "an unhappy survey opens a follow-up with a draft for a person",
+        "a happy survey is only recorded"
+      ],
+      "story": [
+        {
+          "title": "A ticket is opened",
+          "copy": "Zendesk sends it in. A ticket seen before is not answered twice.",
+          "nodes": [
+            "New ticket",
+            "Read the ticket",
+            "Seen this ticket?",
+            "New ticket?",
+            "Already handled"
+          ]
+        },
+        {
+          "title": "A triage agent reads it",
+          "copy": "Topic, urgency, sentiment and language. It is told not to answer.",
+          "nodes": [
+            "Triage agent",
+            "GPT · triage",
+            "Triage"
+          ]
+        },
+        {
+          "title": "Some tickets always get a person",
+          "copy": "Legal language, an angry customer, an enterprise account or another language: code sends these straight to the team, whatever the model thought.",
+          "nodes": [
+            "Apply the triage rules",
+            "Tag the ticket",
+            "Straight to a person?",
+            "Skip the agents"
+          ]
+        },
+        {
+          "title": "The rest go to a specialist",
+          "copy": "Four agents, each with only the tools its job needs.",
+          "nodes": [
+            "Which specialist?",
+            "To the orders agent",
+            "To the billing agent",
+            "To the technical agent",
+            "To the general agent"
+          ]
+        },
+        {
+          "title": "Orders: it looks the order up",
+          "copy": "The agent reads the order and the customer's history from Shopify and Supabase before it writes a word.",
+          "nodes": [
+            "Orders agent",
+            "Claude · orders",
+            "Orders answer",
+            "Order lookup",
+            "Order history"
+          ]
+        },
+        {
+          "title": "Billing: it reads the charge",
+          "copy": "It can look at Stripe. It cannot refund: it can only say a refund was asked for.",
+          "nodes": [
+            "Billing agent",
+            "Claude · billing",
+            "Billing answer",
+            "Charge lookup",
+            "Customer lookup",
+            "Days since"
+          ]
+        },
+        {
+          "title": "Technical and general: from the documents",
+          "copy": "Both search the knowledge base in Pinecone and must name the articles they used.",
+          "nodes": [
+            "Technical agent",
+            "Claude · technical",
+            "Technical answer",
+            "Help centre",
+            "Embeddings · help centre",
+            "Work it through",
+            "General agent",
+            "Claude · general",
+            "General answer",
+            "Policies and guides",
+            "Embeddings · policies",
+            "Collect the answer"
+          ]
+        },
+        {
+          "title": "A refund is decided by a written policy",
+          "copy": "Under 100, not a third refund, not already refunded. Inside the policy, Stripe refunds it with an idempotency key. Outside, a person decides.",
+          "nodes": [
+            "Refund asked for?",
+            "Past refunds",
+            "Apply the refund policy",
+            "Inside the policy?",
+            "Refund in Stripe",
+            "Record the refund",
+            "Add the refund to the reply",
+            "Refund needs a person"
+          ]
+        },
+        {
+          "title": "A judge checks the answer",
+          "copy": "A different model, which did not write the reply, checks every statement against the facts the specialist gathered.",
+          "nodes": [
+            "Judge agent",
+            "GPT · judging",
+            "Verdict"
+          ]
+        },
+        {
+          "title": "Code makes the final call",
+          "copy": "Low confidence, a rejected verdict, a promise, a card number or a judge that could not be reached all mean the same thing: do not send.",
+          "nodes": [
+            "Decide: send or hand over",
+            "Fit to send?"
+          ]
+        },
+        {
+          "title": "Sent, and logged",
+          "copy": "The reply goes out through Zendesk and the answer is recorded for the nightly audit.",
+          "nodes": [
+            "Send the reply",
+            "Log: answered"
+          ]
+        },
+        {
+          "title": "Or handed over with everything attached",
+          "copy": "The team gets the reasons, the facts found and the unsent draft as a private note, so nobody starts from zero.",
+          "nodes": [
+            "Write the handover",
+            "Assign to the team",
+            "Log: handed over",
+            "Handover message",
+            "Tell the support team"
+          ]
+        },
+        {
+          "title": "Tickets waiting on people are watched",
+          "copy": "Every ten minutes, anything near or past its response time is raised once per stage.",
+          "nodes": [
+            "Every 10 minutes",
+            "Open, unanswered tickets",
+            "Measure against the SLA",
+            "Mark the stage",
+            "SLA message",
+            "Raise the SLA"
+          ]
+        },
+        {
+          "title": "Every night, the agents are audited",
+          "copy": "Every answer that moved money and a sample of the rest are graded by a separate agent. Poor grades are named in Slack.",
+          "nodes": [
+            "02:00 nightly",
+            "Yesterday's answers",
+            "Take a sample",
+            "Auditor agent",
+            "Claude · auditing",
+            "Grade",
+            "Gather the grades",
+            "Save the audit",
+            "Post the audit"
+          ]
+        },
+        {
+          "title": "Every Monday, the gaps become a to-do list",
+          "copy": "What the agents could not answer is grouped into themes, each with the article, tool or policy that would fix it.",
+          "nodes": [
+            "Monday 08:00",
+            "Handed over last week",
+            "Gather the questions",
+            "Any gaps?",
+            "Gaps agent",
+            "Claude · gaps",
+            "Post the gaps",
+            "Post all clear"
+          ]
+        },
+        {
+          "title": "An unhappy customer gets a person",
+          "copy": "A low survey score opens a follow-up with a draft note. The agent writes the draft; a person decides what is sent.",
+          "nodes": [
+            "Survey answered",
+            "Read the survey",
+            "Record the score",
+            "Unhappy?",
+            "Recovery agent",
+            "Claude · recovery",
+            "Open a follow-up",
+            "Unhappy message",
+            "Tell the support lead",
+            "Recorded"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "New ticket",
+            "kind": "trigger",
+            "platform": "zendesk",
+            "x": 0,
+            "y": 470
+          },
+          {
+            "id": "Read the ticket",
+            "kind": "code",
+            "x": 260,
+            "y": 470
+          },
+          {
+            "id": "Seen this ticket?",
+            "kind": "call",
+            "x": 520,
+            "y": 470
+          },
+          {
+            "id": "New ticket?",
+            "kind": "branch",
+            "x": 780,
+            "y": 470
+          },
+          {
+            "id": "Already handled",
+            "kind": "end",
+            "x": 1140,
+            "y": 250
+          },
+          {
+            "id": "Triage agent",
+            "kind": "agent",
+            "x": 1140,
+            "y": 430
+          },
+          {
+            "id": "GPT · triage",
+            "kind": "part",
+            "platform": "openai",
+            "x": 1040,
+            "y": 650
+          },
+          {
+            "id": "Triage",
+            "kind": "part",
+            "x": 1240,
+            "y": 650
+          },
+          {
+            "id": "Apply the triage rules",
+            "kind": "code",
+            "x": 1500,
+            "y": 470
+          },
+          {
+            "id": "Tag the ticket",
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 1760,
+            "y": 470
+          },
+          {
+            "id": "Straight to a person?",
+            "kind": "branch",
+            "x": 2020,
+            "y": 470
+          },
+          {
+            "id": "Skip the agents",
+            "kind": "code",
+            "x": 2280,
+            "y": 380
+          },
+          {
+            "id": "Which specialist?",
+            "kind": "branch",
+            "x": 2280,
+            "y": 560
+          },
+          {
+            "id": "To the orders agent",
+            "kind": "code",
+            "x": 2540,
+            "y": 200
+          },
+          {
+            "id": "To the billing agent",
+            "kind": "code",
+            "x": 2540,
+            "y": 380
+          },
+          {
+            "id": "To the technical agent",
+            "kind": "code",
+            "x": 2540,
+            "y": 560
+          },
+          {
+            "id": "To the general agent",
+            "kind": "code",
+            "x": 2540,
+            "y": 740
+          },
+          {
+            "id": "Orders agent",
+            "kind": "agent",
+            "x": 400,
+            "y": 1150
+          },
+          {
+            "id": "Claude · orders",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 100,
+            "y": 1370
+          },
+          {
+            "id": "Orders answer",
+            "kind": "part",
+            "x": 300,
+            "y": 1370
+          },
+          {
+            "id": "Order lookup",
+            "kind": "part",
+            "platform": "shopify",
+            "x": 500,
+            "y": 1370
+          },
+          {
+            "id": "Order history",
+            "kind": "part",
+            "platform": "supabase",
+            "x": 700,
+            "y": 1370
+          },
+          {
+            "id": "Billing agent",
+            "kind": "agent",
+            "x": 400,
+            "y": 1590
+          },
+          {
+            "id": "Claude · billing",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 0,
+            "y": 1810
+          },
+          {
+            "id": "Billing answer",
+            "kind": "part",
+            "x": 200,
+            "y": 1810
+          },
+          {
+            "id": "Charge lookup",
+            "kind": "part",
+            "platform": "stripe",
+            "x": 400,
+            "y": 1810
+          },
+          {
+            "id": "Customer lookup",
+            "kind": "part",
+            "platform": "stripe",
+            "x": 600,
+            "y": 1810
+          },
+          {
+            "id": "Days since",
+            "kind": "part",
+            "x": 800,
+            "y": 1810
+          },
+          {
+            "id": "Technical agent",
+            "kind": "agent",
+            "x": 400,
+            "y": 2030
+          },
+          {
+            "id": "Claude · technical",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 100,
+            "y": 2250
+          },
+          {
+            "id": "Technical answer",
+            "kind": "part",
+            "x": 300,
+            "y": 2250
+          },
+          {
+            "id": "Help centre",
+            "kind": "part",
+            "platform": "pinecone",
+            "x": 500,
+            "y": 2250
+          },
+          {
+            "id": "Embeddings · help centre",
+            "kind": "part",
+            "platform": "openai",
+            "x": 500,
+            "y": 2470
+          },
+          {
+            "id": "Work it through",
+            "kind": "part",
+            "x": 700,
+            "y": 2250
+          },
+          {
+            "id": "General agent",
+            "kind": "agent",
+            "x": 400,
+            "y": 2650
+          },
+          {
+            "id": "Claude · general",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 200,
+            "y": 2870
+          },
+          {
+            "id": "General answer",
+            "kind": "part",
+            "x": 400,
+            "y": 2870
+          },
+          {
+            "id": "Policies and guides",
+            "kind": "part",
+            "platform": "pinecone",
+            "x": 600,
+            "y": 2870
+          },
+          {
+            "id": "Embeddings · policies",
+            "kind": "part",
+            "platform": "openai",
+            "x": 600,
+            "y": 3090
+          },
+          {
+            "id": "Collect the answer",
+            "kind": "code",
+            "x": 1060,
+            "y": 2120
+          },
+          {
+            "id": "Refund asked for?",
+            "kind": "branch",
+            "x": 0,
+            "y": 3590
+          },
+          {
+            "id": "Past refunds",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 260,
+            "y": 3590
+          },
+          {
+            "id": "Apply the refund policy",
+            "kind": "code",
+            "x": 520,
+            "y": 3590
+          },
+          {
+            "id": "Inside the policy?",
+            "kind": "branch",
+            "x": 780,
+            "y": 3590
+          },
+          {
+            "id": "Refund in Stripe",
+            "kind": "http",
+            "platform": "stripe",
+            "x": 1040,
+            "y": 3590
+          },
+          {
+            "id": "Record the refund",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1300,
+            "y": 3500
+          },
+          {
+            "id": "Add the refund to the reply",
+            "kind": "code",
+            "x": 1560,
+            "y": 3590
+          },
+          {
+            "id": "Refund needs a person",
+            "kind": "code",
+            "x": 1300,
+            "y": 3680
+          },
+          {
+            "id": "Judge agent",
+            "kind": "agent",
+            "x": 100,
+            "y": 4090
+          },
+          {
+            "id": "GPT · judging",
+            "kind": "part",
+            "platform": "openai",
+            "x": 0,
+            "y": 4310
+          },
+          {
+            "id": "Verdict",
+            "kind": "part",
+            "x": 200,
+            "y": 4310
+          },
+          {
+            "id": "Decide: send or hand over",
+            "kind": "code",
+            "x": 460,
+            "y": 4220
+          },
+          {
+            "id": "Fit to send?",
+            "kind": "branch",
+            "x": 720,
+            "y": 4220
+          },
+          {
+            "id": "Send the reply",
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 980,
+            "y": 4130
+          },
+          {
+            "id": "Log: answered",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1240,
+            "y": 4130
+          },
+          {
+            "id": "Write the handover",
+            "kind": "code",
+            "x": 980,
+            "y": 4310
+          },
+          {
+            "id": "Assign to the team",
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 1240,
+            "y": 4310
+          },
+          {
+            "id": "Log: handed over",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1500,
+            "y": 4220
+          },
+          {
+            "id": "Handover message",
+            "kind": "code",
+            "x": 1760,
+            "y": 4220
+          },
+          {
+            "id": "Tell the support team",
+            "kind": "call",
+            "x": 2020,
+            "y": 4220
+          },
+          {
+            "id": "Every 10 minutes",
+            "kind": "trigger",
+            "x": 0,
+            "y": 4760
+          },
+          {
+            "id": "Open, unanswered tickets",
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 260,
+            "y": 4760
+          },
+          {
+            "id": "Measure against the SLA",
+            "kind": "code",
+            "x": 520,
+            "y": 4760
+          },
+          {
+            "id": "Mark the stage",
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 780,
+            "y": 4760
+          },
+          {
+            "id": "SLA message",
+            "kind": "code",
+            "x": 1040,
+            "y": 4760
+          },
+          {
+            "id": "Raise the SLA",
+            "kind": "call",
+            "x": 1300,
+            "y": 4760
+          },
+          {
+            "id": "02:00 nightly",
+            "kind": "trigger",
+            "x": 0,
+            "y": 5300
+          },
+          {
+            "id": "Yesterday's answers",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 260,
+            "y": 5300
+          },
+          {
+            "id": "Take a sample",
+            "kind": "code",
+            "x": 520,
+            "y": 5300
+          },
+          {
+            "id": "Auditor agent",
+            "kind": "agent",
+            "x": 880,
+            "y": 5170
+          },
+          {
+            "id": "Claude · auditing",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 780,
+            "y": 5390
+          },
+          {
+            "id": "Grade",
+            "kind": "part",
+            "x": 980,
+            "y": 5390
+          },
+          {
+            "id": "Gather the grades",
+            "kind": "code",
+            "x": 1240,
+            "y": 5300
+          },
+          {
+            "id": "Save the audit",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1500,
+            "y": 5300
+          },
+          {
+            "id": "Post the audit",
+            "kind": "app",
+            "platform": "slack",
+            "x": 1760,
+            "y": 5300
+          },
+          {
+            "id": "Monday 08:00",
+            "kind": "trigger",
+            "x": 0,
+            "y": 6060
+          },
+          {
+            "id": "Handed over last week",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 260,
+            "y": 6060
+          },
+          {
+            "id": "Gather the questions",
+            "kind": "code",
+            "x": 520,
+            "y": 6060
+          },
+          {
+            "id": "Any gaps?",
+            "kind": "branch",
+            "x": 780,
+            "y": 6060
+          },
+          {
+            "id": "Gaps agent",
+            "kind": "agent",
+            "x": 1040,
+            "y": 5840
+          },
+          {
+            "id": "Claude · gaps",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 1040,
+            "y": 6060
+          },
+          {
+            "id": "Post the gaps",
+            "kind": "app",
+            "platform": "slack",
+            "x": 1300,
+            "y": 6060
+          },
+          {
+            "id": "Post all clear",
+            "kind": "app",
+            "platform": "slack",
+            "x": 1040,
+            "y": 6280
+          },
+          {
+            "id": "Survey answered",
+            "kind": "trigger",
+            "platform": "typeform",
+            "x": 0,
+            "y": 6910
+          },
+          {
+            "id": "Read the survey",
+            "kind": "code",
+            "x": 260,
+            "y": 6910
+          },
+          {
+            "id": "Record the score",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 520,
+            "y": 6910
+          },
+          {
+            "id": "Unhappy?",
+            "kind": "branch",
+            "x": 780,
+            "y": 6910
+          },
+          {
+            "id": "Recovery agent",
+            "kind": "agent",
+            "x": 1040,
+            "y": 6690
+          },
+          {
+            "id": "Claude · recovery",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 1040,
+            "y": 6910
+          },
+          {
+            "id": "Open a follow-up",
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 1300,
+            "y": 6910
+          },
+          {
+            "id": "Unhappy message",
+            "kind": "code",
+            "x": 1560,
+            "y": 6910
+          },
+          {
+            "id": "Tell the support lead",
+            "kind": "call",
+            "x": 1820,
+            "y": 6910
+          },
+          {
+            "id": "Recorded",
+            "kind": "end",
+            "x": 1040,
+            "y": 7130
+          }
+        ],
+        "edges": [
+          {
+            "from": "New ticket",
+            "to": "Read the ticket",
+            "out": 0
+          },
+          {
+            "from": "Read the ticket",
+            "to": "Seen this ticket?",
+            "out": 0
+          },
+          {
+            "from": "Seen this ticket?",
+            "to": "New ticket?",
+            "out": 0
+          },
+          {
+            "from": "New ticket?",
+            "to": "Triage agent",
+            "out": 0
+          },
+          {
+            "from": "Triage agent",
+            "to": "Apply the triage rules",
+            "out": 0
+          },
+          {
+            "from": "Apply the triage rules",
+            "to": "Tag the ticket",
+            "out": 0
+          },
+          {
+            "from": "Tag the ticket",
+            "to": "Straight to a person?",
+            "out": 0
+          },
+          {
+            "from": "Straight to a person?",
+            "to": "Skip the agents",
+            "out": 0
+          },
+          {
+            "from": "Skip the agents",
+            "to": "Write the handover",
+            "out": 0
+          },
+          {
+            "from": "New ticket?",
+            "to": "Already handled",
+            "out": 1
+          },
+          {
+            "from": "Straight to a person?",
+            "to": "Which specialist?",
+            "out": 1
+          },
+          {
+            "from": "Which specialist?",
+            "to": "To the orders agent",
+            "out": 0
+          },
+          {
+            "from": "To the orders agent",
+            "to": "Orders agent",
+            "out": 0
+          },
+          {
+            "from": "Orders agent",
+            "to": "Collect the answer",
+            "out": 0
+          },
+          {
+            "from": "Which specialist?",
+            "to": "To the billing agent",
+            "out": 1
+          },
+          {
+            "from": "To the billing agent",
+            "to": "Billing agent",
+            "out": 0
+          },
+          {
+            "from": "Billing agent",
+            "to": "Collect the answer",
+            "out": 0
+          },
+          {
+            "from": "Which specialist?",
+            "to": "To the technical agent",
+            "out": 2
+          },
+          {
+            "from": "To the technical agent",
+            "to": "Technical agent",
+            "out": 0
+          },
+          {
+            "from": "Technical agent",
+            "to": "Collect the answer",
+            "out": 0
+          },
+          {
+            "from": "Which specialist?",
+            "to": "To the general agent",
+            "out": 3
+          },
+          {
+            "from": "To the general agent",
+            "to": "General agent",
+            "out": 0
+          },
+          {
+            "from": "General agent",
+            "to": "Collect the answer",
+            "out": 0
+          },
+          {
+            "from": "Collect the answer",
+            "to": "Refund asked for?",
+            "out": 0
+          },
+          {
+            "from": "Refund asked for?",
+            "to": "Past refunds",
+            "out": 0
+          },
+          {
+            "from": "Past refunds",
+            "to": "Apply the refund policy",
+            "out": 0
+          },
+          {
+            "from": "Apply the refund policy",
+            "to": "Inside the policy?",
+            "out": 0
+          },
+          {
+            "from": "Inside the policy?",
+            "to": "Refund in Stripe",
+            "out": 0
+          },
+          {
+            "from": "Refund in Stripe",
+            "to": "Record the refund",
+            "out": 0
+          },
+          {
+            "from": "Record the refund",
+            "to": "Add the refund to the reply",
+            "out": 0
+          },
+          {
+            "from": "Add the refund to the reply",
+            "to": "Judge agent",
+            "out": 0
+          },
+          {
+            "from": "Refund asked for?",
+            "to": "Judge agent",
+            "out": 1
+          },
+          {
+            "from": "Inside the policy?",
+            "to": "Refund needs a person",
+            "out": 1
+          },
+          {
+            "from": "Refund needs a person",
+            "to": "Write the handover",
+            "out": 0
+          },
+          {
+            "from": "Refund in Stripe",
+            "to": "Refund needs a person",
+            "out": 1
+          },
+          {
+            "from": "Judge agent",
+            "to": "Decide: send or hand over",
+            "out": 0
+          },
+          {
+            "from": "Decide: send or hand over",
+            "to": "Fit to send?",
+            "out": 0
+          },
+          {
+            "from": "Fit to send?",
+            "to": "Send the reply",
+            "out": 0
+          },
+          {
+            "from": "Send the reply",
+            "to": "Log: answered",
+            "out": 0
+          },
+          {
+            "from": "Fit to send?",
+            "to": "Write the handover",
+            "out": 1
+          },
+          {
+            "from": "Write the handover",
+            "to": "Assign to the team",
+            "out": 0
+          },
+          {
+            "from": "Assign to the team",
+            "to": "Log: handed over",
+            "out": 0
+          },
+          {
+            "from": "Log: handed over",
+            "to": "Handover message",
+            "out": 0
+          },
+          {
+            "from": "Handover message",
+            "to": "Tell the support team",
+            "out": 0
+          },
+          {
+            "from": "Every 10 minutes",
+            "to": "Open, unanswered tickets",
+            "out": 0
+          },
+          {
+            "from": "Open, unanswered tickets",
+            "to": "Measure against the SLA",
+            "out": 0
+          },
+          {
+            "from": "Measure against the SLA",
+            "to": "Mark the stage",
+            "out": 0
+          },
+          {
+            "from": "Mark the stage",
+            "to": "SLA message",
+            "out": 0
+          },
+          {
+            "from": "SLA message",
+            "to": "Raise the SLA",
+            "out": 0
+          },
+          {
+            "from": "02:00 nightly",
+            "to": "Yesterday's answers",
+            "out": 0
+          },
+          {
+            "from": "Yesterday's answers",
+            "to": "Take a sample",
+            "out": 0
+          },
+          {
+            "from": "Take a sample",
+            "to": "Auditor agent",
+            "out": 0
+          },
+          {
+            "from": "Auditor agent",
+            "to": "Gather the grades",
+            "out": 0
+          },
+          {
+            "from": "Gather the grades",
+            "to": "Save the audit",
+            "out": 0
+          },
+          {
+            "from": "Save the audit",
+            "to": "Post the audit",
+            "out": 0
+          },
+          {
+            "from": "Monday 08:00",
+            "to": "Handed over last week",
+            "out": 0
+          },
+          {
+            "from": "Handed over last week",
+            "to": "Gather the questions",
+            "out": 0
+          },
+          {
+            "from": "Gather the questions",
+            "to": "Any gaps?",
+            "out": 0
+          },
+          {
+            "from": "Any gaps?",
+            "to": "Gaps agent",
+            "out": 0
+          },
+          {
+            "from": "Gaps agent",
+            "to": "Post the gaps",
+            "out": 0
+          },
+          {
+            "from": "Any gaps?",
+            "to": "Post all clear",
+            "out": 1
+          },
+          {
+            "from": "Survey answered",
+            "to": "Read the survey",
+            "out": 0
+          },
+          {
+            "from": "Read the survey",
+            "to": "Record the score",
+            "out": 0
+          },
+          {
+            "from": "Record the score",
+            "to": "Unhappy?",
+            "out": 0
+          },
+          {
+            "from": "Unhappy?",
+            "to": "Recovery agent",
+            "out": 0
+          },
+          {
+            "from": "Recovery agent",
+            "to": "Open a follow-up",
+            "out": 0
+          },
+          {
+            "from": "Open a follow-up",
+            "to": "Unhappy message",
+            "out": 0
+          },
+          {
+            "from": "Unhappy message",
+            "to": "Tell the support lead",
+            "out": 0
+          },
+          {
+            "from": "Unhappy?",
+            "to": "Recorded",
+            "out": 1
+          },
+          {
+            "from": "GPT · triage",
+            "to": "Triage agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Triage",
+            "to": "Triage agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Claude · orders",
+            "to": "Orders agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Orders answer",
+            "to": "Orders agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Order lookup",
+            "to": "Orders agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Order history",
+            "to": "Orders agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Claude · billing",
+            "to": "Billing agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Billing answer",
+            "to": "Billing agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Charge lookup",
+            "to": "Billing agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Customer lookup",
+            "to": "Billing agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Days since",
+            "to": "Billing agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Claude · technical",
+            "to": "Technical agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Technical answer",
+            "to": "Technical agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Help centre",
+            "to": "Technical agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Embeddings · help centre",
+            "to": "Help centre",
+            "out": 0,
+            "part": "embedding"
+          },
+          {
+            "from": "Work it through",
+            "to": "Technical agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Claude · general",
+            "to": "General agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "General answer",
+            "to": "General agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Policies and guides",
+            "to": "General agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Embeddings · policies",
+            "to": "Policies and guides",
+            "out": 0,
+            "part": "embedding"
+          },
+          {
+            "from": "GPT · judging",
+            "to": "Judge agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Verdict",
+            "to": "Judge agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Claude · auditing",
+            "to": "Auditor agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Grade",
+            "to": "Auditor agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Claude · gaps",
+            "to": "Gaps agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Claude · recovery",
+            "to": "Recovery agent",
+            "out": 0,
+            "part": "languageModel"
+          }
+        ],
+        "sections": [
+          {
+            "title": "Intake and triage",
+            "nodes": [
+              "New ticket",
+              "Read the ticket",
+              "Seen this ticket?",
+              "New ticket?",
+              "Already handled",
+              "Triage agent",
+              "Apply the triage rules",
+              "Tag the ticket",
+              "Straight to a person?",
+              "Skip the agents",
+              "Which specialist?",
+              "To the orders agent",
+              "To the billing agent",
+              "To the technical agent",
+              "To the general agent"
+            ]
+          },
+          {
+            "title": "Specialists, each with its own tools",
+            "nodes": [
+              "Orders agent",
+              "Billing agent",
+              "Technical agent",
+              "General agent",
+              "Collect the answer"
+            ]
+          },
+          {
+            "title": "Refund policy, in code",
+            "nodes": [
+              "Refund asked for?",
+              "Past refunds",
+              "Apply the refund policy",
+              "Inside the policy?",
+              "Refund in Stripe",
+              "Record the refund",
+              "Add the refund to the reply",
+              "Refund needs a person"
+            ]
+          },
+          {
+            "title": "The judge, then send or hand over",
+            "nodes": [
+              "Judge agent",
+              "Decide: send or hand over",
+              "Fit to send?",
+              "Send the reply",
+              "Log: answered",
+              "Write the handover",
+              "Assign to the team",
+              "Log: handed over",
+              "Handover message",
+              "Tell the support team"
+            ]
+          },
+          {
+            "title": "Response-time watch",
+            "nodes": [
+              "Every 10 minutes",
+              "Open, unanswered tickets",
+              "Measure against the SLA",
+              "Mark the stage",
+              "SLA message",
+              "Raise the SLA"
+            ]
+          },
+          {
+            "title": "Nightly audit of what was sent",
+            "nodes": [
+              "02:00 nightly",
+              "Yesterday's answers",
+              "Take a sample",
+              "Auditor agent",
+              "Gather the grades",
+              "Save the audit",
+              "Post the audit"
+            ]
+          },
+          {
+            "title": "Weekly gaps",
+            "nodes": [
+              "Monday 08:00",
+              "Handed over last week",
+              "Gather the questions",
+              "Any gaps?",
+              "Gaps agent",
+              "Post the gaps",
+              "Post all clear"
+            ]
+          },
+          {
+            "title": "After the answer: unhappy customers",
+            "nodes": [
+              "Survey answered",
+              "Read the survey",
+              "Record the score",
+              "Unhappy?",
+              "Recovery agent",
+              "Open a follow-up",
+              "Unhappy message",
+              "Tell the support lead",
+              "Recorded"
             ]
           }
         ]

@@ -1,0 +1,3364 @@
+{
+  "name": "AI support desk · Triage, specialists and a judge",
+  "nodes": [
+    {
+      "id": "f68ffd9f-2bcd-4b35-a9a3-76adc8079f22",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -220
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 230,
+        "content": "## AI support desk · Triage, specialists and a judge\nA triage agent routes each Zendesk ticket to a specialist agent that can read Shopify, Stripe or the knowledge base. A separate judge checks every answer before it is sent, refunds are decided by a written policy in code, and anything uncertain reaches a person with the facts already gathered.\n\n**Platforms:** Zendesk, OpenAI, Claude, Shopify, Supabase, Stripe, Pinecone, Slack, Typeform\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/ai-support-desk`"
+      }
+    },
+    {
+      "id": "ee334b2d-8ecc-456d-a000-db1ca0f979fa",
+      "name": "Section: Intake and triage",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        0
+      ],
+      "parameters": {
+        "width": 2920,
+        "height": 870,
+        "color": 4,
+        "content": "## 1. Intake and triage\nZendesk in. One agent reads the ticket; code decides what always goes to a person."
+      }
+    },
+    {
+      "id": "9218e76e-32ca-490e-a60c-1b664a3357cf",
+      "name": "Section: Specialists, each with its own tools",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        950
+      ],
+      "parameters": {
+        "width": 1440,
+        "height": 2270,
+        "color": 5,
+        "content": "## 2. Specialists, each with its own tools\nOrders reads Shopify, billing reads Stripe, technical and general search the knowledge base in Pinecone."
+      }
+    },
+    {
+      "id": "e626be2e-929a-42bb-a8bc-f5580bc9fcbb",
+      "name": "Section: Refund policy, in code",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        3300
+      ],
+      "parameters": {
+        "width": 1940,
+        "height": 510,
+        "color": 6,
+        "content": "## 3. Refund policy, in code\nAn agent can ask for a refund. Only this section can make one."
+      }
+    },
+    {
+      "id": "4ec2bfa7-a9ae-4683-a80c-54d0cde43f0e",
+      "name": "Section: The judge, then send or hand over",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        3890
+      ],
+      "parameters": {
+        "width": 2400,
+        "height": 590,
+        "color": 3,
+        "content": "## 4. The judge, then send or hand over\nA different model checks the answer against the facts. Code makes the final call."
+      }
+    },
+    {
+      "id": "bb0cb96d-6937-41a8-aa18-075deb37dee2",
+      "name": "Section: Response-time watch",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        4560
+      ],
+      "parameters": {
+        "width": 1680,
+        "height": 330,
+        "color": 7,
+        "content": "## 5. Response-time watch"
+      }
+    },
+    {
+      "id": "aebdb838-4b8b-40df-a075-49e31163b0ed",
+      "name": "Section: Nightly audit of what was sent",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        4970
+      ],
+      "parameters": {
+        "width": 2140,
+        "height": 590,
+        "color": 2,
+        "content": "## 6. Nightly audit of what was sent"
+      }
+    },
+    {
+      "id": "7ae1387f-9093-4dc6-a2a0-a1138fb77005",
+      "name": "Section: Weekly gaps",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        5640
+      ],
+      "parameters": {
+        "width": 1680,
+        "height": 770,
+        "color": 4,
+        "content": "## 7. Weekly gaps"
+      }
+    },
+    {
+      "id": "0f34fb00-5458-4085-abba-b7beaf3bc664",
+      "name": "Section: After the answer: unhappy customers",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        6490
+      ],
+      "parameters": {
+        "width": 2200,
+        "height": 770,
+        "color": 5,
+        "content": "## 8. After the answer: unhappy customers"
+      }
+    },
+    {
+      "id": "f0b84625-0fab-4bbd-a1ff-6f0f6537b5cc",
+      "position": [
+        0,
+        470
+      ],
+      "name": "New ticket",
+      "type": "n8n-nodes-base.zendeskTrigger",
+      "typeVersion": 1,
+      "parameters": {
+        "service": "support",
+        "options": {},
+        "conditions": {
+          "all": [
+            {
+              "resource": "ticket",
+              "field": "status",
+              "operation": "is",
+              "value": "new"
+            }
+          ]
+        }
+      },
+      "webhookId": "85a6b415-94b1-4bac-a67b-3fc2b8479dfc",
+      "credentials": {
+        "zendeskApi": {
+          "id": "__CRED:zendesk__",
+          "name": "Zendesk"
+        }
+      }
+    },
+    {
+      "id": "82092ee9-3929-4b97-a2fb-d291c21fe259",
+      "position": [
+        260,
+        470
+      ],
+      "name": "Read the ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => {\n  const t = item.json;\n  const id = String(t.id ?? t.ticket_id ?? \"\");\n  if (!id) throw new Error(\"Ticket has no id\");\n  return { json: {\n    ticket_id: id,\n    email: String(t.requester_email ?? t.requester?.email ?? \"\").toLowerCase(),\n    subject: String(t.subject ?? \"\").slice(0, 300),\n    body: String(t.description ?? t.body ?? \"\").slice(0, 4000),\n    plan: t.organization?.plan ?? t.plan ?? \"standard\",\n    scope: \"support-ticket\", key: id,\n  } };\n});"
+      }
+    },
+    {
+      "id": "5c2ddf2c-5f21-4ffc-ae5c-c0e206b42dfe",
+      "position": [
+        520,
+        470
+      ],
+      "name": "Seen this ticket?",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:idempotency-guard__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c9d3c72a-644a-4b96-af34-51839743e941",
+      "position": [
+        780,
+        470
+      ],
+      "name": "New ticket?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d16d7877-6534-40cc-aa83-6632d7a29357",
+              "leftValue": "={{ !$json.duplicate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7c2b9b73-833d-4303-a9a9-032a00582646",
+      "position": [
+        1140,
+        250
+      ],
+      "name": "Already handled",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "13f7e52e-8a8e-4121-a11f-ae651b69233b",
+      "position": [
+        1140,
+        430
+      ],
+      "name": "Triage agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Subject: ' + $json.subject + '\\n\\n' + $json.body }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Triage agent on a support desk. Read the ticket and decide: topic ('orders' for delivery, order status and returns; 'billing' for charges, invoices and refunds; 'technical' for something not working; 'other' for anything else), urgency ('low', 'normal' or 'high'), sentiment ('calm', 'frustrated' or 'angry') and the language it is written in as a two-letter code. Do not answer the ticket.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "e65088e4-54ad-4414-a2ce-99369174cf9e",
+      "position": [
+        1040,
+        650
+      ],
+      "name": "GPT · triage",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "580993ec-4c30-431e-a3af-15083fb264e3",
+      "position": [
+        1240,
+        650
+      ],
+      "name": "Triage",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"topic\": \"orders\",\n  \"urgency\": \"normal\",\n  \"sentiment\": \"calm\",\n  \"language\": \"en\"\n}"
+      }
+    },
+    {
+      "id": "3bd3f21c-d746-463d-a748-1e74a1a98cb1",
+      "position": [
+        1500,
+        470
+      ],
+      "name": "Apply the triage rules",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const t = $(\"New ticket?\").first().json;\nconst m = $input.first().json.output;\nconst ok = m && [\"orders\", \"billing\", \"technical\", \"other\"].includes(m.topic);\nconst text = (t.subject + \" \" + t.body).toLowerCase();\n// Things a person handles whatever the model made of them.\nconst human = [];\nif (!ok) human.push(\"triage could not read the ticket\");\nif (/\\b(lawyer|legal action|sue|chargeback|trading standards|data protection|gdpr|press)\\b/.test(text)) human.push(\"legal or regulatory language\");\nif (ok && m.sentiment === \"angry\") human.push(\"the customer is angry\");\nif (t.plan === \"enterprise\") human.push(\"enterprise account\");\nif (ok && m.language && m.language !== \"en\") human.push(\"written in \" + m.language);\nreturn [{ json: { ...t, topic: ok ? m.topic : \"other\", urgency: ok ? m.urgency : \"normal\", sentiment: ok ? m.sentiment : \"unknown\", straight_to_human: human.length > 0, human_reasons: human } }];"
+      }
+    },
+    {
+      "id": "4cb81686-d2fb-42f8-a573-d1516b0f7323",
+      "position": [
+        1760,
+        470
+      ],
+      "name": "Tag the ticket",
+      "type": "n8n-nodes-base.zendesk",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "ticket",
+        "operation": "update",
+        "id": "={{ $json.ticket_id }}",
+        "updateFields": {
+          "tags": [
+            "ai-triaged"
+          ],
+          "internalNote": "={{ 'Triage: ' + $json.topic + ', ' + $json.urgency + ', ' + $json.sentiment }}"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "zendeskApi": {
+          "id": "__CRED:zendesk__",
+          "name": "Zendesk"
+        }
+      }
+    },
+    {
+      "id": "fb31888b-4f4f-4b32-ab0d-5e673ecee857",
+      "position": [
+        2020,
+        470
+      ],
+      "name": "Straight to a person?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a84e04a9-b455-429e-ad85-cbc9ecd51e1c",
+              "leftValue": "={{ $('Apply the triage rules').first().json.straight_to_human }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d62275ae-2865-4db4-a21f-6f12f2d1544d",
+      "position": [
+        2280,
+        380
+      ],
+      "name": "Skip the agents",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return [{ json: $(\"Apply the triage rules\").first().json }];"
+      }
+    },
+    {
+      "id": "4d4cede7-0432-4ff6-ae01-7cd3a6b14cf7",
+      "position": [
+        2280,
+        560
+      ],
+      "name": "Which specialist?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0810dca3-f5c7-4eec-aff0-e6c17636edb0",
+                    "leftValue": "={{ $('Apply the triage rules').first().json.topic === 'orders' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "orders"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2ed90610-e52e-480c-a19d-ebcd14b13b67",
+                    "leftValue": "={{ $('Apply the triage rules').first().json.topic === 'billing' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "billing"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "87602f1c-6593-4793-a005-de0216478b21",
+                    "leftValue": "={{ $('Apply the triage rules').first().json.topic === 'technical' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "technical"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      }
+    },
+    {
+      "id": "e9ae329a-80e4-45c5-a2ae-c6797baadf50",
+      "position": [
+        2540,
+        200
+      ],
+      "name": "To the orders agent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return [{ json: $(\"Apply the triage rules\").first().json }];"
+      }
+    },
+    {
+      "id": "d50148ba-569f-4acd-ae56-5dca13f9b3dd",
+      "position": [
+        2540,
+        380
+      ],
+      "name": "To the billing agent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return [{ json: $(\"Apply the triage rules\").first().json }];"
+      }
+    },
+    {
+      "id": "a78a6d01-dc68-4e4c-aca5-ce56ae9ccb40",
+      "position": [
+        2540,
+        560
+      ],
+      "name": "To the technical agent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return [{ json: $(\"Apply the triage rules\").first().json }];"
+      }
+    },
+    {
+      "id": "08b076f5-dc89-40cc-a78b-1b7e242a210e",
+      "position": [
+        2540,
+        740
+      ],
+      "name": "To the general agent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return [{ json: $(\"Apply the triage rules\").first().json }];"
+      }
+    },
+    {
+      "id": "7b529563-d0f1-4aa7-a5f3-ef5485bfd1bc",
+      "position": [
+        400,
+        1150
+      ],
+      "name": "Orders agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Subject: ' + $json.subject + '\\n\\n' + $json.body + '\\n\\nCustomer email: ' + $json.email }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Orders agent. Look the order up in Shopify before saying anything about it. Reply in under 140 words, plain text, signed 'The Acme support team'. State only what a tool returned. If a tool returned nothing useful, set needs_human true and confidence low instead of guessing. Never promise a refund, a date or a discount: describe what you found and what happens next.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "9be363aa-f14a-40db-a082-b033e868daee",
+      "position": [
+        100,
+        1370
+      ],
+      "name": "Claude · orders",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "f7c11566-ac12-4123-a09e-724c1f7aecb8",
+      "position": [
+        300,
+        1370
+      ],
+      "name": "Orders answer",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"reply\": \"The reply to the customer.\",\n  \"confidence\": 0.85,\n  \"needs_human\": false,\n  \"facts\": [\n    \"A fact the reply relies on, with where it came from\"\n  ]\n}"
+      }
+    },
+    {
+      "id": "d86e7167-71c5-486e-a1db-0f48899f4826",
+      "position": [
+        500,
+        1370
+      ],
+      "name": "Order lookup",
+      "type": "n8n-nodes-base.shopifyTool",
+      "typeVersion": 1,
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Gets one Shopify order by its id: status, fulfilment, tracking and line items.",
+        "authentication": "accessToken",
+        "resource": "order",
+        "operation": "get",
+        "orderId": "={{ $fromAI('order_id', `The Shopify order id from the ticket`, 'string') }}",
+        "options": {}
+      },
+      "credentials": {
+        "shopifyAccessTokenApi": {
+          "id": "__CRED:shopify__",
+          "name": "Shopify"
+        }
+      }
+    },
+    {
+      "id": "be84197b-0f6e-4b7b-a4e4-384bbe3fd650",
+      "position": [
+        700,
+        1370
+      ],
+      "name": "Order history",
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Lists this customer's past orders from the orders table. Pass their email.",
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "orders",
+        "returnAll": false,
+        "limit": 10,
+        "filterType": "string",
+        "filterString": "={{ $fromAI('filter', `A PostgREST filter such as email=eq.ana@example.com`, 'string') }}"
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "e5be4a87-fce4-448d-a140-815c08c4a99b",
+      "position": [
+        400,
+        1590
+      ],
+      "name": "Billing agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Subject: ' + $json.subject + '\\n\\n' + $json.body + '\\n\\nCustomer email: ' + $json.email }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Billing agent. Look the charge up in Stripe before saying anything about it. If the customer is asking for money back, do not decide it: describe what you found and set refund to the charge id and the amount in the currency's main unit. A separate policy decides. Reply in under 140 words, plain text, signed 'The Acme support team'. State only what a tool returned. If a tool returned nothing useful, set needs_human true and confidence low instead of guessing. Never promise a refund, a date or a discount: describe what you found and what happens next.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "52ea9108-6fb9-4711-a0be-e754ac97c21b",
+      "position": [
+        0,
+        1810
+      ],
+      "name": "Claude · billing",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "42242f90-6d14-45bc-ad8c-faab0d238ebe",
+      "position": [
+        200,
+        1810
+      ],
+      "name": "Billing answer",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"reply\": \"The reply to the customer.\",\n  \"confidence\": 0.85,\n  \"needs_human\": false,\n  \"facts\": [\n    \"A fact the reply relies on, with where it came from\"\n  ],\n  \"refund\": {\n    \"charge\": \"ch_123\",\n    \"amount\": 0\n  }\n}"
+      }
+    },
+    {
+      "id": "f23ba892-fc49-4cd5-a12e-d0a500080f62",
+      "position": [
+        400,
+        1810
+      ],
+      "name": "Charge lookup",
+      "type": "n8n-nodes-base.stripeTool",
+      "typeVersion": 1,
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Gets one Stripe charge by its id: amount, status, date and whether it was refunded.",
+        "resource": "charge",
+        "operation": "get",
+        "chargeId": "={{ $fromAI('charge_id', `The Stripe charge id, starting ch_`, 'string') }}"
+      },
+      "credentials": {
+        "stripeApi": {
+          "id": "__CRED:stripe__",
+          "name": "Stripe"
+        }
+      }
+    },
+    {
+      "id": "14281933-c645-4a63-a61c-d4bd5ec9012f",
+      "position": [
+        600,
+        1810
+      ],
+      "name": "Customer lookup",
+      "type": "n8n-nodes-base.stripeTool",
+      "typeVersion": 1,
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Gets one Stripe customer by id.",
+        "resource": "customer",
+        "operation": "get",
+        "customerId": "={{ $fromAI('customer_id', `The Stripe customer id, starting cus_`, 'string') }}"
+      },
+      "credentials": {
+        "stripeApi": {
+          "id": "__CRED:stripe__",
+          "name": "Stripe"
+        }
+      }
+    },
+    {
+      "id": "405f3f6d-ddb6-4c71-a528-3b0049743881",
+      "position": [
+        800,
+        1810
+      ],
+      "name": "Days since",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "parameters": {
+        "description": "Returns how many whole days ago an ISO date or a Unix timestamp in seconds was.",
+        "jsCode": "const t = /^\\d+$/.test(String(query).trim()) ? Number(query) * 1000 : Date.parse(query); if (Number.isNaN(t)) return 'unknown'; return String(Math.floor((Date.now() - t) / 864e5));"
+      }
+    },
+    {
+      "id": "2e78b9ff-4e4f-4f15-abca-e4d4140b99fc",
+      "position": [
+        400,
+        2030
+      ],
+      "name": "Technical agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Subject: ' + $json.subject + '\\n\\n' + $json.body + '\\n\\nCustomer email: ' + $json.email }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Technical agent. Search the knowledge base and answer only from what it returns, citing the article titles in facts. Reply in under 140 words, plain text, signed 'The Acme support team'. State only what a tool returned. If a tool returned nothing useful, set needs_human true and confidence low instead of guessing. Never promise a refund, a date or a discount: describe what you found and what happens next.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "1928c57d-d38d-415a-a61c-8f7a95e3def7",
+      "position": [
+        100,
+        2250
+      ],
+      "name": "Claude · technical",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "63621588-ebd5-4703-a5ae-304adb62d281",
+      "position": [
+        300,
+        2250
+      ],
+      "name": "Technical answer",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"reply\": \"The reply to the customer.\",\n  \"confidence\": 0.85,\n  \"needs_human\": false,\n  \"facts\": [\n    \"A fact the reply relies on, with where it came from\"\n  ]\n}"
+      }
+    },
+    {
+      "id": "75c5293d-013d-4c14-a1bc-5b71bfd99d7d",
+      "position": [
+        500,
+        2250
+      ],
+      "name": "Help centre",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search the help centre and troubleshooting guides. Pass a short description of the problem.",
+        "pineconeIndex": {
+          "__rl": true,
+          "mode": "id",
+          "value": "kb-index"
+        },
+        "topK": 4,
+        "options": {}
+      },
+      "credentials": {
+        "pineconeApi": {
+          "id": "__CRED:pinecone__",
+          "name": "Pinecone"
+        }
+      }
+    },
+    {
+      "id": "bcda1946-f73b-458c-aeeb-86588c005e0c",
+      "position": [
+        500,
+        2470
+      ],
+      "name": "Embeddings · help centre",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "b1e159c3-c12e-49ba-a009-823c8a454fe9",
+      "position": [
+        700,
+        2250
+      ],
+      "name": "Work it through",
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "36eab742-64cd-470b-ae86-b5dc3c80951f",
+      "position": [
+        400,
+        2650
+      ],
+      "name": "General agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Subject: ' + $json.subject + '\\n\\n' + $json.body + '\\n\\nCustomer email: ' + $json.email }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the General agent, for questions that are not about an order, a charge or a fault. Search the knowledge base for policy and how-to answers. Reply in under 140 words, plain text, signed 'The Acme support team'. State only what a tool returned. If a tool returned nothing useful, set needs_human true and confidence low instead of guessing. Never promise a refund, a date or a discount: describe what you found and what happens next.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "ecba4e3e-1f36-472f-a8ce-0240e8c907da",
+      "position": [
+        200,
+        2870
+      ],
+      "name": "Claude · general",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "e8033c38-43ec-4e3b-a9c3-301e25e48b27",
+      "position": [
+        400,
+        2870
+      ],
+      "name": "General answer",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"reply\": \"The reply to the customer.\",\n  \"confidence\": 0.85,\n  \"needs_human\": false,\n  \"facts\": [\n    \"A fact the reply relies on, with where it came from\"\n  ]\n}"
+      }
+    },
+    {
+      "id": "6bb4b822-170d-4ebd-a87d-504806119ed3",
+      "position": [
+        600,
+        2870
+      ],
+      "name": "Policies and guides",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search company policies, opening hours and how-to guides.",
+        "pineconeIndex": {
+          "__rl": true,
+          "mode": "id",
+          "value": "kb-index"
+        },
+        "topK": 4,
+        "options": {}
+      },
+      "credentials": {
+        "pineconeApi": {
+          "id": "__CRED:pinecone__",
+          "name": "Pinecone"
+        }
+      }
+    },
+    {
+      "id": "5c417ea0-88ba-46bc-a7e1-78ff5e79e3ae",
+      "position": [
+        600,
+        3090
+      ],
+      "name": "Embeddings · policies",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "d9874466-f036-44f6-a81d-fadb1438877e",
+      "position": [
+        1060,
+        2120
+      ],
+      "name": "Collect the answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const t = $(\"Apply the triage rules\").first().json;\nconst o = $input.first().json.output;\nconst ok = o && typeof o.reply === \"string\" && o.reply.trim().length > 0;\nconst refund = t.topic === \"billing\" && o && o.refund && o.refund.charge ? { charge: String(o.refund.charge), amount: Number(o.refund.amount) } : null;\nreturn [{ json: { ...t, reply: ok ? o.reply.trim() : null, confidence: ok ? Number(o.confidence) || 0 : 0, needs_human: !ok || o.needs_human === true, facts: ok ? (o.facts ?? []) : [], refund, agent_failed: !ok } }];"
+      }
+    },
+    {
+      "id": "c671a3a5-93ad-4a3c-af39-d62a130dc560",
+      "position": [
+        0,
+        3590
+      ],
+      "name": "Refund asked for?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "db3bb622-f33a-4125-a407-d79bb4337cf1",
+              "leftValue": "={{ !!$json.refund }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c28564d6-223a-4b66-affe-0fe06243786f",
+      "position": [
+        260,
+        3590
+      ],
+      "name": "Past refunds",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "refunds",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ 'email=eq.' + $json.email }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "5e6ba887-7d2d-47f5-a192-4f3c2c90433c",
+      "position": [
+        520,
+        3590
+      ],
+      "name": "Apply the refund policy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const a = $(\"Collect the answer\").first().json;\nconst past = $input.all().map((i) => i.json).filter((r) => r.email);\nconst reasons = [];\nif (!(a.refund.amount > 0)) reasons.push(\"no amount could be read\");\nif (a.refund.amount > 100) reasons.push(\"over the 100 automatic limit\");\nif (past.length >= 2) reasons.push(\"third refund for this customer\");\nif (past.some((r) => r.charge === a.refund.charge)) reasons.push(\"this charge was already refunded\");\nreturn [{ json: { ...a, refund_ok: reasons.length === 0, refund_reasons: reasons } }];"
+      }
+    },
+    {
+      "id": "3f96a0a2-3d2d-4cd9-a2d3-edc26feb9074",
+      "position": [
+        780,
+        3590
+      ],
+      "name": "Inside the policy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6511e17d-31ea-4580-a7b2-89071c34d29e",
+              "leftValue": "={{ $json.refund_ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f47cc760-3fc3-42ae-aced-e92ac7cd8db4",
+      "position": [
+        1040,
+        3590
+      ],
+      "name": "Refund in Stripe",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.stripe.com/v1/refunds' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ 'refund-' + $json.ticket_id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ charge: $json.refund.charge, amount: Math.round($json.refund.amount * 100) }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "stripeApi": {
+          "id": "__CRED:stripe__",
+          "name": "Stripe"
+        }
+      }
+    },
+    {
+      "id": "9179b82d-4134-4afc-aa72-17c382ca5c3c",
+      "position": [
+        1300,
+        3500
+      ],
+      "name": "Record the refund",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "refunds",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Inside the policy?').first().json.email }}"
+            },
+            {
+              "fieldId": "charge",
+              "fieldValue": "={{ $('Inside the policy?').first().json.refund.charge }}"
+            },
+            {
+              "fieldId": "amount",
+              "fieldValue": "={{ $('Inside the policy?').first().json.refund.amount }}"
+            },
+            {
+              "fieldId": "ticket_id",
+              "fieldValue": "={{ $('Inside the policy?').first().json.ticket_id }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "b25cc0bc-fec8-4858-ae96-f7cbc5921153",
+      "position": [
+        1560,
+        3590
+      ],
+      "name": "Add the refund to the reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const a = $(\"Inside the policy?\").first().json;\nreturn [{ json: { ...a, reply: a.reply + \"\\n\\nWe have refunded \" + a.refund.amount.toFixed(2) + \" to your original payment method. It usually arrives within 5 to 10 working days.\", refunded: true } }];"
+      }
+    },
+    {
+      "id": "52081b73-bed2-4ea2-ab33-73fc7eb4fd01",
+      "position": [
+        1300,
+        3680
+      ],
+      "name": "Refund needs a person",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const a = $(\"Collect the answer\").first().json;\nconst why = $input.first().json.refund_reasons ?? [\"Stripe could not process the refund\"];\nreturn [{ json: { ...a, needs_human: true, human_reasons: [\"refund outside the policy: \" + why.join(\", \")] } }];"
+      }
+    },
+    {
+      "id": "57a3c7e3-eef5-4fe0-a167-bc9acc30588a",
+      "position": [
+        100,
+        4090
+      ],
+      "name": "Judge agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ ticket: { subject: $json.subject, body: $json.body }, reply: $json.reply, facts: $json.facts }) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Judge agent. You did not write this reply. Pass it only if every statement in it is supported by the listed facts, it answers what the customer asked, it promises nothing, and the tone is calm and plain. List every problem you find.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "7afa5bce-7b49-40ff-a6b7-4ebeab69a8c3",
+      "position": [
+        0,
+        4310
+      ],
+      "name": "GPT · judging",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "db00854c-ef00-4825-a269-d9d015e7be04",
+      "position": [
+        200,
+        4310
+      ],
+      "name": "Verdict",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"pass\": true,\n  \"issues\": [\n    \"A specific problem, if any\"\n  ]\n}"
+      }
+    },
+    {
+      "id": "7d51b218-f146-4d08-a00b-d41014bb7f22",
+      "position": [
+        460,
+        4220
+      ],
+      "name": "Decide: send or hand over",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const a = $(\"Add the refund to the reply\").isExecuted ? $(\"Add the refund to the reply\").first().json : $(\"Collect the answer\").first().json;\nconst v = $input.first().json.output;\nconst judged = v && typeof v.pass === \"boolean\";\nconst reasons = [...(a.human_reasons ?? [])];\nif (a.needs_human) reasons.push(\"the specialist asked for a person\");\nif (a.confidence < 0.75) reasons.push(\"low confidence (\" + a.confidence + \")\");\nif (!judged) reasons.push(\"the judge could not be reached\");\nelse if (!v.pass) reasons.push(\"the judge rejected it: \" + (v.issues ?? []).join(\"; \"));\n// Checks no model is asked to make.\nconst reply = String(a.reply ?? \"\");\nif (/guarantee|we promise|definitely will|100%/i.test(reply)) reasons.push(\"the reply makes a promise\");\nif (/\\b(?:\\d[ -]?){13,19}\\b/.test(reply)) reasons.push(\"the reply contains what looks like a card number\");\nif (reply.split(/\\s+/).filter(Boolean).length > 220) reasons.push(\"the reply is too long\");\nreturn [{ json: { ...a, send: reasons.length === 0, human_reasons: reasons } }];"
+      }
+    },
+    {
+      "id": "5a2ef8b7-a8f6-42c1-af76-7233558fd91a",
+      "position": [
+        720,
+        4220
+      ],
+      "name": "Fit to send?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eea52163-d725-4acf-a687-9956c1c196b5",
+              "leftValue": "={{ $json.send }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "33ab2d01-f0d2-4c25-a40e-17311f40e071",
+      "position": [
+        980,
+        4130
+      ],
+      "name": "Send the reply",
+      "type": "n8n-nodes-base.zendesk",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "ticket",
+        "operation": "update",
+        "id": "={{ $json.ticket_id }}",
+        "updateFields": {
+          "status": "={{ 'pending' }}",
+          "publicReply": "={{ $json.reply }}",
+          "tags": [
+            "ai-answered"
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "zendeskApi": {
+          "id": "__CRED:zendesk__",
+          "name": "Zendesk"
+        }
+      }
+    },
+    {
+      "id": "56529c73-ea86-43f6-a0df-05f713d42807",
+      "position": [
+        1240,
+        4130
+      ],
+      "name": "Log: answered",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "support_log",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "ticket_id",
+              "fieldValue": "={{ $('Fit to send?').first().json.ticket_id }}"
+            },
+            {
+              "fieldId": "topic",
+              "fieldValue": "={{ $('Fit to send?').first().json.topic }}"
+            },
+            {
+              "fieldId": "question",
+              "fieldValue": "={{ $('Fit to send?').first().json.subject }}"
+            },
+            {
+              "fieldId": "reply",
+              "fieldValue": "={{ $('Fit to send?').first().json.reply }}"
+            },
+            {
+              "fieldId": "answered",
+              "fieldValue": "={{ true }}"
+            },
+            {
+              "fieldId": "confidence",
+              "fieldValue": "={{ $('Fit to send?').first().json.confidence }}"
+            },
+            {
+              "fieldId": "refunded",
+              "fieldValue": "={{ $('Fit to send?').first().json.refunded === true }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "4a56ed06-d6c9-44b3-a8ee-bade46235158",
+      "position": [
+        980,
+        4310
+      ],
+      "name": "Write the handover",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const t = $input.first().json;\nconst reasons = t.human_reasons ?? [];\nconst draft = t.reply ? \"\\n\\nDraft the agents wrote (not sent):\\n\" + t.reply : \"\";\nconst facts = (t.facts ?? []).length ? \"\\n\\nWhat was found:\\n- \" + t.facts.join(\"\\n- \") : \"\";\nreturn [{ json: { ticket_id: t.ticket_id, topic: t.topic, subject: t.subject, urgency: t.urgency ?? \"normal\", confidence: t.confidence ?? 0, reasons, note: \"Handed to a person because: \" + reasons.join(\"; \") + \".\" + facts + draft } }];"
+      }
+    },
+    {
+      "id": "47fd7279-1645-4b65-addc-3ee89a464889",
+      "position": [
+        1240,
+        4310
+      ],
+      "name": "Assign to the team",
+      "type": "n8n-nodes-base.zendesk",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "ticket",
+        "operation": "update",
+        "id": "={{ $json.ticket_id }}",
+        "updateFields": {
+          "status": "={{ 'open' }}",
+          "priority": "={{ $json.urgency === 'high' ? 'urgent' : 'normal' }}",
+          "internalNote": "={{ $json.note }}",
+          "tags": [
+            "needs-human"
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "zendeskApi": {
+          "id": "__CRED:zendesk__",
+          "name": "Zendesk"
+        }
+      }
+    },
+    {
+      "id": "a0c8731a-f9ff-4e05-aace-cdb5622fe6a9",
+      "position": [
+        1500,
+        4220
+      ],
+      "name": "Log: handed over",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "support_log",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "ticket_id",
+              "fieldValue": "={{ $('Write the handover').first().json.ticket_id }}"
+            },
+            {
+              "fieldId": "topic",
+              "fieldValue": "={{ $('Write the handover').first().json.topic }}"
+            },
+            {
+              "fieldId": "question",
+              "fieldValue": "={{ $('Write the handover').first().json.subject }}"
+            },
+            {
+              "fieldId": "answered",
+              "fieldValue": "={{ false }}"
+            },
+            {
+              "fieldId": "reasons",
+              "fieldValue": "={{ $('Write the handover').first().json.reasons }}"
+            },
+            {
+              "fieldId": "confidence",
+              "fieldValue": "={{ $('Write the handover').first().json.confidence }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "1fa92d72-0067-407b-af4b-b2e213703129",
+      "position": [
+        1760,
+        4220
+      ],
+      "name": "Handover message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const h = $(\"Write the handover\").first().json;\nreturn [{ json: { channel: \"#support\", level: h.urgency === \"high\" ? \"critical\" : \"warn\", text: \"Ticket #\" + h.ticket_id + \" (\" + h.topic + \") needs a person: \" + h.reasons.join(\"; \") + \".\" } }];"
+      }
+    },
+    {
+      "id": "fbaa47b7-c87e-4f42-a587-0a4aee55e9df",
+      "position": [
+        2020,
+        4220
+      ],
+      "name": "Tell the support team",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5512c8e8-c472-4d3f-a787-85856f2d873c",
+      "position": [
+        0,
+        4760
+      ],
+      "name": "Every 10 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f99506e9-c578-40cd-abd9-d3a2247ab45b",
+      "position": [
+        260,
+        4760
+      ],
+      "name": "Open, unanswered tickets",
+      "type": "n8n-nodes-base.zendesk",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "ticket",
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "query": "={{ 'status:open tags:needs-human' }}"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "zendeskApi": {
+          "id": "__CRED:zendesk__",
+          "name": "Zendesk"
+        }
+      }
+    },
+    {
+      "id": "565f8983-9ca3-41ce-abf8-abc0676a9f62",
+      "position": [
+        520,
+        4760
+      ],
+      "name": "Measure against the SLA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const SLA = { urgent: 30, high: 120, normal: 480, low: 1440 }; // minutes\nconst now = Date.now();\nreturn $input.all().map((i) => i.json).filter((t) => t.id && t.created_at).map((t) => {\n  const limit = SLA[t.priority] ?? SLA.normal;\n  const waited = Math.floor((now - new Date(t.created_at).getTime()) / 60000);\n  const stage = waited >= limit ? \"breached\" : waited >= limit * 0.75 ? \"at_risk\" : \"ok\";\n  const last = (t.tags ?? []).includes(\"sla-breached\") ? \"breached\" : (t.tags ?? []).includes(\"sla-at-risk\") ? \"at_risk\" : \"ok\";\n  return { id: String(t.id), subject: t.subject, waited, limit, stage, last };\n}).filter((t) => t.stage !== \"ok\" && t.stage !== t.last).map((json) => ({ json }));"
+      }
+    },
+    {
+      "id": "3d005afc-6ece-4a0f-acb2-5fd5593a7891",
+      "position": [
+        780,
+        4760
+      ],
+      "name": "Mark the stage",
+      "type": "n8n-nodes-base.zendesk",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "ticket",
+        "operation": "update",
+        "id": "={{ $json.id }}",
+        "updateFields": {
+          "tags": [
+            "={{ $json.stage === 'breached' ? 'sla-breached' : 'sla-at-risk' }}"
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "zendeskApi": {
+          "id": "__CRED:zendesk__",
+          "name": "Zendesk"
+        }
+      }
+    },
+    {
+      "id": "7a2cd8ea-12f7-44e2-aa00-6a9dec8557e3",
+      "position": [
+        1040,
+        4760
+      ],
+      "name": "SLA message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const before = $(\"Measure against the SLA\").all();\nreturn $input.all().map((_, i) => { const t = before[i].json; return { json: { channel: \"#support\", level: t.stage === \"breached\" ? \"critical\" : \"warn\", text: t.stage === \"breached\" ? \"Response time missed on #\" + t.id + \": waited \" + t.waited + \" min (limit \" + t.limit + \").\" : \"Response time at risk on #\" + t.id + \": \" + (t.limit - t.waited) + \" min left.\" } }; });"
+      }
+    },
+    {
+      "id": "79297600-2ab2-421e-a7b0-1599c703d0f0",
+      "position": [
+        1300,
+        4760
+      ],
+      "name": "Raise the SLA",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a0b6c08b-1e06-4661-a2fc-5be8da256069",
+      "position": [
+        0,
+        5300
+      ],
+      "name": "02:00 nightly",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bbc94dbb-81ce-4e2f-a1cc-9476dbb32e7d",
+      "position": [
+        260,
+        5300
+      ],
+      "name": "Yesterday's answers",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "support_log",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ 'answered=eq.true&at=gte.' + $now.minus({ days: 1 }).toISO() }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "366eb9b2-3853-4891-ac71-a5499e66b51d",
+      "position": [
+        520,
+        5300
+      ],
+      "name": "Take a sample",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "// Every answer that moved money, plus up to eight of the rest.\nconst rows = $input.all().map((i) => i.json).filter((r) => r.ticket_id && r.reply);\nconst refunded = rows.filter((r) => r.refunded);\nconst rest = rows.filter((r) => !r.refunded).sort((a, b) => String(a.ticket_id).localeCompare(String(b.ticket_id))).slice(0, 8);\nreturn [...refunded, ...rest].map((json) => ({ json }));"
+      }
+    },
+    {
+      "id": "be979adc-c814-4342-ab7d-2589a5627669",
+      "position": [
+        880,
+        5170
+      ],
+      "name": "Auditor agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ question: $json.question, reply: $json.reply, topic: $json.topic }) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Auditor agent. Grade a support reply that has already been sent, from 1 to 5: was it correct for the question, complete, and honest about what it did not know? Name the single most important thing to fix, or 'nothing'.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "054e00b6-96f9-4e5b-a27c-7e043f5625a9",
+      "position": [
+        780,
+        5390
+      ],
+      "name": "Claude · auditing",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "e1e83be0-77a6-454f-ab75-b19b539a9a2e",
+      "position": [
+        980,
+        5390
+      ],
+      "name": "Grade",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"grade\": 4,\n  \"fix\": \"nothing\"\n}"
+      }
+    },
+    {
+      "id": "ac399a73-d477-4fe8-a4cd-c5d2e368e5ce",
+      "position": [
+        1240,
+        5300
+      ],
+      "name": "Gather the grades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const sample = $(\"Take a sample\").all().map((i) => i.json);\nconst graded = $input.all().map((item, i) => ({ ticket_id: sample[i]?.ticket_id, topic: sample[i]?.topic, grade: Number(item.json.output?.grade), fix: item.json.output?.fix ?? null })).filter((g) => g.ticket_id && g.grade >= 1 && g.grade <= 5);\nconst poor = graded.filter((g) => g.grade <= 2);\nconst average = graded.length ? Math.round((graded.reduce((s, g) => s + g.grade, 0) / graded.length) * 10) / 10 : null;\nreturn [{ json: { audited: graded.length, average, poor, text: graded.length ? \"Audited \" + graded.length + \" answers from yesterday, average \" + average + \"/5.\" + (poor.length ? \" Poor: \" + poor.map((p) => \"#\" + p.ticket_id + \" (\" + p.fix + \")\").join(\"; \") : \" None graded 2 or under.\") : \"No answers to audit yesterday.\" } }];"
+      }
+    },
+    {
+      "id": "306a4bf9-93ab-4507-acc3-1d6f49b70232",
+      "position": [
+        1500,
+        5300
+      ],
+      "name": "Save the audit",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "support_audits",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "audited",
+              "fieldValue": "={{ $json.audited }}"
+            },
+            {
+              "fieldId": "average",
+              "fieldValue": "={{ $json.average }}"
+            },
+            {
+              "fieldId": "poor",
+              "fieldValue": "={{ $json.poor }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "cb6b0664-a9fb-4c63-a3b4-eabc162f93c2",
+      "position": [
+        1760,
+        5300
+      ],
+      "name": "Post the audit",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#support' }}"
+        },
+        "text": "={{ ':mag: ' + $('Gather the grades').first().json.text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
+    },
+    {
+      "id": "9500b0ef-63d3-432d-ad99-6404694218f2",
+      "position": [
+        0,
+        6060
+      ],
+      "name": "Monday 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "083627cc-1330-4cbd-a009-4b54ce4394c4",
+      "position": [
+        260,
+        6060
+      ],
+      "name": "Handed over last week",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "support_log",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ 'answered=eq.false&at=gte.' + $now.minus({ days: 7 }).toISO() }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "1c1130c6-1ba1-4437-a512-3793434d9bef",
+      "position": [
+        520,
+        6060
+      ],
+      "name": "Gather the questions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const rows = $input.all().map((i) => i.json).filter((r) => r.question);\nreturn [{ json: { count: rows.length, questions: rows.slice(0, 80).map((r) => \"- [\" + r.topic + \"] \" + String(r.question).slice(0, 160) + \" (\" + (r.reasons ?? []).join(\", \") + \")\").join(\"\\n\") } }];"
+      }
+    },
+    {
+      "id": "587171d7-42ca-42a7-ad21-82fd68b5f393",
+      "position": [
+        780,
+        6060
+      ],
+      "name": "Any gaps?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a2745c57-5fa1-4165-a27c-689389e72115",
+              "leftValue": "={{ $json.count > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e3aa32cb-7749-4b57-af1d-0eb3436591f6",
+      "position": [
+        1040,
+        5840
+      ],
+      "name": "Gaps agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.questions }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "You are the Gaps agent. Group these tickets the agents could not answer into at most five themes. For each, give the theme, how many tickets, and the one change that would let an agent answer next time: a help article to write, a tool to add, or a policy to clarify. Plain text, no preamble.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "1c01b170-080b-45fb-abdd-c7f1e0d993de",
+      "position": [
+        1040,
+        6060
+      ],
+      "name": "Claude · gaps",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "47bb48df-9d7a-4101-a835-27932a6833a0",
+      "position": [
+        1300,
+        6060
+      ],
+      "name": "Post the gaps",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#support' }}"
+        },
+        "text": "={{ ':books: ' + $('Gather the questions').first().json.count + ' tickets went to a person last week.\\n' + ($json.output ?? $('Gather the questions').first().json.questions) }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
+    },
+    {
+      "id": "d0c2a49d-853d-483a-a1f0-0c7cd3404368",
+      "position": [
+        1040,
+        6280
+      ],
+      "name": "Post all clear",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#support' }}"
+        },
+        "text": "={{ ':white_check_mark: The agents answered every ticket they were given last week.' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
+    },
+    {
+      "id": "ae0d589d-7e9a-4c3e-a79e-8c7b296d56f1",
+      "position": [
+        0,
+        6910
+      ],
+      "name": "Survey answered",
+      "type": "n8n-nodes-base.typeformTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "authentication": "accessToken",
+        "formId": "csat-form",
+        "simplifyAnswers": true,
+        "onlyAnswers": false
+      },
+      "webhookId": "11f1c370-ec16-4264-a336-8cc3bac95932",
+      "credentials": {
+        "typeformApi": {
+          "id": "__CRED:typeform__",
+          "name": "Typeform"
+        }
+      }
+    },
+    {
+      "id": "86d4c1b3-9f96-4477-a804-b0c3db3a9978",
+      "position": [
+        260,
+        6910
+      ],
+      "name": "Read the survey",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => {\n  const s = item.json;\n  const score = Number(s.score ?? s[\"How did we do?\"]);\n  if (!Number.isInteger(score) || score < 1 || score > 5) throw new Error(\"Score must be 1 to 5\");\n  return { json: { ticket_id: String(s.ticket_id ?? \"\"), email: String(s.email ?? \"\").toLowerCase(), score, comment: String(s.comment ?? \"\").slice(0, 1000) } };\n});"
+      }
+    },
+    {
+      "id": "cd9e8122-1550-4f23-a822-bb7e7a0d1a6a",
+      "position": [
+        520,
+        6910
+      ],
+      "name": "Record the score",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "csat",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "ticket_id",
+              "fieldValue": "={{ $json.ticket_id }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.email }}"
+            },
+            {
+              "fieldId": "score",
+              "fieldValue": "={{ $json.score }}"
+            },
+            {
+              "fieldId": "comment",
+              "fieldValue": "={{ $json.comment }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "9bdc7e4e-9c9d-491d-a009-0f2aace6c0ef",
+      "position": [
+        780,
+        6910
+      ],
+      "name": "Unhappy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ad1b6d91-a4e4-4fe5-a405-8d6946636c0f",
+              "leftValue": "={{ $('Read the survey').first().json.score <= 2 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3b227fb1-4f63-44a8-a6ba-ee31bb278374",
+      "position": [
+        1040,
+        6690
+      ],
+      "name": "Recovery agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Score: ' + $('Read the survey').first().json.score + '/5\\nComment: ' + ($('Read the survey').first().json.comment || '(none)') }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "You are the Recovery agent. A customer rated their support 1 or 2 out of 5. Draft a short, personal note a human support lead could send: acknowledge what went wrong in their words, do not make excuses, do not offer compensation, and ask one question that would help put it right. Under 90 words. This is a draft for a person, never sent by you.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "358db0b1-e88a-4656-a078-839b52915c48",
+      "position": [
+        1040,
+        6910
+      ],
+      "name": "Claude · recovery",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "14437b8a-e865-4550-a77e-3df3765e598d",
+      "position": [
+        1300,
+        6910
+      ],
+      "name": "Open a follow-up",
+      "type": "n8n-nodes-base.zendesk",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "ticket",
+        "operation": "create",
+        "description": "={{ 'Rated ' + $('Read the survey').first().json.score + '/5. ' + $('Read the survey').first().json.comment + '\\n\\nDraft reply for you to edit:\\n' + ($json.output ?? '(no draft: the agent was unavailable)') }}",
+        "additionalFields": {
+          "subject": "={{ 'Unhappy after ticket #' + $('Read the survey').first().json.ticket_id }}",
+          "tags": [
+            "csat-recovery"
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "zendeskApi": {
+          "id": "__CRED:zendesk__",
+          "name": "Zendesk"
+        }
+      }
+    },
+    {
+      "id": "89de1513-dcb5-4d3b-a999-e62acf418562",
+      "position": [
+        1560,
+        6910
+      ],
+      "name": "Unhappy message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const s = $(\"Read the survey\").first().json;\nreturn [{ json: { channel: \"#support\", level: \"warn\", text: s.email + \" rated ticket #\" + s.ticket_id + \" \" + s.score + \"/5\" + (s.comment ? \": \\\"\" + s.comment.slice(0, 200) + \"\\\"\" : \"\") + \". A follow-up ticket is open with a draft reply.\" } }];"
+      }
+    },
+    {
+      "id": "d57f4953-4fd6-4e75-a3d4-4e26368dde78",
+      "position": [
+        1820,
+        6910
+      ],
+      "name": "Tell the support lead",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "de6f846f-dd7c-4d3c-adab-de4e1cc819e5",
+      "position": [
+        1040,
+        7130
+      ],
+      "name": "Recorded",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "New ticket": {
+      "main": [
+        [
+          {
+            "node": "Read the ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the ticket": {
+      "main": [
+        [
+          {
+            "node": "Seen this ticket?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seen this ticket?": {
+      "main": [
+        [
+          {
+            "node": "New ticket?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New ticket?": {
+      "main": [
+        [
+          {
+            "node": "Triage agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Already handled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triage agent": {
+      "main": [
+        [
+          {
+            "node": "Apply the triage rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply the triage rules": {
+      "main": [
+        [
+          {
+            "node": "Tag the ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag the ticket": {
+      "main": [
+        [
+          {
+            "node": "Straight to a person?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Straight to a person?": {
+      "main": [
+        [
+          {
+            "node": "Skip the agents",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Which specialist?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip the agents": {
+      "main": [
+        [
+          {
+            "node": "Write the handover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Which specialist?": {
+      "main": [
+        [
+          {
+            "node": "To the orders agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "To the billing agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "To the technical agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "To the general agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To the orders agent": {
+      "main": [
+        [
+          {
+            "node": "Orders agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orders agent": {
+      "main": [
+        [
+          {
+            "node": "Collect the answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To the billing agent": {
+      "main": [
+        [
+          {
+            "node": "Billing agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Billing agent": {
+      "main": [
+        [
+          {
+            "node": "Collect the answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To the technical agent": {
+      "main": [
+        [
+          {
+            "node": "Technical agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Technical agent": {
+      "main": [
+        [
+          {
+            "node": "Collect the answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To the general agent": {
+      "main": [
+        [
+          {
+            "node": "General agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General agent": {
+      "main": [
+        [
+          {
+            "node": "Collect the answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect the answer": {
+      "main": [
+        [
+          {
+            "node": "Refund asked for?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refund asked for?": {
+      "main": [
+        [
+          {
+            "node": "Past refunds",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Judge agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Past refunds": {
+      "main": [
+        [
+          {
+            "node": "Apply the refund policy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply the refund policy": {
+      "main": [
+        [
+          {
+            "node": "Inside the policy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inside the policy?": {
+      "main": [
+        [
+          {
+            "node": "Refund in Stripe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refund needs a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refund in Stripe": {
+      "main": [
+        [
+          {
+            "node": "Record the refund",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refund needs a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record the refund": {
+      "main": [
+        [
+          {
+            "node": "Add the refund to the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add the refund to the reply": {
+      "main": [
+        [
+          {
+            "node": "Judge agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refund needs a person": {
+      "main": [
+        [
+          {
+            "node": "Write the handover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge agent": {
+      "main": [
+        [
+          {
+            "node": "Decide: send or hand over",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide: send or hand over": {
+      "main": [
+        [
+          {
+            "node": "Fit to send?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fit to send?": {
+      "main": [
+        [
+          {
+            "node": "Send the reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Write the handover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the reply": {
+      "main": [
+        [
+          {
+            "node": "Log: answered",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the handover": {
+      "main": [
+        [
+          {
+            "node": "Assign to the team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assign to the team": {
+      "main": [
+        [
+          {
+            "node": "Log: handed over",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log: handed over": {
+      "main": [
+        [
+          {
+            "node": "Handover message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handover message": {
+      "main": [
+        [
+          {
+            "node": "Tell the support team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 10 minutes": {
+      "main": [
+        [
+          {
+            "node": "Open, unanswered tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open, unanswered tickets": {
+      "main": [
+        [
+          {
+            "node": "Measure against the SLA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Measure against the SLA": {
+      "main": [
+        [
+          {
+            "node": "Mark the stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark the stage": {
+      "main": [
+        [
+          {
+            "node": "SLA message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SLA message": {
+      "main": [
+        [
+          {
+            "node": "Raise the SLA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02:00 nightly": {
+      "main": [
+        [
+          {
+            "node": "Yesterday's answers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Yesterday's answers": {
+      "main": [
+        [
+          {
+            "node": "Take a sample",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Take a sample": {
+      "main": [
+        [
+          {
+            "node": "Auditor agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auditor agent": {
+      "main": [
+        [
+          {
+            "node": "Gather the grades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gather the grades": {
+      "main": [
+        [
+          {
+            "node": "Save the audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the audit": {
+      "main": [
+        [
+          {
+            "node": "Post the audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monday 08:00": {
+      "main": [
+        [
+          {
+            "node": "Handed over last week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handed over last week": {
+      "main": [
+        [
+          {
+            "node": "Gather the questions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gather the questions": {
+      "main": [
+        [
+          {
+            "node": "Any gaps?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any gaps?": {
+      "main": [
+        [
+          {
+            "node": "Gaps agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post all clear",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gaps agent": {
+      "main": [
+        [
+          {
+            "node": "Post the gaps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Survey answered": {
+      "main": [
+        [
+          {
+            "node": "Read the survey",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the survey": {
+      "main": [
+        [
+          {
+            "node": "Record the score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record the score": {
+      "main": [
+        [
+          {
+            "node": "Unhappy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unhappy?": {
+      "main": [
+        [
+          {
+            "node": "Recovery agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Recorded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recovery agent": {
+      "main": [
+        [
+          {
+            "node": "Open a follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open a follow-up": {
+      "main": [
+        [
+          {
+            "node": "Unhappy message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unhappy message": {
+      "main": [
+        [
+          {
+            "node": "Tell the support lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT · triage": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Triage agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triage": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Triage agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · orders": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Orders agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orders answer": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Orders agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Order lookup": {
+      "ai_tool": [
+        [
+          {
+            "node": "Orders agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Order history": {
+      "ai_tool": [
+        [
+          {
+            "node": "Orders agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · billing": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Billing agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Billing answer": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Billing agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Charge lookup": {
+      "ai_tool": [
+        [
+          {
+            "node": "Billing agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer lookup": {
+      "ai_tool": [
+        [
+          {
+            "node": "Billing agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Days since": {
+      "ai_tool": [
+        [
+          {
+            "node": "Billing agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · technical": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Technical agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Technical answer": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Technical agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Help centre": {
+      "ai_tool": [
+        [
+          {
+            "node": "Technical agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings · help centre": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Help centre",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Work it through": {
+      "ai_tool": [
+        [
+          {
+            "node": "Technical agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · general": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "General agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General answer": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "General agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Policies and guides": {
+      "ai_tool": [
+        [
+          {
+            "node": "General agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings · policies": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Policies and guides",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT · judging": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Judge agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verdict": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Judge agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · auditing": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Auditor agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grade": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Auditor agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · gaps": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Gaps agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · recovery": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Recovery agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}
