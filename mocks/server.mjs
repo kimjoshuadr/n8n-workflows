@@ -29,13 +29,14 @@ const send = (res, status, body) => {
   res.end(JSON.stringify(body));
 };
 
-/** The reply an LLM would give, decided by what the system prompt asks for. */
-function llm(body) {
-  const system = (body.messages ?? []).filter((m) => m.role === "system").map((m) => m.content).join("\n");
-  const user = (body.messages ?? []).filter((m) => m.role === "user").map((m) => m.content).join("\n");
-  const text = `${system}\n${user}`.toLowerCase();
+/**
+ * What a model would say for one of the library's standing prompts, decided by
+ * the prompt's id and the message. This is the default when a test scripts no
+ * reply: enough for a workflow's ordinary paths to run without every test
+ * spelling the model out.
+ */
+function canned(tag, user) {
   let content;
-  const tag = /\[task:([a-z-]+)\]/.exec(system)?.[1];
   switch (tag) {
     case "qualify-lead": {
       const fit = /budget|timeline|clinic|team of|\$\d/.test(user.toLowerCase());
@@ -76,15 +77,9 @@ function llm(body) {
       content = "Mock summary: three things happened, one needs attention.";
       break;
     default:
-      content = /json/.test(text) ? JSON.stringify({ ok: true }) : "Mock completion.";
+      return null;
   }
-  return {
-    id: `chatcmpl-mock-${++seq}`,
-    object: "chat.completion",
-    model: body.model ?? "mock",
-    choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }],
-    usage: { prompt_tokens: 100, completion_tokens: 40, total_tokens: 140 },
-  };
+  return content;
 }
 
 /* ---- Scripted model replies ----
@@ -98,7 +93,16 @@ function llm(body) {
 const flat = (c) => (typeof c === "string" ? c : Array.isArray(c) ? c.map((x) => x.text ?? (x.content ? flat(x.content) : JSON.stringify(x))).join("\n") : JSON.stringify(c ?? ""));
 function pick(system, last) {
   const hit = script.find((r) => r.used < (r.times ?? 1) && (!r.system || new RegExp(r.system, "is").test(system)) && (!r.last || new RegExp(r.last, "is").test(last)));
-  if (!hit) return { text: "UNSCRIPTED: no mock reply matched this request." };
+  if (!hit) {
+    const tag = /\[task:([a-z-]+)\]/.exec(system)?.[1];
+    const content = tag ? canned(tag, last) : null;
+    if (content === null) return { text: "UNSCRIPTED: no mock reply matched this request." };
+    try {
+      const final = JSON.parse(content);
+      if (final && typeof final === "object") return { final };
+    } catch {}
+    return { text: content };
+  }
   hit.used += 1;
   return hit;
 }
@@ -175,24 +179,38 @@ function embeddings(body) {
   };
 }
 
-/** `field=eq.value` filters, the way PostgREST writes them. */
+/** One PostgREST condition against one row. */
+function holds(row, col, op, raw) {
+  // PostgREST quotes a value that holds reserved characters: email.eq."a@b.co"
+  if (/^".*"$/s.test(raw)) raw = raw.slice(1, -1).replace(/\\"/g, '"');
+  const a = row[col];
+  const b = typeof a === "number" ? Number(raw) : raw === "true" ? true : raw === "false" ? false : raw === "null" ? null : raw;
+  if (op === "eq" || op === "is") return a === b || (a !== undefined && a !== null && String(a) === String(raw)) || (raw === "null" && a === undefined);
+  if (op === "neq") return String(a) !== String(raw);
+  if (a === undefined || a === null) return false;
+  if (op === "lt") return a < b;
+  if (op === "lte") return a <= b;
+  if (op === "gt") return a > b;
+  if (op === "gte") return a >= b;
+  if (op === "like" || op === "ilike") return new RegExp("^" + String(raw).replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/[*%]/g, ".*") + "$", op === "ilike" ? "i" : "").test(String(a));
+  return true;
+}
+
+/**
+ * PostgREST filters: `field=eq.value` in the query, and the combined form
+ * `and=(field.eq.value,other.gte.value)` that the Supabase node sends for reads.
+ */
 function filterRows(rows, query) {
   let out = rows;
   for (const [k, v] of query) {
-    if (["on_conflict", "select", "order", "limit"].includes(k)) continue;
-    const m = /^(eq|neq|lt|lte|gt|gte|is)\.(.*)$/.exec(v);
-    if (!m) continue;
-    const [, op, raw] = m;
-    const cmp = (a) => {
-      const b = typeof a === "number" ? Number(raw) : raw === "true" ? true : raw === "false" ? false : raw === "null" ? null : raw;
-      if (op === "eq" || op === "is") return a === b || String(a) === String(raw);
-      if (op === "neq") return String(a) !== String(raw);
-      if (op === "lt") return a < b;
-      if (op === "lte") return a <= b;
-      if (op === "gt") return a > b;
-      return a >= b;
-    };
-    out = out.filter((r) => cmp(r[k]));
+    if (["on_conflict", "select", "order", "limit", "offset"].includes(k)) continue;
+    if (k === "and" || k === "or") {
+      const conds = v.replace(/^\(|\)$/g, "").split(/,(?=[A-Za-z_]+\.(?:eq|neq|gt|gte|lt|lte|is|like|ilike)\.)/).map((c) => /^([A-Za-z_]+)\.([a-z]+)\.(.*)$/s.exec(c)).filter(Boolean);
+      out = out.filter((r) => (k === "and" ? conds.every((m) => holds(r, m[1], m[2], m[3])) : conds.some((m) => holds(r, m[1], m[2], m[3]))));
+      continue;
+    }
+    const m = /^(eq|neq|lt|lte|gt|gte|is|like|ilike)\.(.*)$/s.exec(v);
+    if (m) out = out.filter((r) => holds(r, k, m[1], m[2]));
   }
   const limit = query.get("limit");
   return limit ? out.slice(0, Number(limit)) : out;
@@ -319,7 +337,6 @@ const handle = (req, res) => {
       }
       if (host === "api.openai.com" && p === "/v1/chat/completions") return openai(res, body ?? {});
       if (host === "api.openai.com" && p === "/v1/embeddings") return send(res, 200, embeddings(body ?? {}));
-      if (p.startsWith("/llm/")) return send(res, 200, llm(body ?? {}));
       if (p.startsWith("/db/")) return db(req, res, url, body);
       if (host.endsWith(".supabase.co") && p.startsWith("/rest/v1/")) return db(req, res, url, body, p.split("/")[3]);
       send(res, 200, { ok: true, id: `mock_${++seq}` });

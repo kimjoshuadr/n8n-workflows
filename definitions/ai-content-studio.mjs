@@ -10,8 +10,8 @@
  * Seven agents write and check. Nothing is published without a person's yes,
  * and a claim the sources do not support does not survive the fact-check.
  */
-import { define, webhook, schedule, code, iff, call, noop, respond } from "../lib/wf.mjs";
-import { db, slack, serp, wordpress, social, openaiApi, elevenlabs, posthog, agent, claude, gpt, shape, toolThink, toolKnowledge, embeddings } from "../lib/nodes.mjs";
+import { webhook, schedule, code, iff, respond, noop, call, define } from "../lib/wf.mjs";
+import { db, slack, wordpress, elevenlabs, serp, social, openaiApi, posthog, agent, claude, gpt, shape, toolKnowledge, embeddings, toolThink } from "../lib/nodes.mjs";
 
 const topic = "$('Is there a topic?').first().json";
 const decision = "$('Read the decision').first().json";

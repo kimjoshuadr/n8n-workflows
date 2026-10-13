@@ -5,7 +5,7 @@
  * State lives in Supabase, alerts go to Slack, and SendGrid is the fallback when
  * Slack is down.
  */
-import { define, onError, called, schedule, http, code, iff, batches, noop, fail, set } from "../lib/wf.mjs";
+import { schedule, called, onError, http, code, iff, set, batches, noop, fail, define } from "../lib/wf.mjs";
 import { db, slack, sendgrid } from "../lib/nodes.mjs";
 
 const base = { folder: "shared", tier: "flagship", system: "reliability-kit", category: "Reliability" };

@@ -1,5 +1,6 @@
 /** Production workflows for content, SEO, e-commerce and payments. */
-import { define, webhook, schedule, http, llm, parseLlm, code, iff, route, call, respond, noop } from "../lib/wf.mjs";
+import { webhook, schedule, http, code, iff, route, respond, noop, call, define } from "../lib/wf.mjs";
+import { db, slack, sendgrid, ask, readAnswer } from "../lib/nodes.mjs";
 
 const content = { folder: "workflows/content", tier: "production", category: "Content and SEO" };
 const commerce = { folder: "workflows/commerce", tier: "production", category: "E-commerce and payments" };
@@ -13,7 +14,7 @@ export default [
     integrations: ["Schedule", "Datastore", "LLM", "Email"],
     nodes: [
       schedule("Friday 15:00", "0 15 * * 5"),
-      http("Feeds to read", "DB:/feeds", { method: "GET", alwaysOutput: true }),
+      db.find("Feeds to read", "feeds", null),
       http("Fetch the feed", "=$json.url", { method: "GET", onFail: "continue", retry: false }),
       code("Collect the items", `const items = $input.all().flatMap((i) => i.json.items ?? []).filter((x) => x && x.url && x.title);
 const unique = [...new Map(items.map((x) => [x.url, x])).values()];
@@ -22,8 +23,8 @@ return unique.map((x) => ({ json: { url: x.url, title: x.title, summary: String(
       code("Only the new ones", `const fresh = $input.all().map((i) => i.json).filter((r) => r && r.url);
 return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + " (" + r.url + "): " + r.summary).join("\\n") } }];`),
       iff("Anything new?", "$json.count > 0"),
-      llm("Write the digest", { task: "summarise", json: false, system: "Write a short weekly digest from these items: one line per item saying why it matters, grouped under at most three headings. Keep every link. Add nothing that is not in the items.", user: "$json.list", onFail: "continue" }),
-      http("Send the digest", "EMAIL:/emails", { body: "{ to: 'team@example.com', subject: 'This week: ' + $('Only the new ones').first().json.count + ' things worth reading', text: $json.choices?.[0]?.message?.content ?? $('Only the new ones').first().json.list }" }),
+      ...ask("Write the digest", { task: "summarise", system: "Write a short weekly digest from these items: one line per item saying why it matters, grouped under at most three headings. Keep every link. Add nothing that is not in the items.", prompt: "$json.list" }),
+      sendgrid.text("Send the digest", { to: "'team@example.com'", subject: "'This week: ' + $('Only the new ones').first().json.count + ' things worth reading'", text: "$json.output ?? $('Only the new ones').first().json.list" }),
       noop("Quiet week"),
     ],
     flow: [
@@ -36,9 +37,9 @@ return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + "
       { title: "A digest, or the plain list", copy: "If the model is down the raw list is sent instead of nothing.", nodes: ["Write the digest", "Send the digest"] },
     ],
     tests: [
-      { name: "sends only items not seen before", seed: { feeds: [{ url: "http://mocks:4010/feed/a" }], seen_items: [{ url: "https://x.example/old", title: "Old" }] }, routes: [{ path: "/feed/a", response: { items: [{ url: "https://x.example/old", title: "Old" }, { url: "https://x.example/new", title: "New thing", summary: "It is new." }] } }], input: [{}], output: { node: "Only the new ones", json: { count: 1 } }, calls: [{ path: "/email/emails", body: { subject: "This week: 1 things worth reading" } }] },
-      { name: "sends nothing in a quiet week", seed: { feeds: [{ url: "http://mocks:4010/feed/a" }], seen_items: [{ url: "https://x.example/old" }] }, routes: [{ path: "/feed/a", response: { items: [{ url: "https://x.example/old", title: "Old" }] } }], input: [{}], ran: ["Quiet week"], noCalls: ["/email", "/llm"] },
-      { name: "sends the plain list when the model is down", seed: { feeds: [{ url: "http://mocks:4010/feed/a" }] }, routes: [{ path: "/feed/a", response: { items: [{ url: "https://x.example/n", title: "New thing", summary: "S" }] } }], fail: [{ path: "/llm", times: 3 }], input: [{}], calls: [{ path: "/email/emails", body: { text: "- New thing (https://x.example/n): S" } }] },
+      { name: "sends only items not seen before", seed: { feeds: [{ url: "http://mocks:4010/feed/a" }], seen_items: [{ url: "https://x.example/old", title: "Old" }] }, routes: [{ path: "/feed/a", response: { items: [{ url: "https://x.example/old", title: "Old" }, { url: "https://x.example/new", title: "New thing", summary: "It is new." }] } }], input: [{}], output: { node: "Only the new ones", json: { count: 1 } }, calls: [{ to: "sendgrid", path: "/v3/mail/send", body: { subject: "This week: 1 things worth reading" } }] },
+      { name: "sends nothing in a quiet week", seed: { feeds: [{ url: "http://mocks:4010/feed/a" }], seen_items: [{ url: "https://x.example/old" }] }, routes: [{ path: "/feed/a", response: { items: [{ url: "https://x.example/old", title: "Old" }] } }], input: [{}], ran: ["Quiet week"], noCalls: ["sendgrid", "openai", "anthropic"] },
+      { name: "sends the plain list when the model is down", seed: { feeds: [{ url: "http://mocks:4010/feed/a" }] }, routes: [{ path: "/feed/a", response: { items: [{ url: "https://x.example/n", title: "New thing", summary: "S" }] } }], fail: [{ path: "/v1/chat/completions", times: 20 }, { path: "/v1/messages", times: 20 }], input: [{}], calls: [{ to: "sendgrid", path: "/v3/mail/send", body: { text: "- New thing (https://x.example/n): S" } }] },
     ],
   }),
 
@@ -50,15 +51,15 @@ return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + "
     integrations: ["Schedule", "Datastore", "Chat"],
     nodes: [
       schedule("Sunday 23:00", "0 23 * * 0"),
-      http("Pages to check", "DB:/site_pages", { method: "GET", alwaysOutput: true }),
+      db.find("Pages to check", "site_pages", null),
       http("Visit the page", "=$json.url", { method: "GET", fullResponse: true, retry: false, onFail: "continue" }),
       code("Find the broken ones", `const pages = $("Pages to check").all();
 const results = $input.all().map((item, i) => ({ url: pages[i]?.json.url, status: item.json.statusCode ?? 0 })).filter((r) => r.url);
 const broken = results.filter((r) => r.status === 0 || r.status >= 400);
 return [{ json: { checked: results.length, broken, any: broken.length > 0, text: broken.length + " of " + results.length + " pages are broken:\\n" + broken.map((b) => "- " + b.url + " (" + (b.status || "no response") + ")").join("\\n") } }];`),
       iff("Any broken?", "$json.any"),
-      http("Report them", "CHAT:/chat.postMessage", { body: "{ channel: '#website', text: ':link: ' + $json.text }" }),
-      http("Save the run", "DB:/link_checks", { body: "{ checked: $('Find the broken ones').first().json.checked, broken: $('Find the broken ones').first().json.broken.length, at: $now.toISO() }" }),
+      slack.post("Report them", "'#website'", "':link: ' + $json.text"),
+      db.insert("Save the run", "link_checks", { checked: "$('Find the broken ones').first().json.checked", broken: "$('Find the broken ones').first().json.broken.length", at: "$now.toISO()" }),
     ],
     flow: [
       ["Sunday 23:00", "Pages to check", "Visit the page", "Find the broken ones", "Any broken?", "Report them", "Save the run"],
@@ -70,8 +71,8 @@ return [{ json: { checked: results.length, broken, any: broken.length > 0, text:
       { title: "Reported, and the run is saved", copy: "A clean week posts nothing, but the run is still recorded so the trend is there.", nodes: ["Report them", "Save the run"] },
     ],
     tests: [
-      { name: "reports a page that returns an error", seed: { site_pages: [{ url: "http://mocks:4010/page/ok" }, { url: "http://mocks:4010/page/gone" }] }, fail: [{ path: "/page/gone", times: 1, status: 404 }], input: [{}], output: { node: "Find the broken ones", json: { checked: 2, broken: [{ url: "http://mocks:4010/page/gone", status: 404 }] } }, calls: [{ path: "/chat/chat.postMessage", body: { channel: "#website" } }, { path: "/db/link_checks", body: { broken: 1, checked: 2 } }] },
-      { name: "a clean site posts nothing and records the run", seed: { site_pages: [{ url: "http://mocks:4010/page/ok" }] }, input: [{}], noCalls: ["/chat"], calls: [{ path: "/db/link_checks", body: { broken: 0 } }] },
+      { name: "reports a page that returns an error", seed: { site_pages: [{ url: "http://mocks:4010/page/ok" }, { url: "http://mocks:4010/page/gone" }] }, fail: [{ path: "/page/gone", times: 1, status: 404 }], input: [{}], output: { node: "Find the broken ones", json: { checked: 2, broken: [{ url: "http://mocks:4010/page/gone", status: 404 }] } }, calls: [{ to: "slack", path: "/api/chat.postMessage", body: { channel: "#website" } }, { to: "supabase", path: "/rest/v1/link_checks", body: { broken: 1, checked: 2 } }] },
+      { name: "a clean site posts nothing and records the run", seed: { site_pages: [{ url: "http://mocks:4010/page/ok" }] }, input: [{}], noCalls: ["slack"], calls: [{ to: "supabase", path: "/rest/v1/link_checks", body: { broken: 0 } }] },
     ],
   }),
 
@@ -83,7 +84,7 @@ return [{ json: { checked: results.length, broken, any: broken.length > 0, text:
     integrations: ["Schedule", "Datastore", "Search", "Chat"],
     nodes: [
       schedule("05:00 daily", "0 5 * * *"),
-      http("Tracked keywords", "DB:/keywords", { method: "GET", alwaysOutput: true }),
+      db.find("Tracked keywords", "keywords", null),
       http("Search for it", "SEARCH:/serp", { body: "{ query: $json.keyword, num: 30 }", onFail: "continue" }),
       code("Find our position", `const kws = $("Tracked keywords").all();
 return $input.all().map((item, i) => {
@@ -99,8 +100,8 @@ return $input.all().map((item, i) => {
   return { json: { ...k, position, before, checked: true, alert: fell || offFirstPage } };
 }).filter(Boolean);`),
       iff("Got a result?", "$json.checked"),
-      http("Record today", "DB:/rank_history", { body: "{ keyword: $json.keyword, position: $json.position, at: $now.toISO() }" }),
-      http("Update the keyword", "DB:/keywords", { method: "PATCH", query: { keyword: "'eq.' + $('Got a result?').item.json.keyword" }, body: "{ last_position: $('Got a result?').item.json.position, checked_at: $now.toISO() }" }),
+      db.insert("Record today", "rank_history", { keyword: "$json.keyword", position: "$json.position", at: "$now.toISO()" }),
+      db.update("Update the keyword", "keywords", { keyword: "$('Got a result?').item.json.keyword" }, { last_position: "$('Got a result?').item.json.position", checked_at: "$now.toISO()" }, { alwaysOutput: false }),
       code("Gather the drops", `const drops = $("Got a result?").all().map((i) => i.json).filter((k) => k.alert);
 if (!drops.length) return [];
 return [{ json: { channel: "#seo", level: "warn", text: drops.length + " keyword(s) dropped: " + drops.map((d) => "\\"" + d.keyword + "\\" " + d.before + " to " + (d.position ?? "not in top 30")).join("; ") } }];`),
@@ -118,9 +119,9 @@ return [{ json: { channel: "#seo", level: "warn", text: drops.length + " keyword
       { title: "Drops are raised together", copy: "Five places down, or off the first page. One message lists them all.", nodes: ["Gather the drops", "Alert"] },
     ],
     tests: [
-      { name: "records the position and alerts on a fall off page one", seed: { keywords: [{ keyword: "prop firm reviews", domain: "oursite.com", last_position: 4 }] }, routes: [{ path: "/search/serp", response: { results: [...Array(11).fill({ url: "https://other.com" }), { url: "https://oursite.com/reviews" }] } }], input: [{}], calls: [{ path: "/db/rank_history", body: { keyword: "prop firm reviews", position: 12 } }, { path: "/chat/chat.postMessage" }], table: { keywords: [{ keyword: "prop firm reviews", last_position: 12 }] } },
-      { name: "a small move is recorded without an alert", seed: { keywords: [{ keyword: "k", domain: "oursite.com", last_position: 3 }] }, routes: [{ path: "/search/serp", response: { results: [{ url: "https://a.com" }, { url: "https://b.com" }, { url: "https://c.com" }, { url: "https://oursite.com" }] } }], input: [{}], calls: [{ path: "/db/rank_history", body: { position: 4 } }], noCalls: ["/chat"] },
-      { name: "a failed search keeps yesterday's position", seed: { keywords: [{ keyword: "k", domain: "oursite.com", last_position: 3 }] }, fail: [{ path: "/search", times: 3 }], input: [{}], ran: ["Search failed, keep yesterday"], noCalls: ["/db/rank_history", "/chat"] },
+      { name: "records the position and alerts on a fall off page one", seed: { keywords: [{ keyword: "prop firm reviews", domain: "oursite.com", last_position: 4 }] }, routes: [{ path: "/search/serp", response: { results: [...Array(11).fill({ url: "https://other.com" }), { url: "https://oursite.com/reviews" }] } }], input: [{}], calls: [{ to: "supabase", path: "/rest/v1/rank_history", body: { keyword: "prop firm reviews", position: 12 } }, { to: "slack", path: "/api/chat.postMessage" }], table: { keywords: [{ keyword: "prop firm reviews", last_position: 12 }] } },
+      { name: "a small move is recorded without an alert", seed: { keywords: [{ keyword: "k", domain: "oursite.com", last_position: 3 }] }, routes: [{ path: "/search/serp", response: { results: [{ url: "https://a.com" }, { url: "https://b.com" }, { url: "https://c.com" }, { url: "https://oursite.com" }] } }], input: [{}], calls: [{ to: "supabase", path: "/rest/v1/rank_history", body: { position: 4 } }], noCalls: ["slack"] },
+      { name: "a failed search keeps yesterday's position", seed: { keywords: [{ keyword: "k", domain: "oursite.com", last_position: 3 }] }, fail: [{ path: "/search", times: 3 }], input: [{}], ran: ["Search failed, keep yesterday"], noCalls: ["/rest/v1/rank_history", "slack"] },
     ],
   }),
 
@@ -136,8 +137,8 @@ return [{ json: { channel: "#seo", level: "warn", text: drops.length + " keyword
       code("One item per mention", `return ($input.first().json.mentions ?? []).filter((m) => m.url && m.text).map((m) => ({ json: { url: m.url, text: String(m.text).slice(0, 1500), author: m.author ?? "unknown" } }));`),
       http("Claim as seen", "DB:/seen_mentions", { query: { on_conflict: "'url'" }, body: "{ url: $json.url, text: $json.text, author: $json.author }", alwaysOutput: true }),
       iff("New mention?", "!!$json.url"),
-      llm("Read the tone", { task: "classify", system: "Classify a public mention of a brand. Reply with JSON: { label: string, urgent: boolean, sentiment: 'negative'|'neutral'|'positive' }.", user: "$json.text", onFail: "continue" }),
-      parseLlm("Read the verdict", { from: "New mention?", fallback: { sentiment: "unknown" } }),
+      ...ask("Read the tone", { task: "classify", system: "Classify a public mention of a brand. Reply with JSON: { label: string, urgent: boolean, sentiment: 'negative'|'neutral'|'positive' }.", prompt: "$json.text", example: { label: "billing", urgent: false, sentiment: "neutral" } }),
+      readAnswer("Read the verdict", { from: "New mention?", fallback: { sentiment: "unknown" } }),
       iff("Needs attention?", "$json.sentiment === 'negative' || $json.sentiment === 'unknown'"),
       code("Write the alert", `return $input.all().map((i) => ({ json: { channel: "#brand", level: "warn", text: (i.json.sentiment === "unknown" ? "Unclassified" : "Negative") + " mention by " + i.json.author + ": \\"" + i.json.text.slice(0, 240) + "\\" " + i.json.url } }));`),
       call("Raise it", "notify"),
@@ -149,8 +150,8 @@ return [{ json: { channel: "#seo", level: "warn", text: drops.length + " keyword
       { title: "Negative ones are raised with the link", copy: "Positive and neutral mentions are kept in the datastore and nobody is interrupted.", nodes: ["Write the alert", "Raise it"] },
     ],
     tests: [
-      { name: "raises a negative mention once", routes: [{ path: "/search/mentions", response: { mentions: [{ url: "https://x.example/1", text: "Worst service, terrible", author: "sam" }, { url: "https://x.example/2", text: "Loved it", author: "ana" }] } }], repeat: 2, input: [{}], callCount: { "/chat/chat.postMessage": 1 }, calls: [{ path: "/chat/chat.postMessage", body: { channel: "#brand" } }] },
-      { name: "a mention it cannot classify is raised too", routes: [{ path: "/search/mentions", response: { mentions: [{ url: "https://x.example/3", text: "Hmm", author: "sam" }] } }], fail: [{ path: "/llm", times: 3 }], input: [{}], calls: [{ path: "/chat/chat.postMessage", body: { channel: "#brand" } }] },
+      { name: "raises a negative mention once", routes: [{ path: "/search/mentions", response: { mentions: [{ url: "https://x.example/1", text: "Worst service, terrible", author: "sam" }, { url: "https://x.example/2", text: "Loved it", author: "ana" }] } }], repeat: 2, input: [{}], callCount: { "slack /api/chat.postMessage": 1 }, calls: [{ to: "slack", path: "/api/chat.postMessage", body: { channel: "#brand" } }] },
+      { name: "a mention it cannot classify is raised too", routes: [{ path: "/search/mentions", response: { mentions: [{ url: "https://x.example/3", text: "Hmm", author: "sam" }] } }], fail: [{ path: "/v1/chat/completions", times: 20 }, { path: "/v1/messages", times: 20 }], input: [{}], calls: [{ to: "slack", path: "/api/chat.postMessage", body: { channel: "#brand" } }] },
     ],
   }),
 
@@ -163,7 +164,7 @@ return [{ json: { channel: "#seo", level: "warn", text: drops.length + " keyword
     nodes: [
       schedule("Every 2 hours", { hours: 2 }),
       http("Supplier feed", "SUPPLIER:/stock", { method: "GET" }),
-      http("Last known stock", "DB:/stock_snapshot", { method: "GET", alwaysOutput: true, once: true }),
+      db.find("Last known stock", "stock_snapshot", null, { once: true }),
       code("What changed?", `const feed = ($("Supplier feed").first().json.items ?? []).filter((i) => i.sku && Number.isFinite(Number(i.quantity)));
 const known = new Map($input.all().map((i) => i.json).filter((r) => r.sku).map((r) => [r.sku, r.quantity]));
 const changes = feed.map((i) => ({ sku: String(i.sku), quantity: Number(i.quantity), before: known.get(String(i.sku)) ?? null })).filter((c) => c.before !== c.quantity);
@@ -207,10 +208,10 @@ return [{ json: { level: "critical", text: "Supplier stock feed refused: " + (r.
 return [{ json: { order_id: String(b.order_id ?? ""), reason: String(b.reason ?? "").slice(0, 500), valid: !!b.order_id } }];`),
       iff("Valid?", "$json.valid"),
       respond("Invalid", "{ ok: false, error: 'order_id is required' }", { status: 400 }),
-      http("Load the order", "DB:/orders", { method: "GET", query: { order_id: "'eq.' + $json.order_id" }, alwaysOutput: true }),
+      db.find("Load the order", "orders", { order_id: "$json.order_id" }),
       iff("Order found?", "!!$json.order_id"),
       respond("Unknown order", "{ ok: false, error: 'Order not found' }", { status: 404 }),
-      http("Past refunds", "DB:/refunds", { method: "GET", query: { email: "'eq.' + $json.email" }, alwaysOutput: true }),
+      db.find("Past refunds", "refunds", { email: "$json.email" }),
       code("Apply the policy", `const o = $("Order found?").first().json;
 const past = $input.all().map((i) => i.json).filter((r) => r.email);
 const ageDays = (Date.now() - new Date(o.created_at).getTime()) / 864e5;
@@ -223,8 +224,8 @@ return [{ json: { order_id: o.order_id, email: o.email, amount: Number(o.total),
       route("Decision", { already: "$json.already", auto: "$json.auto" }),
       respond("Already refunded", "{ ok: true, status: 'already_refunded' }"),
       http("Refund at the processor", "PAYMENTS:/refunds", { body: "{ charge: $json.charge_id, amount: Math.round($json.amount * 100) }", headers: { "Idempotency-Key": "='refund-' + $json.order_id" } }),
-      http("Record the refund", "DB:/refunds", { body: "{ order_id: $('Decision').first().json.order_id, email: $('Decision').first().json.email, amount: $('Decision').first().json.amount, auto: true, at: $now.toISO() }" }),
-      http("Mark the order", "DB:/orders", { method: "PATCH", query: { order_id: "'eq.' + $('Decision').first().json.order_id" }, body: "{ status: 'refunded' }" }),
+      db.insert("Record the refund", "refunds", { order_id: "$('Decision').first().json.order_id", email: "$('Decision').first().json.email", amount: "$('Decision').first().json.amount", auto: "true", at: "$now.toISO()" }),
+      db.update("Mark the order", "orders", { order_id: "$('Decision').first().json.order_id" }, { status: "'refunded'" }, { alwaysOutput: false }),
       respond("Refunded", "{ ok: true, status: 'refunded' }"),
       code("Review message", `const d = $input.first().json;
 return [{ json: { channel: "#finance", level: "warn", text: "Refund request for order " + d.order_id + " (" + d.amount + ", " + d.email + ") needs a decision: " + d.reasons.join(", ") + ". Customer says: \\"" + d.request_reason + "\\"" } }];`),
@@ -262,14 +263,14 @@ return [{ json: { channel: "#finance", level: "warn", text: "Refund request for 
     integrations: ["Schedule", "Datastore", "Email"],
     nodes: [
       schedule("08:00 daily", "0 8 * * *"),
-      http("Active subscriptions", "DB:/subscriptions", { method: "GET", query: { status: "'eq.active'", interval: "'eq.year'" }, alwaysOutput: true }),
+      db.find("Active subscriptions", "subscriptions", { status: "'active'", interval: "'year'" }),
       code("Renewing in a week", `const now = Date.now();
 return $input.all().map((i) => i.json).filter((s) => s.email && s.renews_at).filter((s) => {
   const days = (new Date(s.renews_at).getTime() - now) / 864e5;
   return days > 0 && days <= 7 && s.reminded_for !== s.renews_at;
 }).map((json) => ({ json }));`),
-      http("Send the notice", "EMAIL:/emails", { body: "{ to: $json.email, subject: 'Your plan renews on ' + $json.renews_at.slice(0, 10), template: 'renewal-notice', data: { amount: $json.amount, currency: $json.currency, renews_at: $json.renews_at, manage_url: $json.manage_url } }" }),
-      http("Mark reminded", "DB:/subscriptions", { method: "PATCH", query: { id: "'eq.' + $('Renewing in a week').item.json.id" }, body: "{ reminded_for: $('Renewing in a week').item.json.renews_at }" }),
+      sendgrid.send("Send the notice", { to: "$json.email", template: "'d-renewal-notice'", data: { amount: "$json.amount", currency: "$json.currency", renews_at: "$json.renews_at", manage_url: "$json.manage_url" } }),
+      db.update("Mark reminded", "subscriptions", { id: "$('Renewing in a week').item.json.id" }, { reminded_for: "$('Renewing in a week').item.json.renews_at" }, { alwaysOutput: false }),
     ],
     flow: [["08:00 daily", "Active subscriptions", "Renewing in a week", "Send the notice", "Mark reminded"]],
     story: [
@@ -278,8 +279,8 @@ return $input.all().map((i) => i.json).filter((s) => s.email && s.renews_at).fil
       { title: "One notice, with the amount", copy: "And a link to change or cancel.", nodes: ["Send the notice", "Mark reminded"] },
     ],
     tests: [
-      { name: "reminds once for a renewal five days away", seed: { subscriptions: [{ id: "s1", email: "a@b.co", status: "active", interval: "year", amount: 290, renews_at: new Date(Date.now() + 5 * 864e5).toISOString() }] }, repeat: 2, input: [{}], callCount: { "/email/emails": 1 } },
-      { name: "a renewal a month away is left alone", seed: { subscriptions: [{ id: "s1", email: "a@b.co", status: "active", interval: "year", renews_at: new Date(Date.now() + 30 * 864e5).toISOString() }] }, input: [{}], noCalls: ["/email"] },
+      { name: "reminds once for a renewal five days away", seed: { subscriptions: [{ id: "s1", email: "a@b.co", status: "active", interval: "year", amount: 290, renews_at: new Date(Date.now() + 5 * 864e5).toISOString() }] }, repeat: 2, input: [{}], callCount: { "sendgrid /v3/mail/send": 1 } },
+      { name: "a renewal a month away is left alone", seed: { subscriptions: [{ id: "s1", email: "a@b.co", status: "active", interval: "year", renews_at: new Date(Date.now() + 30 * 864e5).toISOString() }] }, input: [{}], noCalls: ["sendgrid"] },
     ],
   }),
 
@@ -293,9 +294,9 @@ return $input.all().map((i) => i.json).filter((s) => s.email && s.renews_at).fil
       webhook("Invoice received", "invoice-received", { respond: "immediately" }),
       code("Read the upload", `const b = $input.first().json.body ?? {};
 return [{ json: { file_url: b.file_url ?? null, text: String(b.text ?? "").slice(0, 12000), received_from: b.from ?? null } }];`),
-      llm("Extract the fields", { task: "extract", system: "Extract from this supplier invoice. Reply with JSON: { vendor: string, invoice_number: string, total: number, currency: string, due_date: 'YYYY-MM-DD', confidence: 0-1 }. Use null for anything not present. Do not guess.", user: "$json.text", onFail: "continue" }),
-      parseLlm("Read the fields", { from: "Read the upload", fallback: { vendor: null, invoice_number: null, total: null, confidence: 0 } }),
-      http("Seen this invoice?", "DB:/supplier_invoices", { method: "GET", query: { vendor: "'eq.' + $json.vendor", invoice_number: "'eq.' + $json.invoice_number" }, alwaysOutput: true }),
+      ...ask("Extract the fields", { task: "extract", system: "Extract from this supplier invoice. Reply with JSON: { vendor: string, invoice_number: string, total: number, currency: string, due_date: 'YYYY-MM-DD', confidence: 0-1 }. Use null for anything not present. Do not guess.", prompt: "$json.text", example: { vendor: "Acme Supplies", invoice_number: "INV-1", total: 100.5, currency: "USD", due_date: "2026-11-15", confidence: 0.9 } }),
+      readAnswer("Read the fields", { from: "Read the upload", fallback: { vendor: null, invoice_number: null, total: null, confidence: 0 } }),
+      db.find("Seen this invoice?", "supplier_invoices", { vendor: "$json.vendor", invoice_number: "$json.invoice_number" }),
       code("Check it", `const f = $("Read the fields").first().json;
 const duplicate = $input.all().some((i) => i.json.invoice_number);
 const problems = [];
@@ -307,8 +308,8 @@ if ((f.confidence ?? 0) < 0.8) problems.push("low confidence (" + (f.confidence 
 if (duplicate) problems.push("an invoice with this number from this vendor already exists");
 return [{ json: { ...f, duplicate, problems, ok: problems.length === 0 } }];`),
       iff("Clean?", "$json.ok"),
-      http("File it", "DB:/supplier_invoices", { body: "{ vendor: $json.vendor, invoice_number: $json.invoice_number, total: $json.total, currency: $json.currency, due_date: $json.due_date, file_url: $json.file_url, status: 'awaiting_payment', at: $now.toISO() }" }),
-      http("Queue for review", "DB:/invoice_review", { body: "{ file_url: $json.file_url, extracted: { vendor: $json.vendor, invoice_number: $json.invoice_number, total: $json.total }, problems: $json.problems, at: $now.toISO() }" }),
+      db.insert("File it", "supplier_invoices", { vendor: "$json.vendor", invoice_number: "$json.invoice_number", total: "$json.total", currency: "$json.currency", due_date: "$json.due_date", file_url: "$json.file_url", status: "'awaiting_payment'", at: "$now.toISO()" }),
+      db.insert("Queue for review", "invoice_review", { file_url: "$json.file_url", extracted: "{ vendor: $json.vendor, invoice_number: $json.invoice_number, total: $json.total }", problems: "$json.problems", at: "$now.toISO()" }),
       code("Review message", `const f = $("Clean?").first().json;
 return [{ json: { channel: "#finance", level: "warn", text: "An invoice" + (f.vendor ? " from " + f.vendor : "") + " needs a manual check: " + f.problems.join("; ") + "." } }];`),
       call("Tell finance", "notify"),
@@ -325,10 +326,10 @@ return [{ json: { channel: "#finance", level: "warn", text: "An invoice" + (f.ve
       { title: "Anything doubtful goes to a person", copy: "With the list of what was wrong, so the check takes seconds.", nodes: ["Queue for review", "Review message", "Tell finance"] },
     ],
     tests: [
-      { name: "a clean invoice is filed", request: { body: { text: "Invoice INV-1042 from Acme Supplies. Total 1280.50 USD due 2026-11-15", file_url: "https://f.example/1.pdf" } }, calls: [{ path: "/db/supplier_invoices", body: { vendor: "Acme Supplies", invoice_number: "INV-1042", total: 1280.5, status: "awaiting_payment" } }], notRan: ["Queue for review"] },
+      { name: "a clean invoice is filed", request: { body: { text: "Invoice INV-1042 from Acme Supplies. Total 1280.50 USD due 2026-11-15", file_url: "https://f.example/1.pdf" } }, calls: [{ to: "supabase", path: "/rest/v1/supplier_invoices", body: { vendor: "Acme Supplies", invoice_number: "INV-1042", total: 1280.5, status: "awaiting_payment" } }], notRan: ["Queue for review"] },
       { name: "a duplicate is caught and sent for review", seed: { supplier_invoices: [{ vendor: "Acme Supplies", invoice_number: "INV-1042" }] }, request: { body: { text: "Invoice INV-1042 from Acme Supplies" } }, ran: ["Tell finance"], output: { node: "Check it", json: { duplicate: true, ok: false } } },
-      { name: "low confidence goes for review", routes: [{ path: "/llm/chat/completions", response: { choices: [{ message: { content: JSON.stringify({ vendor: "Acme", invoice_number: "9", total: 10, confidence: 0.4 }) } }] } }], request: { body: { text: "blurry" } }, ran: ["Queue for review"], notRan: ["File it"] },
-      { name: "a negative total goes for review", routes: [{ path: "/llm/chat/completions", response: { choices: [{ message: { content: JSON.stringify({ vendor: "Acme", invoice_number: "9", total: -10, confidence: 0.95 }) } }] } }], request: { body: { text: "x" } }, ran: ["Queue for review"], notRan: ["File it"] },
+      { name: "low confidence goes for review", llm: [{ final: { vendor: "Acme", invoice_number: "9", total: 10, confidence: 0.4 } }], request: { body: { text: "blurry" } }, ran: ["Queue for review"], notRan: ["File it"] },
+      { name: "a negative total goes for review", llm: [{ final: { vendor: "Acme", invoice_number: "9", total: -10, confidence: 0.95 } }], request: { body: { text: "x" } }, ran: ["Queue for review"], notRan: ["File it"] },
     ],
   }),
 ];

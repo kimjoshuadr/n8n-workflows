@@ -2,7 +2,8 @@
  * Building blocks: one idea each. Most are meant to be called from another
  * workflow, or copied into one.
  */
-import { define, webhook, schedule, manual, called, http, llm, code, iff, route, respond, batches, wait, call, noop, set } from "../lib/wf.mjs";
+import { webhook, schedule, manual, called, http, llm, code, iff, route, set, respond, batches, wait, noop, call, define } from "../lib/wf.mjs";
+import { db, slack, sendgrid, ask } from "../lib/nodes.mjs";
 
 const b = (kind) => ({ folder: `blocks/${kind}`, tier: "block", category: "Building blocks", kind });
 
@@ -21,7 +22,7 @@ return [{ json: { ...row, received_at: new Date().toISOString() } }];`),
       respond("Thanks", "{ ok: true, id: $json.id }"),
     ],
     flow: [["Form posted", "Keep known fields", "Store the row", "Thanks"]],
-    tests: [{ name: "stores named fields and drops the rest", request: { body: { name: " Ana ", email: "a@b.co", message: "Hi", admin: true } }, response: { status: 200, body: { ok: true } }, calls: [{ path: "/db/form_submissions", body: { name: "Ana", email: "a@b.co" } }], output: { node: "Keep known fields", json: { name: "Ana" } } }],
+    tests: [{ name: "stores named fields and drops the rest", request: { body: { name: " Ana ", email: "a@b.co", message: "Hi", admin: true } }, response: { status: 200, body: { ok: true } }, calls: [{ to: "supabase", path: "/rest/v1/form_submissions", body: { name: "Ana", email: "a@b.co" } }], output: { node: "Keep known fields", json: { name: "Ana" } } }],
   }),
   define({
     ...b("intake"), id: "block-webhook-secret", name: "Block · Webhook with a shared secret",
@@ -69,10 +70,10 @@ return [{ json: { valid: Object.keys(errors).length === 0, errors } }];`),
     integrations: ["Webhook", "Chat"],
     nodes: [
       webhook("Event", "block-to-chat", { respond: "immediately" }),
-      http("Post it", "CHAT:/chat.postMessage", { body: "{ channel: $json.body.channel ?? '#general', text: ($json.body.title ? '*' + $json.body.title + '*\\n' : '') + String($json.body.text ?? '').slice(0, 3000) }" }),
+      slack.post("Post it", "$json.body.channel ?? '#general'", "($json.body.title ? '*' + $json.body.title + '*\\n' : '') + String($json.body.text ?? '').slice(0, 3000)"),
     ],
     flow: [["Event", "Post it"]],
-    tests: [{ name: "posts the title and text", request: { body: { title: "Deploy", text: "v1.2 is live" } }, calls: [{ path: "/chat/chat.postMessage", body: { channel: "#general", text: "*Deploy*\nv1.2 is live" } }] }],
+    tests: [{ name: "posts the title and text", request: { body: { title: "Deploy", text: "v1.2 is live" } }, calls: [{ to: "slack", path: "/api/chat.postMessage", body: { channel: "#general", text: "*Deploy*\nv1.2 is live" } }] }],
   }),
   define({
     ...b("notify"), id: "block-fan-out", name: "Block · One event, three channels",
@@ -80,8 +81,8 @@ return [{ json: { valid: Object.keys(errors).length === 0, errors } }];`),
     integrations: ["Chat", "Email", "SMS"],
     nodes: [
       called(),
-      http("Chat", "CHAT:/chat.postMessage", { body: "{ channel: '#general', text: $json.text }", onFail: "continue" }),
-      http("Email", "EMAIL:/emails", { body: "{ to: $('When called').item.json.email, subject: 'Notice', text: $('When called').item.json.text }", onFail: "continue" }),
+      slack.post("Chat", "'#general'", "$json.text", { onFail: "continue" }),
+      sendgrid.text("Email", { to: "$('When called').item.json.email", subject: "'Notice'", text: "$('When called').item.json.text" }, { onFail: "continue" }),
       http("SMS", "SMS:/Messages", { body: "{ To: $('When called').item.json.phone, Body: $('When called').item.json.text.slice(0, 160) }", onFail: "continue" }),
       code("Report", `const sent = (name) => { const j = $(name).first().json; return !!j && !j.error; };
 return [{ json: { chat: sent("Chat"), email: sent("Email"), sms: sent("SMS") } }];`),
@@ -89,7 +90,7 @@ return [{ json: { chat: sent("Chat"), email: sent("Email"), sms: sent("SMS") } }
     flow: [["When called", "Chat", "Email", "SMS", "Report"]],
     tests: [
       { name: "sends all three", input: [{ text: "Hi", email: "a@b.co", phone: "+15550100" }], output: { node: "Report", json: { chat: true, email: true, sms: true } } },
-      { name: "an email outage does not stop chat or SMS", fail: [{ path: "/email", times: 3 }], input: [{ text: "Hi", email: "a@b.co", phone: "+15550100" }], output: { node: "Report", json: { chat: true, email: false, sms: true } }, calls: [{ path: "/sms/Messages" }] },
+      { name: "an email outage does not stop chat or SMS", fail: [{ path: "/v3/mail/send", times: 3 }], input: [{ text: "Hi", email: "a@b.co", phone: "+15550100" }], output: { node: "Report", json: { chat: true, email: false, sms: true } }, calls: [{ path: "/sms/Messages" }] },
     ],
   }),
   define({
@@ -106,14 +107,14 @@ return [{ json: { chat: sent("Chat"), email: sent("Email"), sms: sent("SMS") } }
   return { json: { ...out, unfilled, ready: unfilled.length === 0 && !!to } };
 });`),
       iff("Ready to send?", "$json.ready"),
-      http("Send", "EMAIL:/emails", { body: "{ to: $json.to, subject: $json.subject, text: $json.text }" }),
+      sendgrid.text("Send", { to: "$json.to", subject: "$json.subject", text: "$json.text" }),
       set("Sent", { sent: "true" }),
       set("Held back", { sent: "false", reason: "'Unfilled placeholders: ' + $json.unfilled.join(', ')" }),
     ],
     flow: [["When called", "Fill the template", "Ready to send?", "Send", "Sent"], ["Ready to send?:1", "Held back"]],
     tests: [
-      { name: "fills and sends", input: [{ to: "a@b.co", subject: "Hi {{name}}", body: "Order {{id}} shipped", data: { name: "Ana", id: 7 } }], calls: [{ path: "/email/emails", body: { subject: "Hi Ana", text: "Order 7 shipped" } }] },
-      { name: "holds back an email with a blank placeholder", input: [{ to: "a@b.co", subject: "Hi {{name}}", body: "x", data: {} }], ran: ["Held back"], noCalls: ["/email"] },
+      { name: "fills and sends", input: [{ to: "a@b.co", subject: "Hi {{name}}", body: "Order {{id}} shipped", data: { name: "Ana", id: 7 } }], calls: [{ to: "sendgrid", path: "/v3/mail/send", body: { subject: "Hi Ana", text: "Order 7 shipped" } }] },
+      { name: "holds back an email with a blank placeholder", input: [{ to: "a@b.co", subject: "Hi {{name}}", body: "x", data: {} }], ran: ["Held back"], noCalls: ["sendgrid"] },
     ],
   }),
 
@@ -124,14 +125,14 @@ return [{ json: { chat: sent("Chat"), email: sent("Email"), sms: sent("SMS") } }
     integrations: ["Schedule", "Datastore", "Chat"],
     nodes: [
       schedule("08:00 daily", "0 8 * * *"),
-      http("Yesterday's rows", "DB:/form_submissions", { method: "GET", query: { received_at: "'gte.' + $now.minus({ days: 1 }).startOf('day').toISO()" }, alwaysOutput: true }),
+      db.find("Yesterday's rows", "form_submissions", { received_at: ["gte", "$now.minus({ days: 1 }).startOf('day').toISO()"] }),
       code("Count", `return [{ json: { count: $input.all().filter((i) => i.json.id).length } }];`),
-      http("Post", "CHAT:/chat.postMessage", { body: "{ channel: '#general', text: $json.count + ' form submissions since yesterday morning.' }" }),
+      slack.post("Post", "'#general'", "$json.count + ' form submissions since yesterday morning.'"),
     ],
     flow: [["08:00 daily", "Yesterday's rows", "Count", "Post"]],
     tests: [
-      { name: "counts rows", seed: { form_submissions: [{ id: "1", received_at: "2999-01-01T00:00:00Z" }, { id: "2", received_at: "2999-01-01T00:00:00Z" }] }, input: [{}], calls: [{ path: "/chat/chat.postMessage", body: { text: "2 form submissions since yesterday morning." } }] },
-      { name: "reports zero and does not go silent", input: [{}], calls: [{ path: "/chat/chat.postMessage", body: { text: "0 form submissions since yesterday morning." } }] },
+      { name: "counts rows", seed: { form_submissions: [{ id: "1", received_at: "2999-01-01T00:00:00Z" }, { id: "2", received_at: "2999-01-01T00:00:00Z" }] }, input: [{}], calls: [{ to: "slack", path: "/api/chat.postMessage", body: { text: "2 form submissions since yesterday morning." } }] },
+      { name: "reports zero and does not go silent", input: [{}], calls: [{ to: "slack", path: "/api/chat.postMessage", body: { text: "0 form submissions since yesterday morning." } }] },
     ],
   }),
   define({
@@ -219,7 +220,7 @@ return [{ json: { total: all.length, items: all } }];`),
       noop("Finished"),
     ],
     flow: [["When called", "Five at a time"], ["Five at a time:0", "Finished"], ["Five at a time:1", "Send", "Pause", "Five at a time"]],
-    tests: [{ name: "sends every item across batches", input: Array.from({ length: 7 }, (_, i) => ({ email: `u${i}@b.co` })), callCount: { "/email/emails": 7 }, ran: ["Finished"] }],
+    tests: [{ name: "sends every item across batches", input: Array.from({ length: 7 }, (_, i) => ({ email: `u${i}@b.co` })), callCount: { "sendgrid /v3/mail/send": 7 }, ran: ["Finished"] }],
   }),
   define({
     ...b("lists"), id: "block-batch-upsert", name: "Block · Upsert in chunks",
@@ -234,7 +235,7 @@ return out;`),
       http("Upsert the chunk", "DB:/records", { query: { on_conflict: "'key'" }, headers: { Prefer: "resolution=merge-duplicates" }, body: "$json.rows" }),
     ],
     flow: [["When called", "Chunk", "Upsert the chunk"]],
-    tests: [{ name: "250 rows become three requests and update on repeat", repeat: 2, input: Array.from({ length: 250 }, (_, i) => ({ key: `k${i}`, v: i })), callCount: { "/db/records": 6 }, table: { records: [{ key: "k249", v: 249 }] } }],
+    tests: [{ name: "250 rows become three requests and update on repeat", repeat: 2, input: Array.from({ length: 250 }, (_, i) => ({ key: `k${i}`, v: i })), callCount: { "supabase /rest/v1/records": 6 }, table: { records: [{ key: "k249", v: 249 }] } }],
   }),
 
   /* ---- Reliability ---- */
@@ -278,7 +279,7 @@ return [{ json: { url: prev.url, payload: prev.payload, attempt, give_up: attemp
     flow: [["When called", "Write", "Written"], ["Write:1", "Wrap", "Park it"]],
     tests: [
       { name: "writes when the service is up", input: [{ a: 1 }], ran: ["Written"], notRan: ["Park it"] },
-      { name: "parks the payload when it stays down", fail: [{ path: "/crm", times: 3 }], input: [{ a: 1 }], calls: [{ path: "/db/dead_letters", body: { payload: { a: 1 } } }] },
+      { name: "parks the payload when it stays down", fail: [{ path: "/crm", times: 3 }], input: [{ a: 1 }], calls: [{ to: "supabase", path: "/rest/v1/dead_letters", body: { payload: { a: 1 } } }] },
     ],
   }),
   define({
@@ -288,7 +289,7 @@ return [{ json: { url: prev.url, payload: prev.payload, attempt, give_up: attemp
     nodes: [
       called(),
       code("This hour's bucket", `return $input.all().map((i) => ({ json: { ...i.json, limit: i.json.limit ?? 5, bucket: i.json.key + ":" + new Date().toISOString().slice(0, 13) } }));`),
-      http("Read the count", "DB:/throttle", { method: "GET", query: { bucket: "'eq.' + $json.bucket" }, alwaysOutput: true }),
+      db.find("Read the count", "throttle", { bucket: "$json.bucket" }),
       code("Decide", `const req = $("This hour's bucket").first().json;
 const count = Number($input.first().json.count ?? 0);
 return [{ json: { ...req, count: count + 1, allowed: count < req.limit } }];`),
@@ -306,7 +307,7 @@ return [{ json: { ...req, count: count + 1, allowed: count < req.limit } }];`),
       webhook("Decision link", "block-approval", { method: "GET" }),
       code("Read the link", `const q = $input.first().json.query ?? {};
 return [{ json: { token: String(q.token ?? ""), decision: q.decision === "approve" ? "approved" : q.decision === "reject" ? "rejected" : null } }];`),
-      http("Resolve if still pending", "DB:/approvals", { method: "PATCH", query: { token: "'eq.' + $json.token", status: "'eq.pending'" }, body: "{ status: $json.decision, decided_at: $now.toISO() }", alwaysOutput: true }),
+      db.update("Resolve if still pending", "approvals", { token: "$json.token", status: "'pending'" }, { status: "$json.decision", decided_at: "$now.toISO()" }),
       iff("Resolved now?", "!!$json.token && !!$('Read the link').first().json.decision"),
       respond("Thanks", "{ ok: true, status: $json.status }"),
       respond("Link no longer valid", "{ ok: false, error: 'This link was already used or does not exist' }", { status: 410 }),
@@ -350,7 +351,7 @@ return body.map((r) => ({ json: Object.fromEntries(header.map((h, i) => [h.trim(
     integrations: ["Datastore"],
     nodes: [
       called(),
-      http("Last copy", "DB:/snapshots", { method: "GET", query: { key: "'eq.' + $json.key" }, alwaysOutput: true }),
+      db.find("Last copy", "snapshots", { key: "$json.key" }),
       code("Compare", `const now = $("When called").first().json;
 const before = $input.first().json.data ?? null;
 const fields = Object.keys({ ...(before ?? {}), ...now.data });
@@ -420,7 +421,7 @@ return [{ json: { ...req, rate, converted: Math.round(req.amount * rate * 100) /
     integrations: ["Datastore", "CRM"],
     nodes: [
       manual(),
-      http("Read bookmark", "DB:/sync_cursors", { method: "GET", query: { name: "'eq.block-sync'" }, alwaysOutput: true }),
+      db.find("Read bookmark", "sync_cursors", { name: "'block-sync'" }),
       http("Fetch newer", "CRM:/changes", { method: "GET", query: { since: "$json.value ?? '0'" } }),
       code("Newest id", `const rows = $input.first().json.results ?? [];
 return [{ json: { rows, count: rows.length, newest: rows.length ? String(Math.max(...rows.map((r) => Number(r.id)))) : null } }];`),
@@ -467,7 +468,7 @@ return [{ json: { rows, count: rows.length, newest: rows.length ? String(Math.ma
       code("Check the reply", `const req = $("When called").first().json;
 const required = req.required ?? [];
 let data = null;
-try { data = JSON.parse($input.first().json.choices[0].message.content); } catch (e) {}
+try { data = JSON.parse($input.first().json.output); } catch (e) {}
 const missing = data ? required.filter((k) => data[k] === undefined || data[k] === null) : required;
 return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $runIndex + 1, prompt: req.prompt + (missing.length ? "\\n\\nYour last reply was missing: " + missing.join(", ") + ". Reply again with every field." : "") } }];`),
       iff("Good?", "$json.ok"),
@@ -477,8 +478,8 @@ return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $r
     ],
     flow: [["When called", "Ask", "Check the reply", "Good?", "Usable"], ["Good?:1", "Try once more?", "Ask"], ["Try once more?:1", "Not usable"]],
     tests: [
-      { name: "accepts a complete reply first time", routes: [{ path: "/llm/chat/completions", response: { choices: [{ message: { content: "{\"city\":\"Cebu\",\"country\":\"PH\"}" } }] } }], input: [{ prompt: "Where?", required: ["city", "country"] }], ran: ["Usable"], callCount: { "/llm/chat/completions": 1 } },
-      { name: "asks once more, then gives up", routes: [{ path: "/llm/chat/completions", response: { choices: [{ message: { content: "{\"city\":\"Cebu\"}" } }] } }], input: [{ prompt: "Where?", required: ["city", "country"] }], ran: ["Not usable"], callCount: { "/llm/chat/completions": 2 } },
+      { name: "accepts a complete reply first time", llm: [{ final: JSON.parse("{\"city\":\"Cebu\",\"country\":\"PH\"}") }], input: [{ prompt: "Where?", required: ["city", "country"] }], ran: ["Usable"], callCount: { "/llm/chat/completions": 1 } },
+      { name: "asks once more, then gives up", llm: [{ final: JSON.parse("{\"city\":\"Cebu\"}") }], input: [{ prompt: "Where?", required: ["city", "country"] }], ran: ["Not usable"], callCount: { "/llm/chat/completions": 2 } },
     ],
   }),
   define({
@@ -534,9 +535,9 @@ return chunks.map((c, i) => ({ json: { id: id + "#" + i, index: i, of: chunks.le
     integrations: ["LLM"],
     nodes: [
       called(),
-      llm("Classify", { task: "classify", system: "Classify the message. Reply with JSON: { label: 'billing'|'technical'|'general' }.", user: "$json.text", onFail: "continue" }),
+      ...ask("Classify", { task: "classify", system: "Classify the message. Reply with JSON: { label: 'billing'|'technical'|'general' }.", prompt: "$json.text", example: { label: "billing", urgent: false, sentiment: "neutral" } }),
       code("Read the label", `let label = "general";
-try { const l = JSON.parse($input.first().json.choices[0].message.content).label; if (["billing", "technical", "general"].includes(l)) label = l; } catch (e) {}
+try { const l = JSON.parse($input.first().json.output).label; if (["billing", "technical", "general"].includes(l)) label = l; } catch (e) {}
 return [{ json: { ...$("When called").first().json, label } }];`),
       route("By label", { billing: "$json.label === 'billing'", technical: "$json.label === 'technical'" }),
       set("Billing", { queue: "'billing'" }),
@@ -546,8 +547,8 @@ return [{ json: { ...$("When called").first().json, label } }];`),
     flow: [["When called", "Classify", "Read the label", "By label"], ["By label:0", "Billing"], ["By label:1", "Technical"], ["By label:2", "General"]],
     tests: [
       { name: "routes a billing message", input: [{ text: "My invoice is wrong" }], ran: ["Billing"], notRan: ["General"] },
-      { name: "an unexpected label takes the default route", routes: [{ path: "/llm/chat/completions", response: { choices: [{ message: { content: "{\"label\":\"sales\"}" } }] } }], input: [{ text: "x" }], ran: ["General"] },
-      { name: "a model outage takes the default route", fail: [{ path: "/llm", times: 3 }], input: [{ text: "My invoice is wrong" }], ran: ["General"] },
+      { name: "an unexpected label takes the default route", llm: [{ final: JSON.parse("{\"label\":\"sales\"}") }], input: [{ text: "x" }], ran: ["General"] },
+      { name: "a model outage takes the default route", fail: [{ path: "/v1/chat/completions", times: 20 }, { path: "/v1/messages", times: 20 }], input: [{ text: "My invoice is wrong" }], ran: ["General"] },
     ],
   }),
 ];

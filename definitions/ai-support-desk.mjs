@@ -12,8 +12,8 @@
  * Agents may read from Shopify, Stripe and the knowledge base. Only code may
  * decide that money moves or that a reply is fit to send.
  */
-import { define, schedule, code, iff, route, call, noop } from "../lib/wf.mjs";
-import { db, slack, zendesk, stripe, triggers, agent, claude, gpt, shape, toolCode, toolThink, toolKnowledge, embeddings, toolNode, fromAI } from "../lib/nodes.mjs";
+import { schedule, code, iff, route, noop, call, define } from "../lib/wf.mjs";
+import { db, slack, zendesk, stripe, triggers, agent, claude, gpt, shape, toolCode, fromAI, toolNode, toolKnowledge, embeddings, toolThink } from "../lib/nodes.mjs";
 
 const ticket = "$('Apply the triage rules').first().json";
 

@@ -80,7 +80,10 @@ const matches = (k, w) =>
 function contains(got, want) {
   if (want === null || typeof want !== "object") return got === want;
   if (got === null || typeof got !== "object") return false;
-  if (Array.isArray(want)) return want.every((w, i) => contains(got[i], w));
+  // Rows are sent as a list: "a row like this was sent" is what a case means by an object.
+  if (Array.isArray(got) && !Array.isArray(want)) return got.some((g) => contains(g, want));
+  // A wanted list is a set of things that must be present, in any order.
+  if (Array.isArray(want)) return Array.isArray(got) && want.every((w) => got.some((g) => contains(g, w)));
   return Object.entries(want).every(([k, v]) => contains(got[k], v));
 }
 
@@ -160,7 +163,7 @@ async function runCase(def, wf, c) {
     if (got !== n) problems.push(`${got} calls to ${what}, wanted ${n}`);
   }
   // DEBUG=1 lists every call a failing case made, which is usually the whole answer.
-  if (process.env.DEBUG && problems.length) problems.push("calls: " + calls.map((k) => `${k.method} ${k.host}${k.path}${k.body?.tools ? ` [tools: ${k.body.tools.map((t) => t.name ?? t.function?.name).join(", ")}]` : ""}`).join(" | "));
+  if (process.env.DEBUG && problems.length) problems.push("calls: " + calls.map((k) => `${k.method} ${k.host}${k.path}${Object.keys(k.query ?? {}).length ? "?" + decodeURIComponent(new URLSearchParams(k.query).toString()) : ""}${k.body?.tools ? ` [tools: ${k.body.tools.map((t) => t.name ?? t.function?.name).join(", ")}]` : ""}`).join(" | "));
   for (const [table, rows] of Object.entries(c.table ?? {})) {
     const got = await mock(`/db/${table}`);
     const real = got.filter((r) => r && typeof r === "object");

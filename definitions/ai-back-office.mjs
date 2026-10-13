@@ -11,8 +11,8 @@
  * Models read and explain. Sums, matches and limits are done in code, and the
  * agents are never given a tool that can move money.
  */
-import { define, webhook, schedule, code, iff, call, noop, respond } from "../lib/wf.mjs";
-import { db, slack, gmail, quickbooks, sheets, triggers, agent, claude, gpt, shape, memory, toolCode, toolThink, toolKnowledge, embeddings, toolNode, fromAI } from "../lib/nodes.mjs";
+import { webhook, schedule, code, iff, respond, noop, call, define } from "../lib/wf.mjs";
+import { db, slack, gmail, quickbooks, sheets, triggers, agent, claude, gpt, shape, memory, toolCode, fromAI, toolNode, toolKnowledge, embeddings, toolThink, ask } from "../lib/nodes.mjs";
 
 const inv = "$('Check the arithmetic').first().json";
 

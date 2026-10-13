@@ -2,7 +2,8 @@
  * Lead intake: an enquiry followed from the form to a booked call, with the
  * follow-up that happens when nobody books.
  */
-import { define, webhook, schedule, http, llm, parseLlm, code, iff, route, respond, call, noop, batches } from "../lib/wf.mjs";
+import { webhook, schedule, code, iff, route, set, respond, noop, call, define } from "../lib/wf.mjs";
+import { db, sendgrid, hubspot, triggers, ask, readAnswer } from "../lib/nodes.mjs";
 
 const base = { folder: "systems/lead-intake", tier: "flagship", system: "lead-intake", category: "Sales and CRM" };
 
@@ -12,7 +13,6 @@ export default [
     id: "lead-capture",
     name: "Lead intake · Capture and qualify",
     summary: "Takes an enquiry from any form, rejects junk, ignores repeats, has a model score the fit, then files it in the CRM and sends the right first reply.",
-    integrations: ["Webhook", "LLM", "CRM", "Email", "Chat", "Datastore"],
     nodes: [
       webhook("Enquiry form", "lead-intake"),
       code(
@@ -40,20 +40,15 @@ return [{ json: {
       call("Seen today?", "idempotency-guard"),
       iff("New enquiry?", "!$json.duplicate"),
       noop("Ignore the repeat"),
-      llm("Score the fit", {
-        task: "qualify-lead",
-        system: "You qualify inbound enquiries for a services business. Reply with JSON: { score: 0-100, fit: boolean, reason: string, missing: string[] }. Judge only what the message says.",
-        user: "'From: ' + $json.name + ($json.company ? ' at ' + $json.company : '') + '\\n\\n' + $json.message",
-        onFail: "continue",
-      }),
-      parseLlm("Read the verdict", { from: "New enquiry?", fallback: { score: null, fit: null, reason: "Model reply could not be read" } }),
-      http("Save the lead", "DB:/leads", { body: "{ email: $json.email, name: $json.name, company: $json.company, message: $json.message, source: $json.source, score: $json.score, fit: $json.fit, reason: $json.reason, status: $json.fit === true ? 'qualified' : $json.fit === false ? 'nurture' : 'review', follow_ups: 0, booked: false, received_at: $json.received_at }" }),
+      ...ask("Score the fit", { task: "qualify-lead", system: "You qualify inbound enquiries for a services business. Reply with JSON: { score: 0-100, fit: boolean, reason: string, missing: string[] }. Judge only what the message says.", prompt: "'From: ' + $json.name + ($json.company ? ' at ' + $json.company : '') + '\\n\\n' + $json.message", example: { score: 70, fit: true, reason: "Why, in one sentence.", missing: ["budget"] } }),
+      readAnswer("Read the verdict", { from: "New enquiry?", fallback: { score: null, fit: null, reason: "Model reply could not be read" } }),
+      db.insert("Save the lead", "leads", { email: "$json.email", name: "$json.name", company: "$json.company", message: "$json.message", source: "$json.source", score: "$json.score", fit: "$json.fit", reason: "$json.reason", status: "$json.fit === true ? 'qualified' : $json.fit === false ? 'nurture' : 'review'", follow_ups: "0", booked: "false", received_at: "$json.received_at" }),
       route("Which path?", { qualified: "$('Read the verdict').first().json.fit === true", nurture: "$('Read the verdict').first().json.fit === false" }),
-      http("Create CRM contact", "CRM:/crm/v3/objects/contacts", { body: "{ properties: { email: $('Read the verdict').first().json.email, firstname: $('Read the verdict').first().json.name, company: $('Read the verdict').first().json.company, lead_score: $('Read the verdict').first().json.score, lifecyclestage: 'salesqualifiedlead' } }", onFail: "branch" }),
-      http("Send booking link", "EMAIL:/emails", { body: "{ to: $('Read the verdict').first().json.email, subject: 'Thanks, ' + $('Read the verdict').first().json.name + '. Pick a time', template: 'booking-link', data: { name: $('Read the verdict').first().json.name } }" }),
+      hubspot.contact("Create CRM contact", "$('Read the verdict').first().json.email", { firstName: "$('Read the verdict').first().json.name", companyName: "$('Read the verdict').first().json.company ?? ''", lifeCycleStage: "'salesqualifiedlead'" }, { onFail: "branch" }),
+      sendgrid.send("Send booking link", { to: "$('Read the verdict').first().json.email", template: "'d-booking-link'", data: { name: "$('Read the verdict').first().json.name" } }),
       call("Tell sales", "notify"),
       call("Park for replay", "dead-letter"),
-      http("Send nurture email", "EMAIL:/emails", { body: "{ to: $('Read the verdict').first().json.email, subject: 'Thanks for getting in touch', template: 'nurture-1', data: { name: $('Read the verdict').first().json.name, missing: $('Read the verdict').first().json.missing } }" }),
+      sendgrid.send("Send nurture email", { to: "$('Read the verdict').first().json.email", template: "'d-nurture-1'", data: { name: "$('Read the verdict').first().json.name", missing: "$('Read the verdict').first().json.missing" } }),
       call("Ask a person to look", "notify"),
       code("Sales message", `const l = $("Read the verdict").first().json;
 return [{ json: { text: "New qualified lead: " + l.name + (l.company ? " (" + l.company + ")" : "") + ", score " + l.score + ". " + l.reason, level: "info" } }];`),
@@ -86,17 +81,17 @@ return [{ json: { source: "lead-capture", reason: "CRM contact could not be crea
         response: { status: 202, body: { ok: true } },
         ran: ["Tell sales"], notRan: ["Send nurture email", "Park for replay"],
         calls: [
-          { path: "/crm/crm/v3/objects/contacts", body: { properties: { email: "maria@northclinic.co", lifecyclestage: "salesqualifiedlead" } } },
-          { path: "/email/emails", body: { template: "booking-link" } },
-          { path: "/db/leads", body: { status: "qualified", fit: true } },
+          { to: "hubspot", path: "/contacts/v1/contact/createOrUpdate/email/maria@northclinic.co", body: { properties: [{ property: "lifecyclestage", value: "salesqualifiedlead" }] } },
+          { to: "sendgrid", path: "/v3/mail/send", body: { template_id: "d-booking-link" } },
+          { to: "supabase", path: "/rest/v1/leads", body: { status: "qualified", fit: true } },
         ],
       },
-      { name: "a poor fit gets the nurture email and no CRM record", request: { body: { email: "sam@example.com", message: "hello there, just looking around really" } }, ran: ["Send nurture email"], noCalls: ["/crm"], calls: [{ path: "/db/leads", body: { status: "nurture" } }] },
-      { name: "a bad email is rejected with a 400", request: { body: { email: "nope", message: "long enough message here" } }, response: { status: 400, body: { ok: false, errors: ["email"] } }, notRan: ["Seen today?"], noCalls: ["/llm", "/db"] },
-      { name: "a bot filling the hidden field is rejected", request: { body: { email: "a@b.co", message: "long enough message here", website: "http://spam" } }, response: { status: 400 }, noCalls: ["/llm"] },
-      { name: "the same enquiry twice is handled once", repeat: 2, request: { body: { email: "maria@northclinic.co", message: "We need a site, budget set, timeline spring." } }, callCount: { "/crm/crm/v3/objects/contacts": 1 }, ran: ["Ignore the repeat"] },
-      { name: "an unreadable model reply goes to a person", routes: [{ path: "/llm/chat/completions", response: { choices: [{ message: { content: "Sure! Here you go" } }] } }], request: { body: { email: "x@y.co", message: "We need a site, budget set." } }, ran: ["Ask a person to look"], noCalls: ["/crm"], calls: [{ path: "/db/leads", body: { status: "review" } }] },
-      { name: "a CRM outage parks the lead", fail: [{ path: "/crm", times: 3 }], request: { body: { email: "maria@northclinic.co", message: "We need a site, budget set, timeline spring." } }, ran: ["Park for replay"], notRan: ["Send booking link"], calls: [{ path: "/db/dead_letters", body: { source: "lead-capture" } }] },
+      { name: "a poor fit gets the nurture email and no CRM record", request: { body: { email: "sam@example.com", message: "hello there, just looking around really" } }, ran: ["Send nurture email"], noCalls: ["hubspot"], calls: [{ to: "supabase", path: "/rest/v1/leads", body: { status: "nurture" } }] },
+      { name: "a bad email is rejected with a 400", request: { body: { email: "nope", message: "long enough message here" } }, response: { status: 400, body: { ok: false, errors: ["email"] } }, notRan: ["Seen today?"], noCalls: ["openai", "anthropic", "supabase"] },
+      { name: "a bot filling the hidden field is rejected", request: { body: { email: "a@b.co", message: "long enough message here", website: "http://spam" } }, response: { status: 400 }, noCalls: ["openai", "anthropic"] },
+      { name: "the same enquiry twice is handled once", repeat: 2, request: { body: { email: "maria@northclinic.co", message: "We need a site, budget set, timeline spring." } }, callCount: { "hubspot /contacts/v1/contact/createOrUpdate/email/maria@northclinic.co": 1 }, ran: ["Ignore the repeat"] },
+      { name: "an unreadable model reply goes to a person", llm: [{ text: "Sure! Here you go" }], request: { body: { email: "x@y.co", message: "We need a site, budget set." } }, ran: ["Ask a person to look"], noCalls: ["hubspot"], calls: [{ to: "supabase", path: "/rest/v1/leads", body: { status: "review" } }] },
+      { name: "a CRM outage parks the lead", fail: [{ path: "/contacts/v1", times: 3 }], request: { body: { email: "maria@northclinic.co", message: "We need a site, budget set, timeline spring." } }, ran: ["Park for replay"], notRan: ["Send booking link"], calls: [{ to: "supabase", path: "/rest/v1/dead_letters", body: { source: "lead-capture" } }] },
     ],
   }),
 
@@ -105,10 +100,9 @@ return [{ json: { source: "lead-capture", reason: "CRM contact could not be crea
     id: "lead-follow-up",
     name: "Lead intake · Follow up the unbooked",
     summary: "Each morning, writes to qualified leads who have not booked. Three nudges, two days apart, then the lead is marked cold and left alone.",
-    integrations: ["Schedule", "Datastore", "Email"],
     nodes: [
       schedule("Every morning", "0 9 * * 1-5"),
-      http("Unbooked leads", "DB:/leads", { method: "GET", query: { status: "'eq.qualified'", booked: "'eq.false'" }, alwaysOutput: true }),
+      db.find("Unbooked leads", "leads", { status: "'qualified'", booked: "'false'" }),
       code(
         "Who is due?",
         `const now = Date.now();
@@ -118,10 +112,10 @@ return $input.all().map((i) => i.json).filter((l) => l.email)
   .map((l) => ({ json: { ...l, next: (l.follow_ups ?? 0) + 1, give_up: (l.follow_ups ?? 0) >= 3 } }));`,
       ),
       iff("Nudges left?", "!$json.give_up"),
-      http("Send the nudge", "EMAIL:/emails", { body: "{ to: $json.email, subject: ['Still thinking it over?', 'A quick question', 'Closing the loop'][$json.next - 1], template: 'follow-up-' + $json.next, data: { name: $json.name } }" }),
-      http("Record the nudge", "DB:/leads", { method: "PATCH", query: { email: "'eq.' + $('Nudges left?').item.json.email" }, body: "{ follow_ups: $('Nudges left?').item.json.next, last_contact_at: $now.toISO() }" }),
-      http("Mark cold", "DB:/leads", { method: "PATCH", query: { email: "'eq.' + $json.email" }, body: "{ status: 'cold' }" }),
-      http("Check in", "DB:/heartbeats", { method: "PATCH", query: { name: "'eq.lead-follow-up'" }, body: "{ last_seen: $now.toISO() }", onFail: "continue" }),
+      sendgrid.send("Send the nudge", { to: "$json.email", template: "'d-follow-up-' + $json.next", data: { name: "$json.name" } }),
+      db.update("Record the nudge", "leads", { email: "$('Nudges left?').item.json.email" }, { follow_ups: "$('Nudges left?').item.json.next", last_contact_at: "$now.toISO()" }, { alwaysOutput: false }),
+      db.update("Mark cold", "leads", { email: "$json.email" }, { status: "'cold'" }, { alwaysOutput: false }),
+      db.update("Check in", "heartbeats", { name: "'lead-follow-up'" }, { last_seen: "$now.toISO()" }, { onFail: "continue", alwaysOutput: false }),
     ],
     flow: [
       ["Every morning", "Unbooked leads", "Who is due?", "Nudges left?", "Send the nudge", "Record the nudge"],
@@ -135,10 +129,10 @@ return $input.all().map((i) => i.json).filter((l) => l.email)
       { title: "It knows when to stop", copy: "After three, the lead is marked cold and never written to again.", nodes: ["Mark cold"] },
     ],
     tests: [
-      { name: "nudges a lead that is due and counts it", seed: { leads: [{ email: "a@b.co", name: "A", status: "qualified", booked: false, follow_ups: 1, received_at: "2020-01-01T00:00:00Z" }] }, input: [{}], calls: [{ path: "/email/emails", body: { to: "a@b.co", template: "follow-up-2" } }], table: { leads: [{ email: "a@b.co", follow_ups: 2 }] } },
-      { name: "leaves a lead contacted yesterday alone", seed: { leads: [{ email: "a@b.co", status: "qualified", booked: false, follow_ups: 0, received_at: new Date().toISOString() }] }, input: [{}], noCalls: ["/email"] },
-      { name: "marks a lead cold after three nudges", seed: { leads: [{ email: "a@b.co", status: "qualified", booked: false, follow_ups: 3, received_at: "2020-01-01T00:00:00Z" }] }, input: [{}], noCalls: ["/email"], table: { leads: [{ email: "a@b.co", status: "cold" }] } },
-      { name: "skips leads that already booked", seed: { leads: [{ email: "a@b.co", status: "qualified", booked: true, follow_ups: 0, received_at: "2020-01-01T00:00:00Z" }] }, input: [{}], noCalls: ["/email"] },
+      { name: "nudges a lead that is due and counts it", seed: { leads: [{ email: "a@b.co", name: "A", status: "qualified", booked: false, follow_ups: 1, received_at: "2020-01-01T00:00:00Z" }] }, input: [{}], calls: [{ to: "sendgrid", path: "/v3/mail/send", body: { personalizations: [{ to: [{ email: "a@b.co" }] }], template_id: "d-follow-up-2" } }], table: { leads: [{ email: "a@b.co", follow_ups: 2 }] } },
+      { name: "leaves a lead contacted yesterday alone", seed: { leads: [{ email: "a@b.co", status: "qualified", booked: false, follow_ups: 0, received_at: new Date().toISOString() }] }, input: [{}], noCalls: ["sendgrid"] },
+      { name: "marks a lead cold after three nudges", seed: { leads: [{ email: "a@b.co", status: "qualified", booked: false, follow_ups: 3, received_at: "2020-01-01T00:00:00Z" }] }, input: [{}], noCalls: ["sendgrid"], table: { leads: [{ email: "a@b.co", status: "cold" }] } },
+      { name: "skips leads that already booked", seed: { leads: [{ email: "a@b.co", status: "qualified", booked: true, follow_ups: 0, received_at: "2020-01-01T00:00:00Z" }] }, input: [{}], noCalls: ["sendgrid"] },
     ],
   }),
 
@@ -147,22 +141,24 @@ return $input.all().map((i) => i.json).filter((l) => l.email)
     id: "lead-booking-sync",
     name: "Lead intake · Booking sync",
     summary: "When a call is booked, moves the lead forward everywhere at once: the lead record, the CRM deal and the sales channel.",
-    integrations: ["Webhook", "Calendar", "Datastore", "CRM", "Chat"],
+    
     nodes: [
-      webhook("Booking created", "booking-created", { respond: "immediately" }),
+      triggers.calendly("Booking created"),
       code(
         "Read the booking",
-        `const b = $input.first().json.body ?? {};
-const p = b.payload ?? b;
-const email = String(p.attendees?.[0]?.email ?? p.email ?? "").toLowerCase();
-if (!email) throw new Error("Booking has no attendee email");
-return [{ json: { email, starts_at: p.startTime ?? p.start_time, booking_id: String(p.uid ?? p.id), scope: "booking", key: String(p.uid ?? p.id) } }];`,
+        `return $input.all().map((item) => {
+  const p = item.json.payload ?? item.json;
+  const email = String(p.email ?? "").toLowerCase();
+  const id = String(p.uri ?? p.scheduled_event?.uri ?? "").split("/").pop();
+  if (!email || !id) throw new Error("Booking has no invitee email or id");
+  return { json: { email, starts_at: p.scheduled_event?.start_time ?? null, booking_id: id, scope: "booking", key: id } };
+});`,
       ),
       call("Seen before?", "idempotency-guard"),
       iff("New booking?", "!$json.duplicate"),
-      http("Mark lead booked", "DB:/leads", { method: "PATCH", query: { email: "'eq.' + $json.email" }, body: "{ booked: true, status: 'booked', call_at: $json.starts_at }", alwaysOutput: true }),
+      db.update("Mark lead booked", "leads", { email: "$json.email" }, { booked: "true", status: "'booked'", call_at: "$json.starts_at" }),
       iff("Known lead?", "!!$json.email"),
-      http("Open CRM deal", "CRM:/crm/v3/objects/deals", { body: "{ properties: { dealname: 'Intro call: ' + $json.name, dealstage: 'appointmentscheduled', closedate: $json.call_at }, contact_email: $json.email }" }),
+      hubspot.deal("Open CRM deal", "'appointmentscheduled'", { dealName: "'Intro call: ' + $json.name" }),
       code("Booked message", `const l = $("Known lead?").first().json;
 return [{ json: { text: l.name + " booked a call for " + l.call_at + ".", level: "info" } }];`),
       call("Tell sales", "notify"),
@@ -176,15 +172,15 @@ return [{ json: { text: l.name + " booked a call for " + l.call_at + ".", level:
       ["Known lead?:1", "Unknown message", "Flag it"],
     ],
     story: [
-      { title: "The calendar reports a booking", copy: "Calendar tools resend webhooks, so the booking id is checked first.", nodes: ["Booking created", "Read the booking", "Seen before?", "New booking?", "Already handled"] },
+      { title: "Calendly reports a booking", copy: "Calendly resends webhooks, so the booking id is checked first.", nodes: ["Booking created", "Read the booking", "Seen before?", "New booking?", "Already handled"] },
       { title: "The lead moves forward", copy: "The lead is marked booked, which is also what stops the follow-up emails.", nodes: ["Mark lead booked", "Known lead?"] },
       { title: "The CRM and the team catch up", copy: "A deal opens at the right stage and sales sees it in the channel.", nodes: ["Open CRM deal", "Booked message", "Tell sales"] },
       { title: "Strangers are flagged", copy: "A booking from someone who never enquired still gets noticed.", nodes: ["Unknown message", "Flag it"] },
     ],
     tests: [
-      { name: "a booking marks the lead and opens a deal", seed: { leads: [{ email: "a@b.co", name: "Ana", status: "qualified", booked: false }] }, request: { body: { payload: { uid: "bk1", startTime: "2026-11-02T10:00:00Z", attendees: [{ email: "A@b.co" }] } } }, calls: [{ path: "/crm/crm/v3/objects/deals", body: { properties: { dealstage: "appointmentscheduled" } } }], table: { leads: [{ email: "a@b.co", booked: true, status: "booked" }] }, ran: ["Tell sales"] },
-      { name: "a booking from a stranger is flagged", request: { body: { payload: { uid: "bk2", attendees: [{ email: "new@x.co" }] } } }, ran: ["Flag it"], noCalls: ["/crm"] },
-      { name: "a resent webhook is handled once", seed: { leads: [{ email: "a@b.co", name: "Ana", booked: false }] }, repeat: 2, request: { body: { payload: { uid: "bk3", attendees: [{ email: "a@b.co" }] } } }, callCount: { "/crm/crm/v3/objects/deals": 1 } },
+      { name: "a booking marks the lead and opens a deal", seed: { leads: [{ email: "a@b.co", name: "Ana", status: "qualified", booked: false }] }, input: [{ event: "invitee.created", payload: { email: "A@b.co", uri: "https://api.calendly.com/scheduled_events/e1/invitees/bk1", scheduled_event: { start_time: "2026-11-02T10:00:00Z" } } }], calls: [{ to: "hubspot", path: "/deals/v1/deal", body: { properties: [{ name: "dealstage", value: "appointmentscheduled" }] } }], table: { leads: [{ email: "a@b.co", booked: true, status: "booked" }] }, ran: ["Tell sales"] },
+      { name: "a booking from a stranger is flagged", input: [{ payload: { email: "new@x.co", uri: "https://api.calendly.com/x/bk2" } }], ran: ["Flag it"], noCalls: ["hubspot"] },
+      { name: "a resent webhook is handled once", seed: { leads: [{ email: "a@b.co", name: "Ana", booked: false }] }, repeat: 2, input: [{ payload: { email: "a@b.co", uri: "https://api.calendly.com/x/bk3" } }], callCount: { "hubspot /deals/v1/deal": 1 } },
     ],
   }),
 ];

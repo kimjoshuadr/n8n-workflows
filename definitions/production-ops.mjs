@@ -1,5 +1,6 @@
 /** Production workflows for operations, people and monitoring. */
-import { define, webhook, schedule, http, llm, code, iff, call, noop } from "../lib/wf.mjs";
+import { webhook, schedule, http, code, iff, noop, call, define } from "../lib/wf.mjs";
+import { db, slack, sendgrid } from "../lib/nodes.mjs";
 
 const ops = { folder: "workflows/operations", tier: "production", category: "Operations and people" };
 const mon = { folder: "workflows/monitoring", tier: "production", category: "Reporting and monitoring" };
@@ -48,8 +49,8 @@ return [{ json: { channel: "#people", level: "info", text: h.name + " (" + h.rol
       { title: "The people who must act are told", copy: "One message, with the date.", nodes: ["Team message", "Tell the team"] },
     ],
     tests: [
-      { name: "creates six tasks, a meeting and a timed welcome", repeat: 2, request: { body: { id: 42, email: "New@Co.com", name: "Sam", role: "Estimator", manager_email: "boss@co.com", start_date: "2026-12-01", remote: true } }, callCount: { "/db/onboarding_tasks": 6, "/calendar/bookings": 1, "/email/emails": 1 }, calls: [{ path: "/db/onboarding_tasks", body: { task: "Ship the laptop", due: "2026-11-28" } }, { path: "/email/emails", body: { send_at: "2026-12-01T08:00:00" } }] },
-      { name: "a hire without a start date fails loudly", request: { body: { email: "a@b.co" } }, status: "error", noCalls: ["/db/onboarding_tasks"] },
+      { name: "creates six tasks, a meeting and a timed welcome", repeat: 2, request: { body: { id: 42, email: "New@Co.com", name: "Sam", role: "Estimator", manager_email: "boss@co.com", start_date: "2026-12-01", remote: true } }, callCount: { "supabase /rest/v1/onboarding_tasks": 6, "/calendar/bookings": 1, "sendgrid /v3/mail/send": 1 }, calls: [{ to: "supabase", path: "/rest/v1/onboarding_tasks", body: { task: "Ship the laptop", due: "2026-11-28" } }, { to: "sendgrid", path: "/v3/mail/send", body: { send_at: "2026-12-01T08:00:00" } }] },
+      { name: "a hire without a start date fails loudly", request: { body: { email: "a@b.co" } }, status: "error", noCalls: ["/rest/v1/onboarding_tasks"] },
     ],
   }),
 
@@ -70,7 +71,7 @@ const minutes = events.reduce((s, e) => s + (new Date(e.end) - new Date(e.start)
 const lines = events.map((e) => hm(e.start) + "-" + hm(e.end) + "  " + e.title);
 return [{ json: { count: events.length, clashes, hours: Math.round(minutes / 6) / 10, text: lines.join("\\n") + (clashes.length ? "\\nClash: " + clashes.join("; ") : "") } }];`),
       iff("Anything on?", "$json.count > 0"),
-      http("Post the agenda", "CHAT:/chat.postMessage", { body: "{ channel: '@me', text: ':calendar: ' + $json.count + ' meetings today, ' + $json.hours + 'h in total.\\n' + $json.text }" }),
+      slack.post("Post the agenda", "'@me'", "':calendar: ' + $json.count + ' meetings today, ' + $json.hours + 'h in total.\\n' + $json.text"),
       noop("Clear day"),
     ],
     flow: [
@@ -83,8 +84,8 @@ return [{ json: { count: events.length, clashes, hours: Math.round(minutes / 6) 
       { title: "One message, or none", copy: "An empty day gets no message at all.", nodes: ["Post the agenda", "Clear day"] },
     ],
     tests: [
-      { name: "lists the day and flags a clash", routes: [{ path: "/calendar/events", response: { events: [{ title: "Standup", start: "2026-10-12T09:00:00Z", end: "2026-10-12T09:30:00Z" }, { title: "Client call", start: "2026-10-12T09:15:00Z", end: "2026-10-12T10:15:00Z" }, { title: "Skipped", start: "2026-10-12T11:00:00Z", end: "2026-10-12T12:00:00Z", declined: true }] } }], input: [{}], output: { node: "Lay out the day", json: { count: 2, hours: 1.5, clashes: ["Standup / Client call"] } }, calls: [{ path: "/chat/chat.postMessage" }] },
-      { name: "stays silent on an empty day", routes: [{ path: "/calendar/events", response: { events: [] } }], input: [{}], ran: ["Clear day"], noCalls: ["/chat"] },
+      { name: "lists the day and flags a clash", routes: [{ path: "/calendar/events", response: { events: [{ title: "Standup", start: "2026-10-12T09:00:00Z", end: "2026-10-12T09:30:00Z" }, { title: "Client call", start: "2026-10-12T09:15:00Z", end: "2026-10-12T10:15:00Z" }, { title: "Skipped", start: "2026-10-12T11:00:00Z", end: "2026-10-12T12:00:00Z", declined: true }] } }], input: [{}], output: { node: "Lay out the day", json: { count: 2, hours: 1.5, clashes: ["Standup / Client call"] } }, calls: [{ to: "slack", path: "/api/chat.postMessage" }] },
+      { name: "stays silent on an empty day", routes: [{ path: "/calendar/events", response: { events: [] } }], input: [{}], ran: ["Clear day"], noCalls: ["slack"] },
     ],
   }),
 
@@ -96,7 +97,7 @@ return [{ json: { count: events.length, clashes, hours: Math.round(minutes / 6) 
     integrations: ["Schedule", "Datastore", "CRM", "Email"],
     nodes: [
       schedule("Every 15 minutes", { minutes: 15 }),
-      http("Read the bookmark", "DB:/sync_cursors", { method: "GET", query: { name: "'eq.crm-to-email'" }, alwaysOutput: true }),
+      db.find("Read the bookmark", "sync_cursors", { name: "'crm-to-email'" }),
       code("Start from", `return [{ json: { since: $input.first().json.value ?? "1970-01-01T00:00:00Z", started_at: new Date().toISOString() } }];`),
       http("Changed contacts", "CRM:/crm/v3/objects/contacts/search", { body: "{ modified_since: $json.since, limit: 200 }" }),
       code("Shape for the list", `const rows = ($input.first().json.results ?? []).filter((c) => c.email);
@@ -116,7 +117,7 @@ return [{ json: { count: rows.length, contacts: rows.map((c) => ({ email: String
     ],
     tests: [
       { name: "syncs changed contacts and moves the bookmark", seed: { sync_cursors: [{ name: "crm-to-email", value: "2026-01-01T00:00:00Z" }] }, routes: [{ path: "/crm/crm/v3/objects/contacts/search", response: { results: [{ email: "A@b.co", firstname: "Ana", lifecyclestage: "customer" }, { firstname: "No email" }] } }], input: [{}], calls: [{ path: "/crm/crm/v3/objects/contacts/search", body: { modified_since: "2026-01-01T00:00:00Z" } }, { path: "/email/audiences/contacts/batch", body: { contacts: [{ email: "a@b.co", tags: ["customer"] }] } }], output: { node: "Shape for the list", json: { count: 1 } } },
-      { name: "a failed upsert leaves the bookmark where it was", seed: { sync_cursors: [{ name: "crm-to-email", value: "2026-01-01T00:00:00Z" }] }, routes: [{ path: "/crm/crm/v3/objects/contacts/search", response: { results: [{ email: "a@b.co" }] } }], fail: [{ path: "/email", times: 3 }], input: [{}], status: "error", table: { sync_cursors: [{ name: "crm-to-email", value: "2026-01-01T00:00:00Z" }] }, notRan: ["Move the bookmark"] },
+      { name: "a failed upsert leaves the bookmark where it was", seed: { sync_cursors: [{ name: "crm-to-email", value: "2026-01-01T00:00:00Z" }] }, routes: [{ path: "/crm/crm/v3/objects/contacts/search", response: { results: [{ email: "a@b.co" }] } }], fail: [{ path: "/v3/mail/send", times: 3 }], input: [{}], status: "error", table: { sync_cursors: [{ name: "crm-to-email", value: "2026-01-01T00:00:00Z" }] }, notRan: ["Move the bookmark"] },
     ],
   }),
 
@@ -128,7 +129,7 @@ return [{ json: { count: rows.length, contacts: rows.map((c) => ({ email: String
     integrations: ["Schedule", "Datastore", "Email"],
     nodes: [
       schedule("Monday 09:00", "0 9 * * 1"),
-      http("Active contracts", "DB:/contracts", { method: "GET", query: { status: "'eq.active'" }, alwaysOutput: true }),
+      db.find("Active contracts", "contracts", { status: "'active'" }),
       code("Which warning is due?", `const MARKS = [60, 30, 7];
 const now = Date.now();
 return $input.all().map((i) => i.json).filter((c) => c.ends_on && c.owner_email).map((c) => {
@@ -136,8 +137,8 @@ return $input.all().map((i) => i.json).filter((c) => c.ends_on && c.owner_email)
   const mark = MARKS.filter((m) => days <= m).pop();
   return { ...c, days, mark };
 }).filter((c) => c.days >= 0 && c.mark && c.mark < (c.last_warning ?? 999)).map((json) => ({ json }));`),
-      http("Warn the owner", "EMAIL:/emails", { body: "{ to: $json.owner_email, subject: $json.name + ' ends in ' + $json.days + ' days', template: 'contract-expiry', data: { name: $json.name, ends_on: $json.ends_on, auto_renews: $json.auto_renews === true, notice_days: $json.notice_days } }" }),
-      http("Record the warning", "DB:/contracts", { method: "PATCH", query: { id: "'eq.' + $('Which warning is due?').item.json.id" }, body: "{ last_warning: $('Which warning is due?').item.json.mark }" }),
+      sendgrid.send("Warn the owner", { to: "$json.owner_email", template: "'d-contract-expiry'", data: { name: "$json.name", ends_on: "$json.ends_on", auto_renews: "$json.auto_renews === true", notice_days: "$json.notice_days" } }),
+      db.update("Record the warning", "contracts", { id: "$('Which warning is due?').item.json.id" }, { last_warning: "$('Which warning is due?').item.json.mark" }, { alwaysOutput: false }),
     ],
     flow: [["Monday 09:00", "Active contracts", "Which warning is due?", "Warn the owner", "Record the warning"]],
     story: [
@@ -146,8 +147,8 @@ return $input.all().map((i) => i.json).filter((c) => c.ends_on && c.owner_email)
       { title: "The owner is told what matters", copy: "Whether it renews by itself, and how much notice cancelling needs.", nodes: ["Warn the owner", "Record the warning"] },
     ],
     tests: [
-      { name: "sends the 30-day warning once", seed: { contracts: [{ id: "c1", name: "Hosting", status: "active", owner_email: "a@b.co", ends_on: new Date(Date.now() + 25 * 864e5).toISOString(), last_warning: 60 }] }, repeat: 2, input: [{}], callCount: { "/email/emails": 1 }, table: { contracts: [{ id: "c1", last_warning: 30 }] } },
-      { name: "a contract a year out is left alone", seed: { contracts: [{ id: "c1", name: "Lease", status: "active", owner_email: "a@b.co", ends_on: new Date(Date.now() + 365 * 864e5).toISOString() }] }, input: [{}], noCalls: ["/email"] },
+      { name: "sends the 30-day warning once", seed: { contracts: [{ id: "c1", name: "Hosting", status: "active", owner_email: "a@b.co", ends_on: new Date(Date.now() + 25 * 864e5).toISOString(), last_warning: 60 }] }, repeat: 2, input: [{}], callCount: { "sendgrid /v3/mail/send": 1 }, table: { contracts: [{ id: "c1", last_warning: 30 }] } },
+      { name: "a contract a year out is left alone", seed: { contracts: [{ id: "c1", name: "Lease", status: "active", owner_email: "a@b.co", ends_on: new Date(Date.now() + 365 * 864e5).toISOString() }] }, input: [{}], noCalls: ["sendgrid"] },
     ],
   }),
 
@@ -159,7 +160,7 @@ return $input.all().map((i) => i.json).filter((c) => c.ends_on && c.owner_email)
     integrations: ["Schedule", "Datastore", "Chat"],
     nodes: [
       schedule("Every 5 minutes", { minutes: 5 }),
-      http("Sites to watch", "DB:/monitors", { method: "GET", alwaysOutput: true }),
+      db.find("Sites to watch", "monitors", null),
       http("Request the site", "=$json.url", { method: "GET", fullResponse: true, retry: false, onFail: "continue" }),
       code("Decide the state", `const monitors = $("Sites to watch").all();
 return $input.all().map((item, i) => {
@@ -175,7 +176,7 @@ return $input.all().map((item, i) => {
   const minutesDown = changed && state === "up" && m.down_since ? Math.round((Date.now() - new Date(m.down_since).getTime()) / 60000) : null;
   return { json: { id: m.id, name: m.name ?? m.url, url: m.url, status, state, failures, changed, down_since: downSince, minutes_down: minutesDown } };
 }).filter(Boolean);`),
-      http("Save the state", "DB:/monitors", { method: "PATCH", query: { id: "'eq.' + $json.id" }, body: "{ state: $json.state, failures: $json.failures, down_since: $json.down_since, checked_at: $now.toISO() }" }),
+      db.update("Save the state", "monitors", { id: "$json.id" }, { state: "$json.state", failures: "$json.failures", down_since: "$json.down_since", checked_at: "$now.toISO()" }, { alwaysOutput: false }),
       code("Alerts for changes", `return $("Decide the state").all().map((i) => i.json).filter((m) => m.changed).map((m) => ({ json: { level: m.state === "down" ? "critical" : "info", text: m.state === "down" ? m.name + " is down (" + (m.status || "no response") + "). " + m.url : m.name + " is back up after " + m.minutes_down + " min." } }));`),
       call("Alert", "notify"),
     ],
@@ -186,10 +187,10 @@ return $input.all().map((item, i) => {
       { title: "Down, and back up", copy: "One alert when it goes down, one when it recovers with how long it lasted. Nothing in between.", nodes: ["Alerts for changes", "Alert"] },
     ],
     tests: [
-      { name: "one failure is noted without an alert", seed: { monitors: [{ id: "m1", name: "Shop", url: "http://mocks:4010/site/shop", state: "up", failures: 0 }] }, fail: [{ path: "/site/shop", times: 1, status: 500 }], input: [{}], noCalls: ["/chat"], table: { monitors: [{ id: "m1", failures: 1, state: "up" }] } },
-      { name: "a second failure in a row alerts", seed: { monitors: [{ id: "m1", name: "Shop", url: "http://mocks:4010/site/shop", state: "up", failures: 1 }] }, fail: [{ path: "/site/shop", times: 1, status: 500 }], input: [{}], calls: [{ path: "/chat/chat.postMessage", body: { text: ":red_circle: Shop is down (500). http://mocks:4010/site/shop" } }], table: { monitors: [{ id: "m1", state: "down" }] } },
-      { name: "recovery reports the downtime", seed: { monitors: [{ id: "m1", name: "Shop", url: "http://mocks:4010/site/shop", state: "down", failures: 4, down_since: new Date(Date.now() - 20 * 6e4).toISOString() }] }, input: [{}], calls: [{ path: "/chat/chat.postMessage", body: { text: ":information_source: Shop is back up after 20 min." } }], table: { monitors: [{ id: "m1", state: "up", failures: 0 }] } },
-      { name: "still down stays quiet", seed: { monitors: [{ id: "m1", name: "Shop", url: "http://mocks:4010/site/shop", state: "down", failures: 4, down_since: new Date().toISOString() }] }, fail: [{ path: "/site/shop", times: 1, status: 500 }], input: [{}], noCalls: ["/chat"] },
+      { name: "one failure is noted without an alert", seed: { monitors: [{ id: "m1", name: "Shop", url: "http://mocks:4010/site/shop", state: "up", failures: 0 }] }, fail: [{ path: "/site/shop", times: 1, status: 500 }], input: [{}], noCalls: ["slack"], table: { monitors: [{ id: "m1", failures: 1, state: "up" }] } },
+      { name: "a second failure in a row alerts", seed: { monitors: [{ id: "m1", name: "Shop", url: "http://mocks:4010/site/shop", state: "up", failures: 1 }] }, fail: [{ path: "/site/shop", times: 1, status: 500 }], input: [{}], calls: [{ to: "slack", path: "/api/chat.postMessage", body: { text: ":red_circle: Shop is down (500). http://mocks:4010/site/shop" } }], table: { monitors: [{ id: "m1", state: "down" }] } },
+      { name: "recovery reports the downtime", seed: { monitors: [{ id: "m1", name: "Shop", url: "http://mocks:4010/site/shop", state: "down", failures: 4, down_since: new Date(Date.now() - 20 * 6e4).toISOString() }] }, input: [{}], calls: [{ to: "slack", path: "/api/chat.postMessage", body: { text: ":information_source: Shop is back up after 20 min." } }], table: { monitors: [{ id: "m1", state: "up", failures: 0 }] } },
+      { name: "still down stays quiet", seed: { monitors: [{ id: "m1", name: "Shop", url: "http://mocks:4010/site/shop", state: "down", failures: 4, down_since: new Date().toISOString() }] }, fail: [{ path: "/site/shop", times: 1, status: 500 }], input: [{}], noCalls: ["slack"] },
     ],
   }),
 
@@ -213,7 +214,7 @@ else {
   if (!b.size_bytes) problems.push("it is empty");
 }
 return [{ json: { ok: problems.length === 0, problems, size_mb: b?.size_bytes ? Math.round(b.size_bytes / 1048576) : null, created_at: b?.created_at ?? null } }];`),
-      http("Record the check", "DB:/backup_checks", { body: "{ ok: $json.ok, problems: $json.problems, size_mb: $json.size_mb, at: $now.toISO() }", onFail: "continue" }),
+      db.insert("Record the check", "backup_checks", { ok: "$json.ok", problems: "$json.problems", size_mb: "$json.size_mb", at: "$now.toISO()" }, { onFail: "continue" }),
       iff("Healthy?", "$('Judge it').first().json.ok"),
       code("Problem message", `return [{ json: { level: "critical", text: "Backup check failed: " + $("Judge it").first().json.problems.join("; ") + "." } }];`),
       call("Alert", "notify"),
@@ -229,7 +230,7 @@ return [{ json: { ok: problems.length === 0, problems, size_mb: b?.size_bytes ? 
       { title: "Silence means it is fine", copy: "Only a problem produces an alert. Every check is recorded either way.", nodes: ["Problem message", "Alert", "All good"] },
     ],
     tests: [
-      { name: "a fresh, full backup passes quietly", routes: [{ path: "/backup/backups/latest", response: { created_at: new Date().toISOString(), status: "completed", size_bytes: 5e8, previous_size_bytes: 4.9e8 } }], input: [{}], ran: ["All good"], noCalls: ["/chat"], calls: [{ path: "/db/backup_checks", body: { ok: true } }] },
+      { name: "a fresh, full backup passes quietly", routes: [{ path: "/backup/backups/latest", response: { created_at: new Date().toISOString(), status: "completed", size_bytes: 5e8, previous_size_bytes: 4.9e8 } }], input: [{}], ran: ["All good"], noCalls: ["slack"], calls: [{ to: "supabase", path: "/rest/v1/backup_checks", body: { ok: true } }] },
       { name: "a backup a third smaller raises an alert", routes: [{ path: "/backup/backups/latest", response: { created_at: new Date().toISOString(), status: "completed", size_bytes: 3e8, previous_size_bytes: 5e8 } }], input: [{}], ran: ["Alert"], output: { node: "Judge it", json: { ok: false, problems: ["it is 40% smaller than the one before"] } } },
       { name: "a stale backup raises an alert", routes: [{ path: "/backup/backups/latest", response: { created_at: new Date(Date.now() - 50 * 36e5).toISOString(), status: "completed", size_bytes: 5e8 } }], input: [{}], ran: ["Alert"] },
       { name: "an unreachable backup service raises an alert", fail: [{ path: "/backup", times: 3 }], input: [{}], ran: ["Alert"], output: { node: "Judge it", json: { problems: ["no backup could be found"] } } },
