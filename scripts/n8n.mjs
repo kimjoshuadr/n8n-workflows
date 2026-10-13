@@ -23,24 +23,46 @@ async function ready() {
   throw new Error(`n8n at ${N8N} did not become ready in two minutes`);
 }
 
-let KEY;
-export async function connect() {
-  await ready();
-  if (fs.existsSync(keyFile)) {
-    const key = fs.readFileSync(keyFile, "utf8").trim();
-    const ok = await fetch(`${N8N}/api/v1/workflows?limit=1`, { headers: { "X-N8N-API-KEY": key } });
-    if (ok.status === 200) return (KEY = key);
-  }
+/** Platforms whose n8n node is published by the platform itself and installed as a package. */
+const PACKAGES = ["@apify/n8n-nodes-apify"];
+
+async function signIn() {
   const json = { "content-type": "application/json" };
   let res = await fetch(`${N8N}/rest/login`, { method: "POST", headers: json, body: JSON.stringify({ emailOrLdapLoginId: OWNER.email, password: OWNER.password }) });
   if (!res.ok) res = await fetch(`${N8N}/rest/owner/setup`, { method: "POST", headers: json, body: JSON.stringify(OWNER) });
   if (!res.ok) throw new Error(`cannot sign in to the test n8n: ${res.status} ${await res.text()}`);
-  const cookie = res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
-  const scopes = (await (await fetch(`${N8N}/rest/api-keys/scopes`, { headers: { cookie } })).json()).data;
-  const made = await fetch(`${N8N}/rest/api-keys`, { method: "POST", headers: { ...json, cookie }, body: JSON.stringify({ label: `tests-${Date.now()}`, scopes, expiresAt: null }) });
-  if (!made.ok) throw new Error(`cannot create an API key: ${made.status} ${await made.text()}`);
-  KEY = (await made.json()).data.rawApiKey;
-  fs.writeFileSync(keyFile, KEY);
+  return res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
+}
+
+async function ensurePackages(cookie) {
+  const have = ((await (await fetch(`${N8N}/rest/community-packages`, { headers: { cookie } })).json()).data ?? []).map((p) => p.packageName);
+  for (const name of PACKAGES.filter((p) => !have.includes(p))) {
+    const res = await fetch(`${N8N}/rest/community-packages`, { method: "POST", headers: { "content-type": "application/json", cookie }, body: JSON.stringify({ name }) });
+    if (!res.ok) throw new Error(`cannot install ${name}: ${res.status} ${await res.text()}`);
+  }
+}
+
+let KEY;
+export async function connect() {
+  await ready();
+  const json = { "content-type": "application/json" };
+  const packagesFile = path.join(root, ".n8n-test-packages");
+  const saved = fs.existsSync(keyFile) ? fs.readFileSync(keyFile, "utf8").trim() : null;
+  const works = saved && (await fetch(`${N8N}/api/v1/workflows?limit=1`, { headers: { "X-N8N-API-KEY": saved } })).status === 200;
+  const installed = works && fs.existsSync(packagesFile) && fs.readFileSync(packagesFile, "utf8") === `${saved}:${PACKAGES.join(",")}`;
+  // Signing in is rate-limited, so it happens only when there is something to set up.
+  if (installed) return (KEY = saved);
+  const cookie = await signIn();
+  await ensurePackages(cookie);
+  if (works) KEY = saved;
+  else {
+    const scopes = (await (await fetch(`${N8N}/rest/api-keys/scopes`, { headers: { cookie } })).json()).data;
+    const made = await fetch(`${N8N}/rest/api-keys`, { method: "POST", headers: { ...json, cookie }, body: JSON.stringify({ label: `tests-${Date.now()}`, scopes, expiresAt: null }) });
+    if (!made.ok) throw new Error(`cannot create an API key: ${made.status} ${await made.text()}`);
+    KEY = (await made.json()).data.rawApiKey;
+    fs.writeFileSync(keyFile, KEY);
+  }
+  fs.writeFileSync(packagesFile, `${KEY}:${PACKAGES.join(",")}`);
   return KEY;
 }
 
@@ -62,10 +84,11 @@ export async function ensureCredentials() {
   const file = path.join(root, ".n8n-test-creds.json");
   if (fs.existsSync(file)) {
     const saved = JSON.parse(fs.readFileSync(file, "utf8"));
-    if (saved.key === KEY && Object.keys(PLATFORMS).every((p) => saved.ids[p])) return saved.ids;
+    if (saved.key === KEY && Object.keys(PLATFORMS).every((p) => !PLATFORMS[p].credential || saved.ids[p])) return saved.ids;
   }
   const ids = {};
   for (const [id, p] of Object.entries(PLATFORMS)) {
+    if (!p.credential) continue;
     try {
       ids[id] = (await n8n("POST", "/credentials", { name: p.credentialName ?? p.name, type: p.credential, data: p.test })).id;
     } catch (e) {

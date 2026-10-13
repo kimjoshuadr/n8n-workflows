@@ -1,0 +1,1869 @@
+{
+  "name": "AI agents · Revenue and support pipeline",
+  "nodes": [
+    {
+      "id": "127f150c-81d0-4c3d-a28a-f5cb1dd147ac",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -220
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 230,
+        "content": "## AI agents · Revenue and support pipeline\nTwo tracks on one canvas. Inbound messages go to a router agent, which hands each one to a RAG agent that answers from the Supabase knowledge base and HubSpot, to a fallback agent, or to a human escalation agent that briefs a person. On weekdays, research and lead gen agents find people who fit the ideal customer profile, and a cold outreach agent writes to them and files them in the CRM.\n\n**Platforms:** Supabase, OpenAI, HubSpot, Slack, SerpAPI, Gmail\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `production/revenue-support-agents`"
+      }
+    },
+    {
+      "id": "a06d93f0-18e1-4c13-af90-9d920e523e63",
+      "name": "Section: Inbound: route the message",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        0
+      ],
+      "parameters": {
+        "width": 1620,
+        "height": 590,
+        "color": 4,
+        "content": "## 1. Inbound: route the message\nA router agent names the intent. Code decides where it goes, and sends anything that reads like a dispute to a person."
+      }
+    },
+    {
+      "id": "05a65b43-a8b7-4fe9-a9b3-36e2de9f84af",
+      "name": "Section: Inbound: answer, fall back or hand over",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        670
+      ],
+      "parameters": {
+        "width": 2540,
+        "height": 1210,
+        "color": 5,
+        "content": "## 2. Inbound: answer, fall back or hand over\nThe RAG agent answers from the knowledge base and the CRM. What it cannot answer goes to the fallback agent; what needs a person is briefed and raised."
+      }
+    },
+    {
+      "id": "41947925-c854-4151-a98e-f9cbac24acf1",
+      "name": "Section: Outbound: research",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        1960
+      ],
+      "parameters": {
+        "width": 2020,
+        "height": 590,
+        "color": 6,
+        "content": "## 3. Outbound: research\nWeekdays. A research agent searches the web for companies that fit the profile stored in Supabase."
+      }
+    },
+    {
+      "id": "6972c10c-1b04-4ee1-ab06-bd3fb81940b7",
+      "name": "Section: Outbound: find the person, write, send",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        2630
+      ],
+      "parameters": {
+        "width": 980,
+        "height": 2830,
+        "color": 3,
+        "content": "## 4. Outbound: find the person, write, send\nOne company per pass. Code applies the profile and checks the email before anything is sent."
+      }
+    },
+    {
+      "id": "d33b1e3d-b3a3-4294-ae1f-5169e0999f68",
+      "position": [
+        0,
+        330
+      ],
+      "name": "on_message_received",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "inbound-message",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "2add19e6-6bb5-42ed-acac-a1c93d2dadb2"
+    },
+    {
+      "id": "818e392a-6933-4550-a3b8-9f724ba47908",
+      "position": [
+        260,
+        330
+      ],
+      "name": "normalise_message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body ?? {};\nconst text = String(b.message ?? b.text ?? \"\").trim();\nif (!text) throw new Error(\"The message is empty\");\nreturn [{ json: { conversation_id: String(b.conversation_id ?? b.email ?? \"anonymous\"), email: String(b.email ?? \"\").trim().toLowerCase(), text: text.slice(0, 4000), channel: b.channel ?? \"chat\" } }];"
+      }
+    },
+    {
+      "id": "5e940843-8ffe-4018-a3d1-77588067ccee",
+      "position": [
+        620,
+        200
+      ],
+      "name": "Router Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'From: ' + ($json.email || 'unknown') + '\\n\\n' + $json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Router Agent for a company's inbox. Read the message and decide its intent: 'support' for a question about the product, an order, an account or how something works; 'sales' for someone asking about buying, pricing or a demo; 'human' for a complaint, a legal or billing dispute, or anyone asking for a person; 'other' for anything else. Give your confidence from 0 to 1. Do not answer the message.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "09b87922-3303-4ee3-a7a4-58efb11038dd",
+      "position": [
+        520,
+        420
+      ],
+      "name": "router_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"intent\": \"support\",\n  \"confidence\": 0.9,\n  \"reason\": \"One sentence.\"\n}"
+      }
+    },
+    {
+      "id": "9a33a49e-9efe-4675-ab28-29709ced4631",
+      "position": [
+        980,
+        330
+      ],
+      "name": "read_route",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const m = $(\"normalise_message\").first().json;\nconst r = $input.first().json.output;\nconst ok = r && [\"support\", \"sales\", \"human\", \"other\"].includes(r.intent);\n// What a person handles whatever the model made of it.\nconst must = /\\b(lawyer|legal action|sue|chargeback|refund|complaint|speak to (a|someone)|human|manager)\\b/i.test(m.text);\nlet to = \"fallback\";\nif (must || (ok && r.intent === \"human\")) to = \"human\";\nelse if (ok && Number(r.confidence) >= 0.6 && (r.intent === \"support\" || r.intent === \"sales\")) to = \"answer\";\nreturn [{ json: { ...m, intent: ok ? r.intent : \"unknown\", confidence: ok ? Number(r.confidence) : 0, route: to } }];"
+      }
+    },
+    {
+      "id": "f0f18519-6724-459d-a1a1-c0d5bca9a35c",
+      "position": [
+        1240,
+        330
+      ],
+      "name": "switch_intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ccbcf3a7-d9f5-43c5-a052-fbf9c249a1f2",
+                    "leftValue": "={{ $json.route === 'answer' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "answer"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "46553f94-5fa6-4ae0-ab74-976626ebcae4",
+                    "leftValue": "={{ $json.route === 'human' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "human"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      }
+    },
+    {
+      "id": "3e4e24a9-bb79-455c-a58e-e0188d2c3be6",
+      "position": [
+        300,
+        870
+      ],
+      "name": "RAG Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Customer: ' + ($('normalise_message').first().json.email || 'unknown') + '\\n\\n' + $('normalise_message').first().json.text }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "You are the RAG Agent: you answer customers for the company. Search the knowledge base before you answer, and look the customer up in the CRM when the question depends on who they are. State only what a tool returned. If the tools do not hold the answer, reply with exactly: I do not know. Under 120 words, plain text.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f4f37e26-eb78-4bb5-ad94-537df2ad7170",
+      "position": [
+        0,
+        1090
+      ],
+      "name": "conversation_memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('normalise_message').first().json.conversation_id }}",
+        "contextWindowLength": 10
+      }
+    },
+    {
+      "id": "68bb6bb7-0d09-4beb-a8f2-3fb050737243",
+      "position": [
+        200,
+        1090
+      ],
+      "name": "knowledge_base",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "knowledge_base",
+        "toolDescription": "Searches the company's help centre and product documentation. Pass the customer's question in a few words.",
+        "tableName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "documents"
+        },
+        "topK": 4,
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "55ab8d0c-02ce-49b5-ae6f-6ba4c2231a06",
+      "position": [
+        200,
+        1310
+      ],
+      "name": "embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "cffc7647-75c5-4928-aa2e-1327b82726b0",
+      "position": [
+        400,
+        1090
+      ],
+      "name": "crm_lookup",
+      "type": "n8n-nodes-base.hubspotTool",
+      "typeVersion": 2.1,
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Searches HubSpot contacts by email, name or company and returns what the CRM knows about them.",
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "search",
+        "returnAll": false,
+        "limit": 5,
+        "filterGroupsUi": {},
+        "additionalFields": {
+          "query": "={{ $fromAI('query', `An email address, a name or a company`, 'string') }}"
+        }
+      },
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
+    },
+    {
+      "id": "7f881909-0c3e-43b6-a2db-dc86c272455f",
+      "position": [
+        860,
+        1220
+      ],
+      "name": "read_answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const m = $(\"normalise_message\").first().json;\nconst reply = String($input.first().json.output ?? \"\").trim();\nconst answered = reply.length > 0 && !/i do not know|i don't know|UNSCRIPTED/i.test(reply);\nreturn [{ json: { ...m, reply, answered, handled_by: \"rag\" } }];"
+      }
+    },
+    {
+      "id": "83f0423a-29e3-4035-a862-a07f847abf8b",
+      "position": [
+        1120,
+        1220
+      ],
+      "name": "if_answered",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "00dcd248-86a7-4b34-a169-22dc9748875f",
+              "leftValue": "={{ $json.answered }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a33b7605-349c-4ded-a325-475a44a6bc48",
+      "position": [
+        1380,
+        1090
+      ],
+      "name": "Fallback Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('normalise_message').first().json.text }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "You are the Fallback Agent. The message could not be answered from the knowledge base, or its intent was unclear. Do not guess an answer. Ask the one question that would make it answerable, or say that the team will follow up by email. Under 60 words, plain text.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "fe35b6d0-fbac-4f7b-ab80-5181bfa17980",
+      "position": [
+        1640,
+        1220
+      ],
+      "name": "read_fallback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const m = $(\"normalise_message\").first().json;\nconst reply = String($input.first().json.output ?? \"\").trim();\nconst usable = reply.length > 0 && !/UNSCRIPTED/.test(reply);\nreturn [{ json: { ...m, reply: usable ? reply : \"Thanks for your message. A member of the team will reply by email shortly.\", handled_by: \"fallback\" } }];"
+      }
+    },
+    {
+      "id": "1f02099b-23a7-401a-a6bf-b7b1ac691012",
+      "position": [
+        300,
+        1490
+      ],
+      "name": "Human Escalation Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Customer: ' + ($('normalise_message').first().json.email || 'unknown') + '\\n\\n' + $('normalise_message').first().json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Human Escalation Agent. This conversation is going to a person. Write a two-sentence summary of what the customer wants for the colleague who picks it up, say how urgent it is ('low', 'normal' or 'high'), and write a short holding reply that tells the customer a person will be in touch. Promise nothing else.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "9dffe015-45b7-4871-a62a-08135ed24bbc",
+      "position": [
+        200,
+        1710
+      ],
+      "name": "escalation_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"summary\": \"Two sentences.\",\n  \"urgency\": \"normal\",\n  \"holding_reply\": \"A person will be in touch.\"\n}"
+      }
+    },
+    {
+      "id": "d6c1d536-2271-4e9c-a55f-a5801a90d766",
+      "position": [
+        860,
+        1400
+      ],
+      "name": "read_escalation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const m = $(\"normalise_message\").first().json;\nconst e = $input.first().json.output;\nconst ok = e && typeof e === \"object\" && e.summary;\nreturn [{ json: { ...m, summary: ok ? String(e.summary) : m.text.slice(0, 300), urgency: ok && [\"low\", \"normal\", \"high\"].includes(e.urgency) ? e.urgency : \"high\", reply: ok && e.holding_reply ? String(e.holding_reply) : \"Thanks for your message. A member of the team will be in touch shortly.\", handled_by: \"human\" } }];"
+      }
+    },
+    {
+      "id": "c692c708-f064-4880-ad96-168f6c36bd83",
+      "position": [
+        1120,
+        1400
+      ],
+      "name": "create_handover_task",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "engagement",
+        "operation": "create",
+        "type": "task",
+        "metadata": {
+          "subject": "={{ 'Handover: ' + ($json.email || 'unknown customer') }}",
+          "body": "={{ $json.summary }}",
+          "status": "NOT_STARTED"
+        },
+        "additionalFields": {
+          "associations": {}
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
+    },
+    {
+      "id": "327b3f59-6d4e-45db-a7d7-94edd98139b2",
+      "position": [
+        1380,
+        1530
+      ],
+      "name": "notify_team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#support' }}"
+        },
+        "text": "={{ ':raising_hand: ' + $('read_escalation').first().json.urgency.toUpperCase() + ' handover from ' + ($('read_escalation').first().json.email || 'unknown') + ': ' + $('read_escalation').first().json.summary }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
+    },
+    {
+      "id": "dd404df0-6c5b-4f81-ab80-e3adcf538c7d",
+      "position": [
+        1640,
+        1400
+      ],
+      "name": "set_escalation_reply",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "00fdde0b-8699-4953-ab86-9a73b756938a",
+              "name": "reply",
+              "value": "={{ $('read_escalation').first().json.reply }}",
+              "type": "string"
+            },
+            {
+              "id": "fee77097-7206-476f-aa7c-035093200fda",
+              "name": "handled_by",
+              "value": "={{ 'human' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "940fbd66-d887-4c07-aeb1-b62d614d3ddf",
+      "position": [
+        1900,
+        1310
+      ],
+      "name": "log_conversation",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "conversations",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "conversation_id",
+              "fieldValue": "={{ $('normalise_message').first().json.conversation_id }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('normalise_message').first().json.email }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $('normalise_message').first().json.text }}"
+            },
+            {
+              "fieldId": "reply",
+              "fieldValue": "={{ $json.reply }}"
+            },
+            {
+              "fieldId": "handled_by",
+              "fieldValue": "={{ $json.handled_by }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "37053c9a-da80-4c4e-acde-9d6699ee148b",
+      "position": [
+        2160,
+        1310
+      ],
+      "name": "respond_to_customer",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply, handled_by: $json.handled_by }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "707a3982-6f51-4925-a834-c5f26432c05e",
+      "position": [
+        0,
+        2290
+      ],
+      "name": "daily_prospecting",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2a8d5af9-5a49-4617-a4d2-967aaa1c7878",
+      "position": [
+        260,
+        2290
+      ],
+      "name": "get_icp",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "icp_profiles",
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "active",
+              "condition": "eq",
+              "keyValue": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "5f9db57d-1089-445a-abbc-765bce87617d",
+      "position": [
+        520,
+        2290
+      ],
+      "name": "if_icp",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4a99e0b2-954e-4297-ac4a-3eeb0ac7db86",
+              "leftValue": "={{ !!$json.industry }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bf47b89b-ca92-475a-a71d-158fbef023d4",
+      "position": [
+        1080,
+        2160
+      ],
+      "name": "Research Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Industry: ' + $json.industry + '\\nSize: ' + $json.size + '\\nRegion: ' + $json.region + '\\nWe offer: ' + $json.offer }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Research Agent. Find up to five real companies that fit the ideal customer profile you are given. Use web search to find candidates and fetch a company's own site to confirm it fits before you list it. For each give its name, its domain and one sentence of evidence. List nothing you could not confirm.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f3cf571e-13b0-401f-a7b9-b80f5787f3cc",
+      "position": [
+        780,
+        2380
+      ],
+      "name": "web_search",
+      "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+      "typeVersion": 1,
+      "parameters": {
+        "options": {}
+      },
+      "credentials": {
+        "serpApi": {
+          "id": "__CRED:serpapi__",
+          "name": "SerpAPI"
+        }
+      }
+    },
+    {
+      "id": "7839b39c-b892-4369-a7db-6ba667abeb9d",
+      "position": [
+        980,
+        2380
+      ],
+      "name": "fetch_page",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Fetches a public web page and returns its HTML. Pass the full address.",
+        "method": "GET",
+        "url": "={{ $fromAI('url', `The full address of the page, starting https://`, 'string') }}",
+        "options": {
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "c25200d5-f77f-41ed-a95c-b55e97259317",
+      "position": [
+        1180,
+        2380
+      ],
+      "name": "research_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"companies\": [\n    {\n      \"name\": \"The company\",\n      \"domain\": \"its-site.com\",\n      \"why\": \"One sentence of evidence.\"\n    }\n  ]\n}"
+      }
+    },
+    {
+      "id": "638d1c89-54ba-4a3b-a37a-7d8b2dfb37ca",
+      "position": [
+        1640,
+        2290
+      ],
+      "name": "read_companies",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const list = $input.first().json.output?.companies;\nif (!Array.isArray(list)) return [];\nconst seen = new Set();\nreturn list.filter((c) => c && c.name && c.domain && !seen.has(c.domain) && seen.add(c.domain)).slice(0, 5).map((c) => ({ json: { name: String(c.name), domain: String(c.domain).toLowerCase(), why: String(c.why ?? \"\") } }));"
+      }
+    },
+    {
+      "id": "4cf65f9f-6925-4db6-aa9d-3cf3c3996735",
+      "position": [
+        300,
+        2830
+      ],
+      "name": "for_each_company",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "06582c47-e4c1-4497-ae48-a2e4b1af79cb",
+      "position": [
+        300,
+        3010
+      ],
+      "name": "Lead Gen Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Company: ' + $json.name + ' (' + $json.domain + ')\\nRole we want: ' + $('get_icp').first().json.role + '\\nWhy the company fits: ' + $json.why }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Lead Gen Agent. For the company you are given, find the one person who holds the role in the ideal customer profile. Fetch the company's site (team, about and contact pages) to find them. Give their name, role and work email only if the site shows them, a fit score from 0 to 100, and the evidence for the role. If you cannot find a named person with an email, leave email empty.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "9110934f-03a1-48f5-a199-cdc385f48108",
+      "position": [
+        0,
+        3230
+      ],
+      "name": "fetch_company_page",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Fetches a public web page and returns its HTML. Pass the full address.",
+        "method": "GET",
+        "url": "={{ $fromAI('url', `The full address of the page, starting https://`, 'string') }}",
+        "options": {
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "b1e12919-bae3-4d70-a2fc-288b3818ac4a",
+      "position": [
+        200,
+        3230
+      ],
+      "name": "crm_search",
+      "type": "n8n-nodes-base.hubspotTool",
+      "typeVersion": 2.1,
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Searches HubSpot contacts by email, name or company and returns what the CRM knows about them.",
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "search",
+        "returnAll": false,
+        "limit": 5,
+        "filterGroupsUi": {},
+        "additionalFields": {
+          "query": "={{ $fromAI('query', `An email address, a name or a company`, 'string') }}"
+        }
+      },
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
+    },
+    {
+      "id": "e245f82c-60ac-49b0-a24f-ff477c377137",
+      "position": [
+        400,
+        3230
+      ],
+      "name": "lead_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"name\": \"Full name\",\n  \"role\": \"Their role\",\n  \"email\": \"name@company.com\",\n  \"company\": \"The company\",\n  \"score\": 80,\n  \"evidence\": \"Where the role was found.\"\n}"
+      }
+    },
+    {
+      "id": "eb104a50-cff9-4d30-a2cf-b1f195bcea88",
+      "position": [
+        300,
+        3450
+      ],
+      "name": "check_icp",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "// The profile is applied here, in code: a model's enthusiasm does not qualify a lead.\nconst c = $(\"for_each_company\").first().json;\nconst l = $input.first().json.output ?? {};\nconst email = String(l.email ?? \"\").trim().toLowerCase();\nconst reasons = [];\nif (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) reasons.push(\"no work email found\");\nelse if (!email.endsWith(\"@\" + c.domain) && !email.endsWith(\".\" + c.domain)) reasons.push(\"email is not at the company's domain\");\nif (!(Number(l.score) >= 70)) reasons.push(\"fit score under 70\");\nif (!String(l.evidence ?? \"\").trim()) reasons.push(\"no evidence for the role\");\nif (!String(l.name ?? \"\").trim()) reasons.push(\"no named person\");\nreturn [{ json: { company: c.name, domain: c.domain, why: c.why, name: String(l.name ?? \"\"), role: String(l.role ?? \"\"), email, score: Number(l.score) || 0, evidence: String(l.evidence ?? \"\"), qualified: reasons.length === 0, reasons } }];"
+      }
+    },
+    {
+      "id": "0ae42ada-c85f-4a3c-ad99-2497c293fb92",
+      "position": [
+        300,
+        3630
+      ],
+      "name": "if_qualified",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fbc0d8bf-edb7-4f43-adec-6334cd553e1a",
+              "leftValue": "={{ $json.qualified }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "4a8b2048-5075-4e98-a5c9-a54c74a7f436",
+      "position": [
+        300,
+        3810
+      ],
+      "name": "find_contact",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "search",
+        "returnAll": false,
+        "limit": 100,
+        "filterGroupsUi": {},
+        "additionalFields": {
+          "query": "={{ $json.email }}"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
+    },
+    {
+      "id": "18d1f901-fd21-4d05-a383-d5813efc650e",
+      "position": [
+        300,
+        3990
+      ],
+      "name": "if_new_lead",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "78c65dcd-a36f-4bbd-aec3-073773ac07ee",
+              "leftValue": "={{ !$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ddc720b2-a1c1-4ab3-ac29-691929d83c67",
+      "position": [
+        300,
+        4170
+      ],
+      "name": "Cold Outreach Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'To: ' + $('check_icp').first().json.name + ', ' + $('check_icp').first().json.role + ' at ' + $('check_icp').first().json.company + '\\nWhat we found: ' + $('check_icp').first().json.why + '\\nWe offer: ' + $('get_icp').first().json.offer }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Cold Outreach Agent. Write one first email to the person you are given. Open with the specific thing found about their company, say in one sentence what we offer and why it fits them, and end with one small ask. Under 90 words, plain text, no flattery, no placeholders. Give a subject line of under 60 characters.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "9c8292d4-7de2-49e8-a141-7fc5974387b8",
+      "position": [
+        200,
+        4390
+      ],
+      "name": "outreach_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"subject\": \"The subject line\",\n  \"body\": \"The email.\"\n}"
+      }
+    },
+    {
+      "id": "4d03b9e4-63a4-47d1-a120-3ebd43bb6b09",
+      "position": [
+        300,
+        4610
+      ],
+      "name": "check_email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const l = $(\"check_icp\").first().json;\nconst e = $input.first().json.output ?? {};\nconst subject = String(e.subject ?? \"\").trim();\nconst body = String(e.body ?? \"\").trim();\nconst problems = [];\nif (!subject || subject.length > 80) problems.push(\"subject missing or too long\");\nif (body.length < 40 || body.split(/\\s+/).length > 130) problems.push(\"body missing or too long\");\nif (/[\\[{<][^\\]}>]*[\\]}>]/.test(subject + body)) problems.push(\"a placeholder was left in\");\nreturn [{ json: { ...l, subject, body, sendable: problems.length === 0, problems } }];"
+      }
+    },
+    {
+      "id": "97a5496a-cf0e-4f82-ab59-0bed5ece8b9f",
+      "position": [
+        300,
+        4790
+      ],
+      "name": "if_sendable",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d803d112-6b41-459a-a006-4e60dd01ab22",
+              "leftValue": "={{ $json.sendable }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1a28e057-a046-4f9d-a4f5-01c3d1da78de",
+      "position": [
+        300,
+        4970
+      ],
+      "name": "send_outreach",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "__CRED:gmail__",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "id": "856bb52b-c9cb-4f90-aad2-09ee3363b27a",
+      "position": [
+        300,
+        5150
+      ],
+      "name": "create_lead",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "upsert",
+        "email": "={{ $('check_icp').first().json.email }}",
+        "additionalFields": {
+          "firstName": "={{ $('check_icp').first().json.name }}",
+          "companyName": "={{ $('check_icp').first().json.company }}",
+          "jobTitle": "={{ $('check_icp').first().json.role }}"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
+    },
+    {
+      "id": "173af5e6-8f69-48c1-a918-0dcc5f2b1214",
+      "position": [
+        300,
+        5330
+      ],
+      "name": "log_outreach",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "outreach_log",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('check_icp').first().json.email }}"
+            },
+            {
+              "fieldId": "company",
+              "fieldValue": "={{ $('check_icp').first().json.company }}"
+            },
+            {
+              "fieldId": "subject",
+              "fieldValue": "={{ $('check_email').first().json.subject }}"
+            },
+            {
+              "fieldId": "score",
+              "fieldValue": "={{ $('check_icp').first().json.score }}"
+            },
+            {
+              "fieldId": "sent_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "3191d97a-9230-47ef-a9a0-19bdbbfe3f3e",
+      "position": [
+        720,
+        420
+      ],
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "cb762694-adc2-4a62-a5df-9618443cdc96",
+      "position": [
+        1380,
+        2380
+      ],
+      "name": "OpenAI Chat Model 1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "on_message_received": {
+      "main": [
+        [
+          {
+            "node": "normalise_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "normalise_message": {
+      "main": [
+        [
+          {
+            "node": "Router Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router Agent": {
+      "main": [
+        [
+          {
+            "node": "read_route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "read_route": {
+      "main": [
+        [
+          {
+            "node": "switch_intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "switch_intent": {
+      "main": [
+        [
+          {
+            "node": "RAG Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Human Escalation Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG Agent": {
+      "main": [
+        [
+          {
+            "node": "read_answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "read_answer": {
+      "main": [
+        [
+          {
+            "node": "if_answered",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_answered": {
+      "main": [
+        [
+          {
+            "node": "log_conversation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback Agent": {
+      "main": [
+        [
+          {
+            "node": "read_fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "read_fallback": {
+      "main": [
+        [
+          {
+            "node": "log_conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Escalation Agent": {
+      "main": [
+        [
+          {
+            "node": "read_escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "read_escalation": {
+      "main": [
+        [
+          {
+            "node": "create_handover_task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_handover_task": {
+      "main": [
+        [
+          {
+            "node": "notify_team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "notify_team": {
+      "main": [
+        [
+          {
+            "node": "set_escalation_reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_escalation_reply": {
+      "main": [
+        [
+          {
+            "node": "log_conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log_conversation": {
+      "main": [
+        [
+          {
+            "node": "respond_to_customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "daily_prospecting": {
+      "main": [
+        [
+          {
+            "node": "get_icp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_icp": {
+      "main": [
+        [
+          {
+            "node": "if_icp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_icp": {
+      "main": [
+        [
+          {
+            "node": "Research Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research Agent": {
+      "main": [
+        [
+          {
+            "node": "read_companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "read_companies": {
+      "main": [
+        [
+          {
+            "node": "for_each_company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "for_each_company": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Lead Gen Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Gen Agent": {
+      "main": [
+        [
+          {
+            "node": "check_icp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_icp": {
+      "main": [
+        [
+          {
+            "node": "if_qualified",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_qualified": {
+      "main": [
+        [
+          {
+            "node": "find_contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "for_each_company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "find_contact": {
+      "main": [
+        [
+          {
+            "node": "if_new_lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_new_lead": {
+      "main": [
+        [
+          {
+            "node": "Cold Outreach Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "for_each_company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cold Outreach Agent": {
+      "main": [
+        [
+          {
+            "node": "check_email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_email": {
+      "main": [
+        [
+          {
+            "node": "if_sendable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_sendable": {
+      "main": [
+        [
+          {
+            "node": "send_outreach",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "for_each_company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_outreach": {
+      "main": [
+        [
+          {
+            "node": "create_lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_lead": {
+      "main": [
+        [
+          {
+            "node": "log_outreach",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log_outreach": {
+      "main": [
+        [
+          {
+            "node": "for_each_company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "router_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Router Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "conversation_memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "RAG Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "knowledge_base": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAG Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "knowledge_base",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crm_lookup": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAG Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "escalation_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Human Escalation Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "web_search": {
+      "ai_tool": [
+        [
+          {
+            "node": "Research Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fetch_page": {
+      "ai_tool": [
+        [
+          {
+            "node": "Research Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "research_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Research Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fetch_company_page": {
+      "ai_tool": [
+        [
+          {
+            "node": "Lead Gen Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crm_search": {
+      "ai_tool": [
+        [
+          {
+            "node": "Lead Gen Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lead_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Lead Gen Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "outreach_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Cold Outreach Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Router Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "RAG Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Fallback Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Human Escalation Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model 1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Research Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Lead Gen Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Cold Outreach Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

@@ -1,0 +1,2121 @@
+{
+  "name": "Research · Content aggregation engine",
+  "nodes": [
+    {
+      "id": "7eaaf3aa-2585-4da9-a2ba-b990a5adb283",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -220
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 230,
+        "content": "## Research · Content aggregation engine\nTen sources are checked on their own schedules: forum feeds and industry blogs. Each new article is scraped in full, judged for relevance to the audience by Gemini, and the ones that pass are saved as Markdown in Google Drive and indexed in Supabase for the newsletter.\n\n**Platforms:** RSS, Google Drive, Gemini, Groq, Supabase\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `production/newsletter-research`"
+      }
+    },
+    {
+      "id": "16990ab2-ddfb-487c-ae80-c51dae80e2e5",
+      "name": "Section: Scrape sources",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        0
+      ],
+      "parameters": {
+        "width": 1940,
+        "height": 1950,
+        "color": 4,
+        "content": "## 1. Scrape sources\nThree forum feeds and seven blogs, each on its own schedule, all put in one shape."
+      }
+    },
+    {
+      "id": "ff0e0352-f07b-44aa-a59f-49769fe07031",
+      "name": "Section: Scrape content",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        2030
+      ],
+      "parameters": {
+        "width": 380,
+        "height": 1050,
+        "color": 5,
+        "content": "## 2. Scrape content\nOne article at a time. An article already in the store is skipped; a new one is fetched in full."
+      }
+    },
+    {
+      "id": "0b98b583-b407-440b-a468-b4c262bd948b",
+      "name": "Section: Validation",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        3160
+      ],
+      "parameters": {
+        "width": 1100,
+        "height": 770,
+        "color": 6,
+        "content": "## 3. Validation\nA page that did not load is dropped. A model decides whether the rest is relevant to the audience."
+      }
+    },
+    {
+      "id": "eaf23f69-0364-42b3-af98-4731abb6356f",
+      "name": "Section: Store data",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        4010
+      ],
+      "parameters": {
+        "width": 900,
+        "height": 330,
+        "color": 3,
+        "content": "## 4. Store data\nMarkdown in Google Drive, an index row in Supabase."
+      }
+    },
+    {
+      "id": "8ab0e696-ba83-4a18-a241-222d20e9c04d",
+      "position": [
+        0,
+        200
+      ],
+      "name": "schedule_1",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "5 5 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4fb5ff34-6c97-4695-aace-d43ad12f9040",
+      "position": [
+        260,
+        200
+      ],
+      "name": "get_feed_1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://feeds.acme.example/forum-1/index.json' }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "bd2ee07b-f2d0-4485-addd-083f6b1ae320",
+      "position": [
+        520,
+        200
+      ],
+      "name": "split_results_1",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "feeds",
+        "options": {}
+      }
+    },
+    {
+      "id": "a5468543-d598-4045-ac67-4e01eb122d83",
+      "position": [
+        780,
+        200
+      ],
+      "name": "read_feed_1",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "609b630e-3826-4fc8-a7db-58ac62c143f9",
+      "position": [
+        1040,
+        830
+      ],
+      "name": "filter_recent_1",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c348d67f-fa45-4156-a1f6-c9563c1804bc",
+              "leftValue": "={{ !!$json.link && !!$json.isoDate && new Date($json.isoDate) >= new Date(Date.now() - 24 * 3600 * 1000) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "069ddbd2-d8be-4a10-a5b4-aaac7d406e8d",
+      "position": [
+        1300,
+        830
+      ],
+      "name": "data_manipulation_1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => i.json).filter((p) => p.link && p.title).map((p) => ({ json: { url: String(p.link), title: String(p.title).trim(), source: \"forum-1\", published: p.isoDate ?? p.published_at ?? p.date ?? null } }));"
+      }
+    },
+    {
+      "id": "6fef11d1-3c4a-4ce6-add0-d631fb12a76a",
+      "position": [
+        0,
+        380
+      ],
+      "name": "schedule_2",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "10 5 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "13f223ca-1c3b-4ab4-ac67-985ea3ce22a7",
+      "position": [
+        260,
+        380
+      ],
+      "name": "get_feed_2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://feeds.acme.example/forum-2/index.json' }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "c16ea44b-bc6d-4241-a6cd-a3863982c92d",
+      "position": [
+        520,
+        380
+      ],
+      "name": "split_results_2",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "feeds",
+        "options": {}
+      }
+    },
+    {
+      "id": "9b49258d-f13e-4903-aefe-413c792593c7",
+      "position": [
+        780,
+        380
+      ],
+      "name": "read_feed_2",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "23853e08-995d-4f6c-ad3c-cea77ea86b7b",
+      "position": [
+        1040,
+        1010
+      ],
+      "name": "filter_recent_2",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fb857228-53e1-4fcb-a244-3fa9ffc775a2",
+              "leftValue": "={{ !!$json.link && !!$json.isoDate && new Date($json.isoDate) >= new Date(Date.now() - 24 * 3600 * 1000) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "9748ce57-30c4-4f36-a493-6ab7f8664b3e",
+      "position": [
+        1300,
+        1010
+      ],
+      "name": "data_manipulation_2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => i.json).filter((p) => p.link && p.title).map((p) => ({ json: { url: String(p.link), title: String(p.title).trim(), source: \"forum-2\", published: p.isoDate ?? p.published_at ?? p.date ?? null } }));"
+      }
+    },
+    {
+      "id": "ad02aa37-bef0-4e4d-a285-a84112220cc7",
+      "position": [
+        0,
+        560
+      ],
+      "name": "schedule_3",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "15 5 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ee864c45-6c6b-48ca-a8c6-fdce733fb303",
+      "position": [
+        260,
+        560
+      ],
+      "name": "get_feed_3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://feeds.acme.example/forum-3/index.json' }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "37503579-5526-4d91-af5a-54fa6fd2a95a",
+      "position": [
+        520,
+        560
+      ],
+      "name": "split_results_3",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "feeds",
+        "options": {}
+      }
+    },
+    {
+      "id": "c36ecbea-22c3-44dc-ad42-6e600679385d",
+      "position": [
+        780,
+        560
+      ],
+      "name": "read_feed_3",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "0f748bdd-0cd2-497f-a5f9-a36869c57023",
+      "position": [
+        1040,
+        1190
+      ],
+      "name": "filter_recent_3",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7de90572-049c-4e38-a78d-f863851acfd8",
+              "leftValue": "={{ !!$json.link && !!$json.isoDate && new Date($json.isoDate) >= new Date(Date.now() - 24 * 3600 * 1000) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "90840b63-9895-434c-a9b4-c8c15bf1b3f1",
+      "position": [
+        1300,
+        1190
+      ],
+      "name": "data_manipulation_3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => i.json).filter((p) => p.link && p.title).map((p) => ({ json: { url: String(p.link), title: String(p.title).trim(), source: \"forum-3\", published: p.isoDate ?? p.published_at ?? p.date ?? null } }));"
+      }
+    },
+    {
+      "id": "c4811d1f-04f1-4e08-a430-1e1f4e73a2b9",
+      "position": [
+        0,
+        740
+      ],
+      "name": "schedule_4",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "20 5 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "15ff2013-64e2-4366-a8ad-affb19808206",
+      "position": [
+        260,
+        740
+      ],
+      "name": "get_blog_1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://feeds.acme.example/blog-1/posts.json' }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "8729a12d-1ac5-4f48-a5b6-6008ab223cd1",
+      "position": [
+        520,
+        740
+      ],
+      "name": "split_results_4",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "posts",
+        "options": {}
+      }
+    },
+    {
+      "id": "02cdd797-04b4-4fe6-a218-2b1e8146eb97",
+      "position": [
+        780,
+        740
+      ],
+      "name": "data_manipulation_4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => i.json).filter((p) => p.url && p.title).map((p) => ({ json: { url: String(p.url), title: String(p.title).trim(), source: \"blog-1\", published: p.isoDate ?? p.published_at ?? p.date ?? null } }));"
+      }
+    },
+    {
+      "id": "b47b6c2c-0629-4ee3-ae35-41ea049beea9",
+      "position": [
+        0,
+        920
+      ],
+      "name": "schedule_5",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "25 5 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "87c782fc-6aba-433d-a6d3-24fccd0c3789",
+      "position": [
+        260,
+        920
+      ],
+      "name": "get_blog_2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://feeds.acme.example/blog-2/posts.json' }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "4112067b-a133-4e2f-aa63-ada57eb80d46",
+      "position": [
+        520,
+        920
+      ],
+      "name": "split_results_5",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "posts",
+        "options": {}
+      }
+    },
+    {
+      "id": "cc00fe85-41ea-42a7-a8c1-1a5edb8e57b1",
+      "position": [
+        780,
+        920
+      ],
+      "name": "data_manipulation_5",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => i.json).filter((p) => p.url && p.title).map((p) => ({ json: { url: String(p.url), title: String(p.title).trim(), source: \"blog-2\", published: p.isoDate ?? p.published_at ?? p.date ?? null } }));"
+      }
+    },
+    {
+      "id": "f31bf5c0-1266-4a14-aa01-3f973fec4edc",
+      "position": [
+        0,
+        1100
+      ],
+      "name": "schedule_6",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 5 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "8311f668-6908-4543-a3cc-7b83b52d00da",
+      "position": [
+        260,
+        1100
+      ],
+      "name": "get_blog_3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://feeds.acme.example/blog-3/posts.json' }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "e5085dc4-2059-43ec-a734-271b04988425",
+      "position": [
+        520,
+        1100
+      ],
+      "name": "split_results_6",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "posts",
+        "options": {}
+      }
+    },
+    {
+      "id": "2a3b9257-613b-4c1a-aeba-6eccaac6ff24",
+      "position": [
+        780,
+        1100
+      ],
+      "name": "data_manipulation_6",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => i.json).filter((p) => p.url && p.title).map((p) => ({ json: { url: String(p.url), title: String(p.title).trim(), source: \"blog-3\", published: p.isoDate ?? p.published_at ?? p.date ?? null } }));"
+      }
+    },
+    {
+      "id": "65ba74e8-b9e2-424d-aea5-4a715381795d",
+      "position": [
+        0,
+        1280
+      ],
+      "name": "schedule_7",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "35 5 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "8f58b7b6-aa38-46a3-a30f-2a99b7cd22bc",
+      "position": [
+        260,
+        1280
+      ],
+      "name": "get_blog_4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://feeds.acme.example/blog-4/posts.json' }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "a5db3454-cab4-4ce8-a0a2-5dcf93e2cf9a",
+      "position": [
+        520,
+        1280
+      ],
+      "name": "split_results_7",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "posts",
+        "options": {}
+      }
+    },
+    {
+      "id": "36316ef2-7e83-4019-a226-253209d20fa1",
+      "position": [
+        780,
+        1280
+      ],
+      "name": "data_manipulation_7",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => i.json).filter((p) => p.url && p.title).map((p) => ({ json: { url: String(p.url), title: String(p.title).trim(), source: \"blog-4\", published: p.isoDate ?? p.published_at ?? p.date ?? null } }));"
+      }
+    },
+    {
+      "id": "237ab75d-ff75-486a-a259-cdf564fd212d",
+      "position": [
+        0,
+        1460
+      ],
+      "name": "schedule_8",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "40 5 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "1623ef7a-dfe6-4242-a429-ff65c4866c30",
+      "position": [
+        260,
+        1460
+      ],
+      "name": "get_blog_5",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://feeds.acme.example/blog-5/posts.json' }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "7529820c-9930-4257-a1fe-ec40347172ac",
+      "position": [
+        520,
+        1460
+      ],
+      "name": "split_results_8",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "posts",
+        "options": {}
+      }
+    },
+    {
+      "id": "427894f4-89ab-4b70-a990-4e4ce562b8d9",
+      "position": [
+        780,
+        1460
+      ],
+      "name": "data_manipulation_8",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => i.json).filter((p) => p.url && p.title).map((p) => ({ json: { url: String(p.url), title: String(p.title).trim(), source: \"blog-5\", published: p.isoDate ?? p.published_at ?? p.date ?? null } }));"
+      }
+    },
+    {
+      "id": "6b604033-ceb4-4d88-a90b-a195f838854f",
+      "position": [
+        0,
+        1640
+      ],
+      "name": "schedule_9",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "45 5 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c75d1adb-e62e-489f-a3be-ded250a33b54",
+      "position": [
+        260,
+        1640
+      ],
+      "name": "get_blog_6",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://feeds.acme.example/blog-6/posts.json' }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "e1538e02-ca8e-48c8-a0d5-f160c395652b",
+      "position": [
+        520,
+        1640
+      ],
+      "name": "split_results_9",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "posts",
+        "options": {}
+      }
+    },
+    {
+      "id": "0f615f03-56e9-4f71-a573-3411d178547f",
+      "position": [
+        780,
+        1640
+      ],
+      "name": "data_manipulation_9",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => i.json).filter((p) => p.url && p.title).map((p) => ({ json: { url: String(p.url), title: String(p.title).trim(), source: \"blog-6\", published: p.isoDate ?? p.published_at ?? p.date ?? null } }));"
+      }
+    },
+    {
+      "id": "c1d1c64e-e6a3-4e5e-aa12-734d9850af11",
+      "position": [
+        0,
+        1820
+      ],
+      "name": "schedule_10",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "50 5 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "01c716aa-d21b-46c2-a08e-3c57b182b85a",
+      "position": [
+        260,
+        1820
+      ],
+      "name": "get_blog_7",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://feeds.acme.example/blog-7/posts.json' }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "123c636c-1183-4cf8-a858-3ba8956c7dc6",
+      "position": [
+        520,
+        1820
+      ],
+      "name": "split_results_10",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "posts",
+        "options": {}
+      }
+    },
+    {
+      "id": "c8433e8c-a4d2-4991-a18e-e980cf7e12d7",
+      "position": [
+        780,
+        1820
+      ],
+      "name": "data_manipulation_10",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => i.json).filter((p) => p.url && p.title).map((p) => ({ json: { url: String(p.url), title: String(p.title).trim(), source: \"blog-7\", published: p.isoDate ?? p.published_at ?? p.date ?? null } }));"
+      }
+    },
+    {
+      "id": "1637fd95-e09e-4902-af25-ab5eba713e8b",
+      "position": [
+        1560,
+        1010
+      ],
+      "name": "set_item",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4158ae16-e267-427b-a51d-89e54f4e340c",
+              "name": "url",
+              "value": "={{ $json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "85ef629f-1461-488d-ad26-434e9848cc0a",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "1c97d5cb-3515-4ab5-a777-7b05c154ee99",
+              "name": "source",
+              "value": "={{ $json.source }}",
+              "type": "string"
+            },
+            {
+              "id": "48dd3b17-207f-4026-a736-c173cbd688c8",
+              "name": "published",
+              "value": "={{ $json.published ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f29cbf3a-8873-47de-a3ea-6f074e07a994",
+              "name": "date",
+              "value": "={{ $now.toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            },
+            {
+              "id": "9977b998-587e-4001-abb3-7583540fecad",
+              "name": "slug",
+              "value": "={{ String($json.url).replace(/^https?:\\/\\//, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase().slice(0, 80) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "3b24872d-0c61-42b5-a993-aef6df65d393",
+      "position": [
+        0,
+        2230
+      ],
+      "name": "for_each_content",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "5b160da5-8aa4-4ae7-a491-05552fd5f5eb",
+      "position": [
+        0,
+        2410
+      ],
+      "name": "get_files",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "parameters": {
+        "resource": "fileFolder",
+        "operation": "search",
+        "searchMethod": "name",
+        "queryString": "={{ $json.slug }}",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "research-folder"
+          }
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "__CRED:googleDrive__",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "id": "6f1a15d7-c549-4aee-a8f6-cda6419c158e",
+      "position": [
+        0,
+        2590
+      ],
+      "name": "skip_existing",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6612d379-00b8-482a-a415-7d4fa2fd868d",
+              "leftValue": "={{ !$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "0f1da4df-854d-4b83-ae38-d036575af396",
+      "position": [
+        0,
+        2770
+      ],
+      "name": "set_url",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a03c04be-e98d-414c-adca-7c6b29a94613",
+              "name": "url",
+              "value": "={{ $('for_each_content').first().json.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "e6c0ac2f-8a1c-410d-a6dd-11187ad425ad",
+      "position": [
+        0,
+        2950
+      ],
+      "name": "scrape_url",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:scrape-page__"
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "e302e64c-df4b-4d6a-a5ce-5fb189b984a1",
+      "position": [
+        0,
+        3580
+      ],
+      "name": "filter_scrape_errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c42b3690-ccef-4e35-aba3-eff6090e6e05",
+              "leftValue": "={{ $json.ok === true && String($json.text ?? '').length >= 200 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "58a57eaf-0957-4779-a25c-172a205b9595",
+      "position": [
+        360,
+        3360
+      ],
+      "name": "validate_content",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Title: ' + $('for_each_content').first().json.title + '\\nSource: ' + $('for_each_content').first().json.source + '\\n\\n' + String($json.text).slice(0, 12000) }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "[task:validate-content] You screen articles for a daily industry newsletter. Decide whether this article is relevant to the newsletter's readers: it must be news or analysis about the industry, published recently, and more than an advert or a listing. Give its topic in a few words, a two-sentence summary using only what the article says, and one sentence on why it is or is not relevant."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "6f2b41dc-0ec7-458d-ad25-547d3e518aaa",
+      "position": [
+        260,
+        3580
+      ],
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "credentials": {
+        "googlePalmApi": {
+          "id": "__CRED:gemini__",
+          "name": "Gemini"
+        }
+      }
+    },
+    {
+      "id": "ee2bd1fd-65a1-404c-a392-84236afcc61b",
+      "position": [
+        460,
+        3580
+      ],
+      "name": "content_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "parameters": {
+        "options": {}
+      }
+    },
+    {
+      "id": "f41cc968-f10b-4d91-ae66-d003ac97392a",
+      "position": [
+        360,
+        3800
+      ],
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "groqApi": {
+          "id": "__CRED:groq__",
+          "name": "Groq"
+        }
+      }
+    },
+    {
+      "id": "e69193aa-5741-4585-a898-fb6ba9fc8708",
+      "position": [
+        560,
+        3800
+      ],
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"relevant\": true,\n  \"topic\": \"A few words\",\n  \"summary\": \"Two sentences.\",\n  \"reason\": \"One sentence.\"\n}"
+      }
+    },
+    {
+      "id": "6df11f05-46a4-4caa-a69b-a3ffc9f55ffb",
+      "position": [
+        720,
+        3580
+      ],
+      "name": "filter_relevant",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fcd5ef50-0d83-42da-a173-6f7548f6c684",
+              "leftValue": "={{ $json.output?.relevant === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "9e490cef-1232-4fe7-a61f-e881327c0e15",
+      "position": [
+        0,
+        4210
+      ],
+      "name": "format_markdown",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9248fd29-2b5c-4c6a-aef3-584262254165",
+              "name": "file_name",
+              "value": "={{ $('for_each_content').first().json.date + ' ' + $('for_each_content').first().json.slug + '.md' }}",
+              "type": "string"
+            },
+            {
+              "id": "fd04efcd-b1c6-4080-a261-b104a4fe7a1b",
+              "name": "markdown",
+              "value": "={{ '# ' + $('for_each_content').first().json.title + '\\n\\nSource: ' + $('for_each_content').first().json.url + '\\nTopic: ' + $json.output.topic + '\\n\\n## Summary\\n' + $json.output.summary + '\\n\\n## Full text\\n' + $('scrape_url').first().json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "7b4bb6a2-01ed-4c17-acd0-f8837834871f",
+              "name": "topic",
+              "value": "={{ $json.output.topic }}",
+              "type": "string"
+            },
+            {
+              "id": "fde02511-6e90-460c-a7b3-a5bbe0fedacc",
+              "name": "summary",
+              "value": "={{ $json.output.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "f4a311c7-a42a-41e0-a2ea-77d5b4afb752",
+              "name": "external_urls",
+              "value": "={{ ($('scrape_url').first().json.links ?? []).slice(0, 5).join(',') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "03470d65-dd7c-4717-af51-867bb505f274",
+      "position": [
+        260,
+        4210
+      ],
+      "name": "upload_file",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "parameters": {
+        "resource": "file",
+        "operation": "createFromText",
+        "content": "={{ $json.markdown }}",
+        "name": "={{ $json.file_name }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "research-folder"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "__CRED:googleDrive__",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "id": "ce33935d-52d6-477b-a490-e956100bc80b",
+      "position": [
+        520,
+        4210
+      ],
+      "name": "create_object_info",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "content_objects",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $('for_each_content').first().json.slug }}"
+            },
+            {
+              "fieldId": "date",
+              "fieldValue": "={{ $('for_each_content').first().json.date }}"
+            },
+            {
+              "fieldId": "type",
+              "fieldValue": "={{ 'article' }}"
+            },
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $('for_each_content').first().json.title }}"
+            },
+            {
+              "fieldId": "url",
+              "fieldValue": "={{ $('for_each_content').first().json.url }}"
+            },
+            {
+              "fieldId": "source",
+              "fieldValue": "={{ $('for_each_content').first().json.source }}"
+            },
+            {
+              "fieldId": "topic",
+              "fieldValue": "={{ $('format_markdown').first().json.topic }}"
+            },
+            {
+              "fieldId": "summary",
+              "fieldValue": "={{ $('format_markdown').first().json.summary }}"
+            },
+            {
+              "fieldId": "external_urls",
+              "fieldValue": "={{ $('format_markdown').first().json.external_urls }}"
+            },
+            {
+              "fieldId": "drive_file_id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "file_name",
+              "fieldValue": "={{ $('format_markdown').first().json.file_name }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "schedule_1": {
+      "main": [
+        [
+          {
+            "node": "get_feed_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_feed_1": {
+      "main": [
+        [
+          {
+            "node": "split_results_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_results_1": {
+      "main": [
+        [
+          {
+            "node": "read_feed_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "read_feed_1": {
+      "main": [
+        [
+          {
+            "node": "filter_recent_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_recent_1": {
+      "main": [
+        [
+          {
+            "node": "data_manipulation_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "data_manipulation_1": {
+      "main": [
+        [
+          {
+            "node": "set_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "schedule_2": {
+      "main": [
+        [
+          {
+            "node": "get_feed_2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_feed_2": {
+      "main": [
+        [
+          {
+            "node": "split_results_2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_results_2": {
+      "main": [
+        [
+          {
+            "node": "read_feed_2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "read_feed_2": {
+      "main": [
+        [
+          {
+            "node": "filter_recent_2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_recent_2": {
+      "main": [
+        [
+          {
+            "node": "data_manipulation_2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "data_manipulation_2": {
+      "main": [
+        [
+          {
+            "node": "set_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "schedule_3": {
+      "main": [
+        [
+          {
+            "node": "get_feed_3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_feed_3": {
+      "main": [
+        [
+          {
+            "node": "split_results_3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_results_3": {
+      "main": [
+        [
+          {
+            "node": "read_feed_3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "read_feed_3": {
+      "main": [
+        [
+          {
+            "node": "filter_recent_3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_recent_3": {
+      "main": [
+        [
+          {
+            "node": "data_manipulation_3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "data_manipulation_3": {
+      "main": [
+        [
+          {
+            "node": "set_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "schedule_4": {
+      "main": [
+        [
+          {
+            "node": "get_blog_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_blog_1": {
+      "main": [
+        [
+          {
+            "node": "split_results_4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_results_4": {
+      "main": [
+        [
+          {
+            "node": "data_manipulation_4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "data_manipulation_4": {
+      "main": [
+        [
+          {
+            "node": "set_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "schedule_5": {
+      "main": [
+        [
+          {
+            "node": "get_blog_2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_blog_2": {
+      "main": [
+        [
+          {
+            "node": "split_results_5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_results_5": {
+      "main": [
+        [
+          {
+            "node": "data_manipulation_5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "data_manipulation_5": {
+      "main": [
+        [
+          {
+            "node": "set_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "schedule_6": {
+      "main": [
+        [
+          {
+            "node": "get_blog_3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_blog_3": {
+      "main": [
+        [
+          {
+            "node": "split_results_6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_results_6": {
+      "main": [
+        [
+          {
+            "node": "data_manipulation_6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "data_manipulation_6": {
+      "main": [
+        [
+          {
+            "node": "set_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "schedule_7": {
+      "main": [
+        [
+          {
+            "node": "get_blog_4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_blog_4": {
+      "main": [
+        [
+          {
+            "node": "split_results_7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_results_7": {
+      "main": [
+        [
+          {
+            "node": "data_manipulation_7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "data_manipulation_7": {
+      "main": [
+        [
+          {
+            "node": "set_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "schedule_8": {
+      "main": [
+        [
+          {
+            "node": "get_blog_5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_blog_5": {
+      "main": [
+        [
+          {
+            "node": "split_results_8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_results_8": {
+      "main": [
+        [
+          {
+            "node": "data_manipulation_8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "data_manipulation_8": {
+      "main": [
+        [
+          {
+            "node": "set_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "schedule_9": {
+      "main": [
+        [
+          {
+            "node": "get_blog_6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_blog_6": {
+      "main": [
+        [
+          {
+            "node": "split_results_9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_results_9": {
+      "main": [
+        [
+          {
+            "node": "data_manipulation_9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "data_manipulation_9": {
+      "main": [
+        [
+          {
+            "node": "set_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "schedule_10": {
+      "main": [
+        [
+          {
+            "node": "get_blog_7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_blog_7": {
+      "main": [
+        [
+          {
+            "node": "split_results_10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_results_10": {
+      "main": [
+        [
+          {
+            "node": "data_manipulation_10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "data_manipulation_10": {
+      "main": [
+        [
+          {
+            "node": "set_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_item": {
+      "main": [
+        [
+          {
+            "node": "for_each_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "for_each_content": {
+      "main": [
+        [],
+        [
+          {
+            "node": "get_files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_files": {
+      "main": [
+        [
+          {
+            "node": "skip_existing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "skip_existing": {
+      "main": [
+        [
+          {
+            "node": "set_url",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "for_each_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_url": {
+      "main": [
+        [
+          {
+            "node": "scrape_url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "scrape_url": {
+      "main": [
+        [
+          {
+            "node": "filter_scrape_errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_scrape_errors": {
+      "main": [
+        [
+          {
+            "node": "validate_content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "for_each_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validate_content": {
+      "main": [
+        [
+          {
+            "node": "filter_relevant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_relevant": {
+      "main": [
+        [
+          {
+            "node": "format_markdown",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "for_each_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format_markdown": {
+      "main": [
+        [
+          {
+            "node": "upload_file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "upload_file": {
+      "main": [
+        [
+          {
+            "node": "create_object_info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_object_info": {
+      "main": [
+        [
+          {
+            "node": "for_each_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "validate_content",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "content_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "validate_content",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "content_parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "content_parser",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

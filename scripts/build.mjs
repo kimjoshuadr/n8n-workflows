@@ -22,7 +22,7 @@ const defs = await loadAll();
 const byFolder = Map.groupBy(defs, (d) => d.folder);
 const results = fs.existsSync(path.join(root, "test-results.json")) ? JSON.parse(fs.readFileSync(path.join(root, "test-results.json"), "utf8")) : null;
 
-for (const dir of ["systems", "workflows", "blocks", "shared"]) fs.rmSync(path.join(root, dir), { recursive: true, force: true });
+for (const dir of ["production", "systems", "workflows", "blocks", "shared"]) fs.rmSync(path.join(root, dir), { recursive: true, force: true });
 
 const mermaidId = (name) => "n" + [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
 const SHAPE = { trigger: ["([", "])"], branch: ["{", "}"], http: ["[/", "/]"], call: ["[[", "]]"], respond: ["([", "])"], fail: ["((", "))"] };
@@ -41,7 +41,7 @@ function mermaid(def) {
   return lines.join("\n");
 }
 
-const TRIGGER = { webhook: "Webhook", scheduleTrigger: "Schedule", manualTrigger: "Manual run", executeWorkflowTrigger: "Called by another workflow", errorTrigger: "A failure in any workflow" };
+const TRIGGER = { formTrigger: "Form", webhook: "Webhook", scheduleTrigger: "Schedule", manualTrigger: "Manual run", executeWorkflowTrigger: "Called by another workflow", errorTrigger: "A failure in any workflow" };
 
 const startsFrom = (def) =>
   [...new Set(def.graph.nodes.filter((g) => g.kind === "trigger").map((g) => (g.platform ? `${PLATFORMS[g.platform].name} event` : (TRIGGER[def.json.nodes.find((n) => n.name === g.id).type.split(".").pop()] ?? "Trigger"))))].join(", ");
@@ -69,6 +69,15 @@ function section(def, level = "##") {
   return out.join("\n");
 }
 
+/** What could not be taken from a canvas, said once per folder. */
+const NOTES = {
+  "production/newsletter-research": "The ten source rows were too small to read in the screenshot: three are built as forum feeds and seven as blogs, and where the canvas drops an item with a Filter node inside the loop, this build uses an If node so the loop is handed back.",
+  "production/newsletter-drafting": "The canvas was photographed in pieces and its model nodes were out of frame: Gemini and Groq are the models named on the blog workflow from the same team.",
+  "production/community-provisioning": "The canvas has three sections, kept here. Its nodes could not all be read from the screenshot, so the steps inside each section follow the written description of the workflow.",
+  "production/revenue-support-agents": "The two tracks and six agents are the original's. The canvas was too small to read node by node, so the steps between the agents follow the written description; sending through Gmail and alerting in Slack are this build's choices.",
+  "production/operations": "The node the bulk creator read its rows from could not be identified in the screenshot; here they come from a Google Sheet.",
+};
+
 const catalog = [];
 for (const [folder, list] of byFolder) {
   const dir = path.join(root, folder);
@@ -80,6 +89,7 @@ for (const [folder, list] of byFolder) {
   const head = [`# ${title}`, ""];
   if (system) head.push(`**${system.line}**`, "", `**The problem.** ${system.problem}`, "", `**What this does about it.** ${system.outcome}`, "", `${list.length === 1 ? `One canvas of ${list[0].nodeCount} nodes` : `${list.length} workflows`}, ${list.reduce((n, d) => n + d.tests.length, 0)} tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.`, "");
   else head.push(`${list.length} workflows. Each one is tested against a real n8n; the cases are listed under it.`, "");
+  if (list.some((d) => d.source === "production")) head.push("> **Built and run in production, rebuilt here on test data.** Node names, order, branches and loops follow the original canvas. What is inside each node was written again for this library, and every name that belonged to the business is a placeholder." + (NOTES[folder] ? " " + NOTES[folder] : ""), "");
   fs.writeFileSync(path.join(dir, "README.md"), head.join("\n") + "\n" + list.map((d) => section(d)).join("\n"));
 
   for (const def of list) {
@@ -91,7 +101,7 @@ for (const [folder, list] of byFolder) {
       category: def.category,
       kind: def.kind ?? null,
       summary: def.summary,
-      source: "reference",
+      source: def.source ?? "reference",
       trigger: def.trigger,
       platforms: def.platforms,
       env: def.env,

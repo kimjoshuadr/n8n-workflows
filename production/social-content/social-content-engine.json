@@ -1,0 +1,971 @@
+{
+  "name": "Social · News to social content engine",
+  "nodes": [
+    {
+      "id": "186adaeb-6b36-4e97-af9e-c2b637041d95",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -220
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 230,
+        "content": "## Social · News to social content engine\nA form request picks a media brand. The workflow applies that brand's voice, reads its news feed, and for each article drafts a caption and an image with Gemini, checks its own output, and sends the draft to the social manager on Telegram. Approved moves to the next article; rejected is drafted again.\n\n**Platforms:** RSS, Gemini, Telegram\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `production/social-content`"
+      }
+    },
+    {
+      "id": "bcdbcc5e-7f2e-43da-ae01-731ce46b6773",
+      "name": "Section: Generate news",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        0
+      ],
+      "parameters": {
+        "width": 1680,
+        "height": 690,
+        "color": 4,
+        "content": "## 1. Generate news"
+      }
+    },
+    {
+      "id": "340b8057-3593-475e-aade-d95599e7663f",
+      "name": "Section: Generate result",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        770
+      ],
+      "parameters": {
+        "width": 1160,
+        "height": 510,
+        "color": 5,
+        "content": "## 2. Generate result"
+      }
+    },
+    {
+      "id": "72f8bca6-c8a6-4272-a266-92bd4cdd1ff0",
+      "name": "Section: Human in the loop",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        1360
+      ],
+      "parameters": {
+        "width": 1420,
+        "height": 330,
+        "color": 6,
+        "content": "## 3. Human in the loop"
+      }
+    },
+    {
+      "id": "f98704ce-c695-4a62-a1c3-7d65ad8b777d",
+      "position": [
+        0,
+        380
+      ],
+      "name": "submit_form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "parameters": {
+        "formTitle": "Create social posts from today's news",
+        "formDescription": "",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Media house",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Northwind Daily"
+                  },
+                  {
+                    "option": "Harbor Finance"
+                  },
+                  {
+                    "option": "Circuit Weekly"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "How many posts",
+              "fieldType": "number",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "webhookId": "65ba7541-4516-470e-acc4-24a7a023f099"
+    },
+    {
+      "id": "36f595ea-76db-4690-ab4c-46876498e45a",
+      "position": [
+        260,
+        380
+      ],
+      "name": "switch_mediahouse",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "34928687-f776-45fc-afb3-dace7411984d",
+                    "leftValue": "={{ $json['Media house'] === 'Northwind Daily' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Northwind Daily"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f20ebd5b-6992-40bb-a180-308d94224b83",
+                    "leftValue": "={{ $json['Media house'] === 'Harbor Finance' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Harbor Finance"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f9facd36-e947-40dd-a18f-9db9e3298b03",
+                    "leftValue": "={{ $json['Media house'] === 'Circuit Weekly' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Circuit Weekly"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      }
+    },
+    {
+      "id": "25fc380c-513a-4a12-a591-34591517b983",
+      "position": [
+        520,
+        200
+      ],
+      "name": "mediahouse_1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8f893945-06d5-419a-aa7a-c834b6cb91a9",
+              "name": "brand",
+              "value": "={{ 'Northwind Daily' }}",
+              "type": "string"
+            },
+            {
+              "id": "5815f0d2-8941-4e4d-afb3-9e4ae876dc68",
+              "name": "voice",
+              "value": "={{ 'Plain, fast, general news. Short sentences. No slang.' }}",
+              "type": "string"
+            },
+            {
+              "id": "4f68f05b-927d-461e-ab5f-70f64e0508e4",
+              "name": "look",
+              "value": "={{ 'Bold editorial photo style, navy and white, headline space at the top.' }}",
+              "type": "string"
+            },
+            {
+              "id": "22f8c9e8-09a5-4809-a36c-abbe83486e8e",
+              "name": "feed",
+              "value": "={{ 'https://feeds.acme.example/northwind.xml' }}",
+              "type": "string"
+            },
+            {
+              "id": "850c6c1e-9b41-4f88-ae15-d8be9f852bba",
+              "name": "tags",
+              "value": "={{ '#news #daily' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "0bc46f97-8b3c-4712-abb5-5ee99f318ab6",
+      "position": [
+        520,
+        380
+      ],
+      "name": "mediahouse_2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1619137-1c48-431c-aa9b-57f5d2c01da8",
+              "name": "brand",
+              "value": "={{ 'Harbor Finance' }}",
+              "type": "string"
+            },
+            {
+              "id": "8dccb5a5-9638-474a-a465-2f251e598c2e",
+              "name": "voice",
+              "value": "={{ 'Measured and precise. Numbers first. Never hype.' }}",
+              "type": "string"
+            },
+            {
+              "id": "09a42b32-8e8a-459d-a2b0-a91760d8658e",
+              "name": "look",
+              "value": "={{ 'Clean chart-led graphic, dark green and cream.' }}",
+              "type": "string"
+            },
+            {
+              "id": "a7328110-c81e-47c7-aa1d-51b5caceabc2",
+              "name": "feed",
+              "value": "={{ 'https://feeds.acme.example/harbor.xml' }}",
+              "type": "string"
+            },
+            {
+              "id": "4ec5f641-0123-43ea-a9a4-a257dbf02d20",
+              "name": "tags",
+              "value": "={{ '#markets #finance' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "10af6986-95e5-4756-a86b-00908aff0257",
+      "position": [
+        520,
+        560
+      ],
+      "name": "mediahouse_3",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ef70f262-7280-40bf-a417-3c167dab96f0",
+              "name": "brand",
+              "value": "={{ 'Circuit Weekly' }}",
+              "type": "string"
+            },
+            {
+              "id": "09c8da81-2ad1-4de8-afd4-4b078e94045e",
+              "name": "voice",
+              "value": "={{ 'Curious and a little playful. Explains the tech in one line.' }}",
+              "type": "string"
+            },
+            {
+              "id": "d8474b33-4802-4d88-aaaf-c0f7466b6cf9",
+              "name": "look",
+              "value": "={{ 'Bright flat illustration, electric blue and orange.' }}",
+              "type": "string"
+            },
+            {
+              "id": "853a6a61-e31c-4b06-a107-41090dc2e344",
+              "name": "feed",
+              "value": "={{ 'https://feeds.acme.example/circuit.xml' }}",
+              "type": "string"
+            },
+            {
+              "id": "789e64b4-e8e8-4a67-a310-27264a0dbd34",
+              "name": "tags",
+              "value": "={{ '#tech #ai' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "1f1c2c33-11c0-4e0c-afc0-decefcf7c390",
+      "position": [
+        780,
+        380
+      ],
+      "name": "store_temp",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c5657148-7668-4e5e-a5bf-6e2922dc3f96",
+              "name": "brand",
+              "value": "={{ $json.brand }}",
+              "type": "string"
+            },
+            {
+              "id": "a2035bef-f9a3-4aa1-a938-588d42e86d3e",
+              "name": "voice",
+              "value": "={{ $json.voice }}",
+              "type": "string"
+            },
+            {
+              "id": "7871d090-da5c-4dce-aae2-4e651c741367",
+              "name": "look",
+              "value": "={{ $json.look }}",
+              "type": "string"
+            },
+            {
+              "id": "7833454c-bb48-4b57-a4c9-2adcabc07bd0",
+              "name": "feed",
+              "value": "={{ $json.feed }}",
+              "type": "string"
+            },
+            {
+              "id": "61d48c15-87c6-4386-a1ae-6df243ab259a",
+              "name": "tags",
+              "value": "={{ $json.tags }}",
+              "type": "string"
+            },
+            {
+              "id": "aee9e7a3-cf60-409f-aa66-037891393ebe",
+              "name": "max_posts",
+              "value": "={{ Math.min(Math.max(Number($('submit_form').first().json['How many posts']) || 3, 1), 10) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "7573b204-92a2-4cb7-a431-237f1eed040f",
+      "position": [
+        1040,
+        380
+      ],
+      "name": "get_news",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "parameters": {
+        "url": "={{ $json.feed }}",
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "940cbd06-b9dc-4212-a444-222c344fba09",
+      "position": [
+        1300,
+        380
+      ],
+      "name": "limit_output",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "parameters": {
+        "maxItems": "={{ Number($('store_temp').first().json.max_posts) }}",
+        "keep": "firstItems"
+      }
+    },
+    {
+      "id": "56460eaf-ca1d-4671-a218-87be4e7cb9c2",
+      "position": [
+        0,
+        1060
+      ],
+      "name": "for_each_news",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "493a6b15-a772-4f8f-ae80-5d7e32d303b9",
+      "position": [
+        260,
+        970
+      ],
+      "name": "generate_caption",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ 'Brand: ' + $('store_temp').first().json.brand + '\\nVoice: ' + $('store_temp').first().json.voice + '\\nHashtags: ' + $('store_temp').first().json.tags + '\\n\\nHeadline: ' + $('for_each_news').first().json.title + '\\nSummary: ' + String($('for_each_news').first().json.contentSnippet ?? '').slice(0, 1500) }}",
+              "role": "user"
+            }
+          ]
+        },
+        "simplify": true,
+        "options": {
+          "systemMessage": "[task:social-caption] You write one social media caption for a media brand. Follow the brand voice you are given exactly. Under 600 characters, one idea, no invented facts, no quotation marks around the whole caption. End with the brand's hashtags. Reply with the caption only."
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "__CRED:gemini__",
+          "name": "Gemini"
+        }
+      }
+    },
+    {
+      "id": "a65b8f70-38c1-45c2-adca-3edd44fc1b6d",
+      "position": [
+        520,
+        1060
+      ],
+      "name": "generate_image",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "image",
+        "operation": "generate",
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "models/gemini-2.5-flash-image"
+        },
+        "prompt": "={{ 'A social media graphic for the news story: ' + $('for_each_news').first().json.title + '. Style: ' + $('store_temp').first().json.look + ' No text in the image.' }}",
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "__CRED:gemini__",
+          "name": "Gemini"
+        }
+      }
+    },
+    {
+      "id": "c90f9b43-ebd2-4fe6-ae8a-e5d742d07236",
+      "position": [
+        780,
+        1060
+      ],
+      "name": "if_valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1e26e4bd-a699-4975-a188-4c50829f8bac",
+              "leftValue": "={{ String($('generate_caption').first().json.content?.parts?.[0]?.text ?? '').trim().length > 0 && String($('generate_caption').first().json.content?.parts?.[0]?.text ?? '').trim().length <= 2200 && !/as an ai|i cannot|i can't/i.test(String($('generate_caption').first().json.content?.parts?.[0]?.text ?? '').trim()) && !!$binary.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a939136a-58e3-47e0-a6a1-c68de226e29d",
+      "position": [
+        0,
+        1560
+      ],
+      "name": "send_image",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendPhoto",
+        "chatId": "={{ '-1000000000001' }}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "cd63fb16-e246-4859-a2a5-2f839c74c07d",
+      "position": [
+        260,
+        1560
+      ],
+      "name": "send_caption",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ '-1000000000001' }}",
+        "text": "={{ String($('generate_caption').first().json.content?.parts?.[0]?.text ?? '').trim() + '\\n\\n' + $('for_each_news').first().json.link }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "e1ed837a-5f2b-4a95-af1b-23d3027f0577",
+      "position": [
+        520,
+        1560
+      ],
+      "name": "wait_approval",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "chatId": "={{ '-1000000000001' }}",
+        "message": "={{ 'Post this for ' + $('store_temp').first().json.brand + '?' }}",
+        "responseType": "approval",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {
+          "appendAttribution": false,
+          "limitWaitTime": {
+            "values": {
+              "limitType": "afterTimeInterval",
+              "resumeAmount": 12,
+              "resumeUnit": "hours"
+            }
+          }
+        }
+      },
+      "webhookId": "3e17810e-858f-45e6-a571-b7b47fc5395e",
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "c14d00b5-876e-4827-a78a-2c9d88d8c4cc",
+      "position": [
+        780,
+        1560
+      ],
+      "name": "if_approved",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c4f8c457-e818-4470-a18e-9d92817ca092",
+              "leftValue": "={{ $json.data?.approved === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "56a7a358-47c9-4cdc-aa1b-2eceb9b7e36a",
+      "position": [
+        1040,
+        1560
+      ],
+      "name": "timeout",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a4c673be-8895-4f5b-a3ad-9b0e57615da4",
+              "leftValue": "={{ $json.data?.approved === false }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d8788666-d6ad-4896-a4f0-696b1be8d5b2",
+      "position": [
+        260,
+        1150
+      ],
+      "name": "send_done",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ '-1000000000001' }}",
+        "text": "={{ 'Done. Every article in this batch for ' + $('store_temp').first().json.brand + ' has an approved post.' }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "executeOnce": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "submit_form": {
+      "main": [
+        [
+          {
+            "node": "switch_mediahouse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "switch_mediahouse": {
+      "main": [
+        [
+          {
+            "node": "mediahouse_1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "mediahouse_2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "mediahouse_3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mediahouse_1": {
+      "main": [
+        [
+          {
+            "node": "store_temp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mediahouse_2": {
+      "main": [
+        [
+          {
+            "node": "store_temp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mediahouse_3": {
+      "main": [
+        [
+          {
+            "node": "store_temp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "store_temp": {
+      "main": [
+        [
+          {
+            "node": "get_news",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_news": {
+      "main": [
+        [
+          {
+            "node": "limit_output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "limit_output": {
+      "main": [
+        [
+          {
+            "node": "for_each_news",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "for_each_news": {
+      "main": [
+        [
+          {
+            "node": "send_done",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "generate_caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate_caption": {
+      "main": [
+        [
+          {
+            "node": "generate_image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate_image": {
+      "main": [
+        [
+          {
+            "node": "if_valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_valid": {
+      "main": [
+        [
+          {
+            "node": "send_image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "generate_caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_image": {
+      "main": [
+        [
+          {
+            "node": "send_caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_caption": {
+      "main": [
+        [
+          {
+            "node": "wait_approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wait_approval": {
+      "main": [
+        [
+          {
+            "node": "if_approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_approved": {
+      "main": [
+        [
+          {
+            "node": "for_each_news",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "timeout",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "timeout": {
+      "main": [
+        [
+          {
+            "node": "generate_caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

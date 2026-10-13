@@ -43,6 +43,15 @@ create table if not exists carts (
   created_at timestamptz not null default now()
 );
 
+create table if not exists community_invites (
+  id uuid primary key default gen_random_uuid(),
+  email text,
+  group_name text,
+  invited_at timestamptz,
+  tier text,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists content_drafts (
   id uuid primary key default gen_random_uuid(),
   approved_by text,
@@ -70,6 +79,21 @@ create table if not exists content_drafts (
   created_at timestamptz not null default now()
 );
 
+create table if not exists content_objects (
+  id uuid primary key default gen_random_uuid(),
+  date text,
+  drive_file_id text,
+  external_urls text,
+  file_name text,
+  source text,
+  summary text,
+  title text,
+  topic text,
+  type text,
+  url text,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists content_topics (
   id uuid primary key default gen_random_uuid(),
   note text,
@@ -84,6 +108,17 @@ create table if not exists contracts (
   id uuid primary key default gen_random_uuid(),
   last_warning text,
   status text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists conversations (
+  id uuid primary key default gen_random_uuid(),
+  at timestamptz,
+  conversation_id text,
+  email text,
+  handled_by text,
+  message text,
+  reply text,
   created_at timestamptz not null default now()
 );
 
@@ -107,6 +142,16 @@ create table if not exists dead_letters (
   replayed_at timestamptz,
   source text,
   status text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists discord_access_codes (
+  id uuid primary key default gen_random_uuid(),
+  charge_id text,
+  code text,
+  email text,
+  redeemed text,
+  roles text,
   created_at timestamptz not null default now()
 );
 
@@ -138,6 +183,12 @@ create table if not exists heartbeats (
   last_seen timestamptz,
   max_gap_minutes numeric,
   name text not null unique,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists icp_profiles (
+  id uuid primary key default gen_random_uuid(),
+  active text,
   created_at timestamptz not null default now()
 );
 
@@ -298,6 +349,16 @@ create table if not exists orders (
   status text,
   total numeric,
   tracking_url text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists outreach_log (
+  id uuid primary key default gen_random_uuid(),
+  company text,
+  email text,
+  score numeric,
+  sent_at timestamptz,
+  subject text,
   created_at timestamptz not null default now()
 );
 
@@ -475,6 +536,16 @@ create table if not exists throttle (
   id uuid primary key default gen_random_uuid(),
   bucket text,
   count numeric,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists users (
+  id uuid primary key default gen_random_uuid(),
+  email text,
+  invited_at timestamptz,
+  last_charge_id text,
+  name text,
+  products text,
   created_at timestamptz not null default now()
 );
 

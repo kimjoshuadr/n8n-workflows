@@ -1,0 +1,307 @@
+{
+  "name": "Data · Database cleansing",
+  "nodes": [
+    {
+      "id": "6ec51746-c0da-4b2c-a895-ba0c158363f9",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -210
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 230,
+        "content": "## Data · Database cleansing\nOn demand, reads every object of one type from the Bubble database, keeps the first of each set of duplicates as the master, and deletes the rest.\n\n**Platforms:** Bubble\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `production/operations`"
+      }
+    },
+    {
+      "id": "4678c1af-411e-44da-a913-3f8380f5c285",
+      "position": [
+        0,
+        90
+      ],
+      "name": "execute",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "e0a4b6c1-232e-4341-a64d-377d838a0929",
+      "position": [
+        260,
+        90
+      ],
+      "name": "get_objects_1",
+      "type": "n8n-nodes-base.bubble",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "object",
+        "operation": "getAll",
+        "typeName": "contact",
+        "returnAll": true,
+        "options": {
+          "filters": {
+            "filter": [
+              {
+                "key": "email",
+                "constraint_type": "is_not_empty"
+              }
+            ]
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "bubbleApi": {
+          "id": "__CRED:bubble__",
+          "name": "Bubble"
+        }
+      }
+    },
+    {
+      "id": "1faeb64c-f3cb-4b95-a56c-140dffc93134",
+      "position": [
+        520,
+        90
+      ],
+      "name": "remove_duplicates",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "email",
+        "options": {}
+      }
+    },
+    {
+      "id": "e4370c4f-1aae-4fd5-afc7-e292ffe21263",
+      "position": [
+        780,
+        90
+      ],
+      "name": "filter_criteria_1",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3b6bba6f-5056-42c8-a1ec-d61057b9d384",
+              "leftValue": "={{ !!$json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c23c6770-dda2-49c3-ad31-a73499a5ad9d",
+      "position": [
+        1040,
+        90
+      ],
+      "name": "aggregate",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "parameters": {
+        "aggregate": "aggregateIndividualFields",
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "_id",
+              "renameField": true,
+              "outputFieldName": "master_ids"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "2faa7a93-bba9-4639-a21a-feaa5cbc5559",
+      "position": [
+        1300,
+        90
+      ],
+      "name": "get_objects_2",
+      "type": "n8n-nodes-base.bubble",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "object",
+        "operation": "getAll",
+        "typeName": "contact",
+        "returnAll": true,
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "bubbleApi": {
+          "id": "__CRED:bubble__",
+          "name": "Bubble"
+        }
+      }
+    },
+    {
+      "id": "90daf67a-9f21-4e21-a3b0-171bdbc46fdf",
+      "position": [
+        1560,
+        90
+      ],
+      "name": "filter_criteria_3",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c9c4ab9b-f879-41de-ac71-f6dbe80553b2",
+              "leftValue": "={{ !!$json.email && !$('aggregate').first().json.master_ids.includes($json._id) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7374f5fc-33f9-425c-a85d-233506cf0382",
+      "position": [
+        1820,
+        90
+      ],
+      "name": "delete_object",
+      "type": "n8n-nodes-base.bubble",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "object",
+        "operation": "delete",
+        "typeName": "contact",
+        "objectId": "={{ $json._id }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "bubbleApi": {
+          "id": "__CRED:bubble__",
+          "name": "Bubble"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "execute": {
+      "main": [
+        [
+          {
+            "node": "get_objects_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_objects_1": {
+      "main": [
+        [
+          {
+            "node": "remove_duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "remove_duplicates": {
+      "main": [
+        [
+          {
+            "node": "filter_criteria_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_criteria_1": {
+      "main": [
+        [
+          {
+            "node": "aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "aggregate": {
+      "main": [
+        [
+          {
+            "node": "get_objects_2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_objects_2": {
+      "main": [
+        [
+          {
+            "node": "filter_criteria_3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_criteria_3": {
+      "main": [
+        [
+          {
+            "node": "delete_object",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

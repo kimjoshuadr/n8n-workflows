@@ -1,0 +1,2696 @@
+{
+  "name": "Newsletter · AI drafting engine",
+  "nodes": [
+    {
+      "id": "4ecb61bc-861d-4152-a8d2-fb61fee871f2",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -220
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 230,
+        "content": "## Newsletter · AI drafting engine\nFor a chosen date, gathers that day's stored research, proposes the top stories and a subject line, and takes the editor's written feedback on each over Telegram until they approve. It then writes each story from its research and outside sources, adds an intro and a round-up, and sends the editor a draft file with a summary.\n\n**Platforms:** Google Drive, Supabase, Telegram, Gemini, Groq\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `production/newsletter-drafting`"
+      }
+    },
+    {
+      "id": "2315703b-c30e-445c-a5bb-8fd4ebb27a90",
+      "name": "Section: Retrieve Markdown content",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        0
+      ],
+      "parameters": {
+        "width": 2720,
+        "height": 330,
+        "color": 4,
+        "content": "## 1. Retrieve Markdown content\nThe research stored for the chosen date, read from Google Drive and joined into one text."
+      }
+    },
+    {
+      "id": "7f76a956-bd58-4173-acec-63ac62373114",
+      "name": "Section: Pick top stories",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        410
+      ],
+      "parameters": {
+        "width": 3120,
+        "height": 590,
+        "color": 5,
+        "content": "## 2. Pick top stories\nA proposal, the reasoning behind it, and the editor's reply. A reply that asks for changes goes round again."
+      }
+    },
+    {
+      "id": "834cbd13-0c89-44f8-a74d-53634d63ed3a",
+      "name": "Section: Subject line",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        1080
+      ],
+      "parameters": {
+        "width": 3120,
+        "height": 590,
+        "color": 6,
+        "content": "## 3. Subject line\nThe same loop for the subject line: propose, explain, wait for the editor."
+      }
+    },
+    {
+      "id": "bd0d1cba-808c-40d1-aef4-d819585239fe",
+      "name": "Section: Write each story",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        1750
+      ],
+      "parameters": {
+        "width": 5980,
+        "height": 770,
+        "color": 3,
+        "content": "## 4. Write each story\nOne story per pass: its research, any outside sources, the story, its images."
+      }
+    },
+    {
+      "id": "7a48328f-6d18-4f5b-aa7d-ff3c9a0f14d0",
+      "name": "Section: Write intro section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        2600
+      ],
+      "parameters": {
+        "width": 580,
+        "height": 770,
+        "color": 7,
+        "content": "## 5. Write intro section"
+      }
+    },
+    {
+      "id": "7e6eec7f-489a-4666-a5e0-8712bea86ee9",
+      "name": "Section: Format full newsletter",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        3450
+      ],
+      "parameters": {
+        "width": 1620,
+        "height": 770,
+        "color": 2,
+        "content": "## 6. Format full newsletter\nThe round-up, the assembled draft, and delivery as a file with a summary."
+      }
+    },
+    {
+      "id": "0c4e2fc8-7ea7-4a09-acc2-25ef20a76a40",
+      "position": [
+        0,
+        200
+      ],
+      "name": "submit_form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "parameters": {
+        "formTitle": "Draft a newsletter",
+        "formDescription": "Drafts the issue for one date from that day's research.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Newsletter date",
+              "fieldType": "date",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Focus for this issue",
+              "fieldType": "textarea",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "webhookId": "4ede89ad-5a9c-4e3b-a9de-cf9cabd02286"
+    },
+    {
+      "id": "8fe58273-2f6e-4ba8-a025-8701337c54cc",
+      "position": [
+        260,
+        200
+      ],
+      "name": "get_files",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "parameters": {
+        "resource": "fileFolder",
+        "operation": "search",
+        "searchMethod": "name",
+        "queryString": "={{ $json['Newsletter date'] }}",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "research-folder"
+          }
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "__CRED:googleDrive__",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "id": "1da71a97-ee4d-494d-a7e8-75b795d6f27b",
+      "position": [
+        520,
+        200
+      ],
+      "name": "filter_only_markdown",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5a59327c-e4d3-486d-ae55-461391cc7284",
+              "leftValue": "={{ String($json.name ?? '').endsWith('.md') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6063c60f-53df-4106-a3b8-d759475ded0d",
+      "position": [
+        780,
+        200
+      ],
+      "name": "get_markdown_object_info",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "content_objects",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "date",
+              "condition": "eq",
+              "keyValue": "={{ $('submit_form').first().json['Newsletter date'] }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "18f5964e-a638-461f-a5e2-ff0da36f5bb4",
+      "position": [
+        1040,
+        200
+      ],
+      "name": "exclude_newsletters",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9c132333-ac69-41c0-a18a-4083fe46d1d9",
+              "leftValue": "={{ $json.type !== 'newsletter' && !!$json.drive_file_id && $('filter_only_markdown').all().some((f) => f.json.id === $json.drive_file_id) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "25dfe4cb-2ce4-4175-a3a4-b2788edc62f0",
+      "position": [
+        1300,
+        200
+      ],
+      "name": "download_markdown_object",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.drive_file_id }}"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "__CRED:googleDrive__",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "id": "749692b0-6e9e-461d-a8a0-ec5b24cb50b6",
+      "position": [
+        1560,
+        200
+      ],
+      "name": "get_markdown_file_content",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "destinationKey": "text",
+        "options": {}
+      }
+    },
+    {
+      "id": "9cf68038-b9fd-4fbe-ad51-eb893a1bb125",
+      "position": [
+        1820,
+        200
+      ],
+      "name": "prepare_markdown_content",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5cd1fc84-e3bf-40bf-abf5-4a9e6e79f43e",
+              "name": "content_id",
+              "value": "={{ $('exclude_newsletters').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "4b542241-cd8f-403d-a103-9d38104b450c",
+              "name": "title",
+              "value": "={{ $('exclude_newsletters').item.json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "a4432d1b-095d-45e6-a437-df91bfe943ff",
+              "name": "url",
+              "value": "={{ $('exclude_newsletters').item.json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "b0819aa4-da90-4b4b-a6d1-9192638a8aef",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "58ddf118-659b-475d-ae64-181a3ca43b43",
+      "position": [
+        2080,
+        200
+      ],
+      "name": "aggregate_markdown_content",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "items",
+        "include": "allFields",
+        "options": {}
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "1b02122b-52d9-4157-a981-cdf4de3fd9f8",
+      "position": [
+        2340,
+        200
+      ],
+      "name": "combine_markdown_content",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c363f8a2-3651-4d10-a870-f18a9ebc7037",
+              "name": "date",
+              "value": "={{ $('submit_form').first().json['Newsletter date'] }}",
+              "type": "string"
+            },
+            {
+              "id": "14d5d3f3-19af-4456-a5c9-594635545fa6",
+              "name": "focus",
+              "value": "={{ String($('submit_form').first().json['Focus for this issue'] ?? '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "d77f0fc1-bb3b-4f12-a539-b9e45b70c844",
+              "name": "count",
+              "value": "={{ $json.items.length }}",
+              "type": "number"
+            },
+            {
+              "id": "e057c53f-31a8-4994-a974-ef89607b6437",
+              "name": "sparse",
+              "value": "={{ $json.items.length < 3 }}",
+              "type": "boolean"
+            },
+            {
+              "id": "b868aa77-e480-4954-a1ed-76a79882d257",
+              "name": "research",
+              "value": "={{ $json.items.map((d) => '[' + d.content_id + '] ' + d.title + ' (' + d.url + ')\\n' + String(d.text).slice(0, 6000)).join('\\n\\n---\\n\\n') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "3bfee53d-d0bb-4ff4-a314-9e265bbc3482",
+      "position": [
+        0,
+        740
+      ],
+      "name": "stories_prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ea52b8e7-1202-4945-a5f4-ac6fdbfff723",
+              "name": "prompt",
+              "value": "={{ 'Date: ' + $json.date + '\\nEditor focus: ' + ($json.focus || 'none given') + '\\n' + ($json.sparse ? 'Only ' + $json.count + ' research documents exist for this date. Choose fewer stories instead of padding: one strong story is enough.' : 'Choose the three or four strongest stories.') + '\\n\\nResearch:\\n' + $json.research }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "72c51cae-f1b3-40be-a50e-653175c700cd",
+      "position": [
+        360,
+        610
+      ],
+      "name": "pick_top_stories",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "[task:pick-stories] You are the editor of a daily industry newsletter. Use only what is in the research you are given: never add a fact, a number or a quote that is not there. Choose the top stories for today's issue. For each, give a headline, the ids of the research documents it draws on (the ids in square brackets), any outside links in those documents worth reading in full, and why it leads. Then give your overall reasoning for the selection."
+            }
+          ]
+        },
+        "batching": {}
+      }
+    },
+    {
+      "id": "03f5505d-6d16-4ab9-a528-3d9ef009a4bd",
+      "position": [
+        2640,
+        610
+      ],
+      "name": "edit_top_stories",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Current selection:\\n' + JSON.stringify($('set_current_stories').first().json.stories) + '\\n\\nEditor feedback: ' + $json.output.feedback + '\\n\\nResearch:\\n' + $('combine_markdown_content').first().json.research }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "[task:edit-stories] You are the editor of a daily industry newsletter. Use only what is in the research you are given: never add a fact, a number or a quote that is not there. The editor has asked for changes to the story selection. Apply exactly what they asked and keep everything else. Answer in the same shape, with your reasoning for the revised selection."
+            }
+          ]
+        },
+        "batching": {}
+      }
+    },
+    {
+      "id": "118150eb-f829-48bf-a16f-c632fcd1ae67",
+      "position": [
+        720,
+        740
+      ],
+      "name": "set_current_stories",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1ec48c44-3839-4c66-aaf6-5baa7e84ccc5",
+              "name": "stories",
+              "value": "={{ $json.output.stories }}",
+              "type": "array"
+            },
+            {
+              "id": "a52eb901-d6ce-4646-ae4d-1e0415680123",
+              "name": "reasoning",
+              "value": "={{ $json.output.reasoning ?? '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "2f50ab3b-5925-479e-a64f-e240ff25a478",
+      "position": [
+        980,
+        740
+      ],
+      "name": "share_selected_stories",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ '-1000000000001' }}",
+        "text": "={{ 'Top stories for ' + $('submit_form').first().json['Newsletter date'] + ':\\n' + $json.stories.map((s, i) => (i + 1) + '. ' + s.title).join('\\n') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "47ce1cd0-ea49-47a7-ad9e-9bb491cdb019",
+      "position": [
+        1240,
+        740
+      ],
+      "name": "split_into_chunks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "// Telegram refuses a message over 4096 characters, so long reasoning is sent in parts.\nconst text = String($(\"set_current_stories\").first().json.reasoning || \"No reasoning was given.\");\nconst chunks = [];\nfor (let i = 0; i < text.length; i += 3500) chunks.push(text.slice(i, i + 3500));\nreturn chunks.map((chunk) => ({ json: { chunk } }));"
+      }
+    },
+    {
+      "id": "533d4582-56fa-4db3-afda-7d25ea017fad",
+      "position": [
+        1500,
+        740
+      ],
+      "name": "share_stories_reasoning",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ '-1000000000001' }}",
+        "text": "={{ $json.chunk }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "c70b82e8-42a7-4fd0-a87e-70d4c530bec8",
+      "position": [
+        1760,
+        740
+      ],
+      "name": "share_stories_approval_feedback",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "chatId": "={{ '-1000000000001' }}",
+        "message": "={{ 'Reply Approve to go on with these stories, or say what to change.' }}",
+        "responseType": "freeText",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "executeOnce": true,
+      "webhookId": "c61b3560-8dcd-4eb3-a174-a7a6c1248669",
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "8bd5b9d9-bad6-479f-a4bd-10de8fa2ce34",
+      "position": [
+        2020,
+        610
+      ],
+      "name": "extract_stories_approval_feedback",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "parameters": {
+        "text": "={{ $json.data.text }}",
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"approved\": true,\n  \"feedback\": \"\"\n}",
+        "options": {
+          "systemPromptTemplate": "[task:read-feedback] Read the editor's reply to a proposal. approved is true only when they accept it as it is, with nothing they want changed. Otherwise approved is false and feedback is what they want changed, in their words."
+        }
+      }
+    },
+    {
+      "id": "77db8913-d33d-4e03-af0d-639bea51e94b",
+      "position": [
+        2280,
+        740
+      ],
+      "name": "check_stories_feedback",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9dad8771-8151-4ec5-a205-f561882eac16",
+              "leftValue": "={{ $json.output?.approved === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f4f5d563-d566-4e7e-a624-e658d945d9c6",
+      "position": [
+        0,
+        1410
+      ],
+      "name": "subject_examples",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "23440fa6-8a53-44e8-a12a-653c18a6d1ca",
+              "name": "examples",
+              "value": "={{ '- Rates hold, markets shrug\\n- The chip that changes the maths\\n- Three deals you missed this week' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "8946326b-891a-4dfe-ab77-0270143218fc",
+      "position": [
+        260,
+        1410
+      ],
+      "name": "set_subject_line_prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d659093c-734c-4dcc-afd8-4a45cd36c5e1",
+              "name": "prompt",
+              "value": "={{ 'Stories in this issue:\\n' + $('set_current_stories').first().json.stories.map((s) => '- ' + s.title + ': ' + s.why).join('\\n') + '\\n\\nSubject lines in the house style:\\n' + $json.examples }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "d8d5cbe3-bf8e-4dbe-af25-28169b701dd5",
+      "position": [
+        620,
+        1280
+      ],
+      "name": "write_subject_line",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "[task:subject-line] You are the editor of a daily industry newsletter. Use only what is in the research you are given: never add a fact, a number or a quote that is not there. Write the subject line for this issue in the house style shown: under 50 characters, concrete, no clickbait and no emoji. Add a preheader of under 90 characters and one sentence of reasoning."
+            }
+          ]
+        },
+        "batching": {}
+      }
+    },
+    {
+      "id": "b74a7ca4-a7df-4aa9-aeb8-6b2ccada07cc",
+      "position": [
+        2640,
+        1280
+      ],
+      "name": "edit_subject_line",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Current subject line: ' + $('set_current_subject_line').first().json.subject_line + '\\nCurrent preheader: ' + $('set_current_subject_line').first().json.preheader + '\\n\\nEditor feedback: ' + $json.output.feedback }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "[task:edit-subject] You are the editor of a daily industry newsletter. Use only what is in the research you are given: never add a fact, a number or a quote that is not there. The editor has asked for changes to the subject line. Apply exactly what they asked. Answer in the same shape."
+            }
+          ]
+        },
+        "batching": {}
+      }
+    },
+    {
+      "id": "aed89160-a092-45a9-a5d4-1b9e63f23ed4",
+      "position": [
+        980,
+        1410
+      ],
+      "name": "set_current_subject_line",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3da39713-92a3-4d42-a963-690171587922",
+              "name": "subject_line",
+              "value": "={{ $json.output.subject_line }}",
+              "type": "string"
+            },
+            {
+              "id": "360ac628-a2e4-4947-a16d-806869929e62",
+              "name": "preheader",
+              "value": "={{ $json.output.preheader ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "b1bb5b4d-a4ab-47c5-ad3f-3c5b74863acd",
+              "name": "reasoning",
+              "value": "={{ $json.output.reasoning ?? '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "8ddc9185-fbe6-4085-acea-fa47002e8022",
+      "position": [
+        1240,
+        1410
+      ],
+      "name": "share_subject_line",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ '-1000000000001' }}",
+        "text": "={{ 'Subject line: ' + $json.subject_line + '\\nPreheader: ' + $json.preheader }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "b97e4d38-e983-4769-a299-9aae94dacfca",
+      "position": [
+        1500,
+        1410
+      ],
+      "name": "share_subject_line_reasoning",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ '-1000000000001' }}",
+        "text": "={{ $('set_current_subject_line').first().json.reasoning || 'No reasoning was given.' }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "6d025a62-8276-444b-a95d-c8a4748fd590",
+      "position": [
+        1760,
+        1410
+      ],
+      "name": "share_subject_line_approval_feedback",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "chatId": "={{ '-1000000000001' }}",
+        "message": "={{ 'Reply Approve to use this subject line, or say what to change.' }}",
+        "responseType": "freeText",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "webhookId": "1ff189c1-3b30-46f5-a306-5b97afcc69c7",
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "e68b2ddf-258a-4151-a659-2cf0a45a24fb",
+      "position": [
+        2020,
+        1280
+      ],
+      "name": "extract_subject_line_approval_feedback",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "parameters": {
+        "text": "={{ $json.data.text }}",
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"approved\": true,\n  \"feedback\": \"\"\n}",
+        "options": {
+          "systemPromptTemplate": "[task:read-feedback] Read the editor's reply to a proposal. approved is true only when they accept it as it is, with nothing they want changed. Otherwise approved is false and feedback is what they want changed, in their words."
+        }
+      }
+    },
+    {
+      "id": "8a0448bd-3e56-472f-aada-aa9a3d84e3a3",
+      "position": [
+        2280,
+        1410
+      ],
+      "name": "check_subject_line_feedback",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "70f1c885-306a-4af8-a042-95d62fb6b173",
+              "leftValue": "={{ $json.output?.approved === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d7fd9afe-8901-4ffb-a265-8f59783fd47e",
+      "position": [
+        0,
+        2170
+      ],
+      "name": "set_selected_stories",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "883a1736-ae29-4f2e-a9c1-a99b119ceb9b",
+              "name": "stories",
+              "value": "={{ $('set_current_stories').first().json.stories }}",
+              "type": "array"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "1f0685c8-2acc-44ea-ad8b-1a8a7c68c332",
+      "position": [
+        260,
+        2170
+      ],
+      "name": "split_stories",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "stories",
+        "options": {}
+      }
+    },
+    {
+      "id": "f1d14418-bb20-4847-a94f-130a5d2757e0",
+      "position": [
+        520,
+        2170
+      ],
+      "name": "iterate_stories",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "ddf16df3-f14b-4a84-a240-c2fa7ffbb342",
+      "position": [
+        780,
+        2170
+      ],
+      "name": "set_current_segment",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0d459a8a-9a54-4f2b-ac3e-11a815d49784",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "3195f148-5bdf-43aa-a2db-a19a133938fc",
+              "name": "why",
+              "value": "={{ $json.why ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "6b2c69d2-94cf-4f72-ada4-e12356656dda",
+              "name": "content_ids",
+              "value": "={{ $json.content_ids ?? [] }}",
+              "type": "array"
+            },
+            {
+              "id": "bedf83ef-ba6a-4f01-a22d-0548995bd4f7",
+              "name": "external_urls",
+              "value": "={{ $json.external_urls ?? [] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "d7b2edfc-8e99-46d4-a513-c11a274c5525",
+      "position": [
+        1040,
+        2170
+      ],
+      "name": "split_content_ids",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "content_ids",
+        "options": {}
+      }
+    },
+    {
+      "id": "d3542efa-61c5-444d-aeb0-c41caf13dcde",
+      "position": [
+        1300,
+        2170
+      ],
+      "name": "get_segment_content_info",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "content_objects",
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.content_ids }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "2836add8-72f5-4f6a-a549-4dd355eb1d26",
+      "position": [
+        1560,
+        2170
+      ],
+      "name": "get_segment_content",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "parameters": {
+        "resource": "fileFolder",
+        "operation": "search",
+        "searchMethod": "name",
+        "queryString": "={{ $json.file_name ?? 'no-such-file' }}",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "research-folder"
+          }
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "__CRED:googleDrive__",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "id": "4527cb20-79b4-487a-ae08-807bdba39b36",
+      "position": [
+        1820,
+        2170
+      ],
+      "name": "download_segment_content",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id ?? 'missing' }}"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "__CRED:googleDrive__",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "id": "e2455dc2-670a-4088-a77f-19f3611be642",
+      "position": [
+        2080,
+        2170
+      ],
+      "name": "get_segment_content_text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "destinationKey": "text",
+        "options": {}
+      }
+    },
+    {
+      "id": "3abaa13a-cc85-4a7a-a56c-4c3f89f50e47",
+      "position": [
+        2340,
+        2170
+      ],
+      "name": "prepare_segment_content_item",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1db5e9a9-0320-470f-a49f-8f491204b1df",
+              "name": "text",
+              "value": "={{ String($json.text ?? '').slice(0, 8000) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "37fac113-ad80-43b7-affb-93af6799d282",
+      "position": [
+        2600,
+        2170
+      ],
+      "name": "aggregate_segment_text_content",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "parameters": {
+        "aggregate": "aggregateIndividualFields",
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "text",
+              "renameField": true,
+              "outputFieldName": "texts"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "3c715256-70db-43d3-a0fc-b82143948b0e",
+      "position": [
+        2860,
+        2170
+      ],
+      "name": "check_external_urls",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e1f42ccd-8c5d-4014-a4d0-5b0778c22a99",
+              "leftValue": "={{ $('set_current_segment').first().json.external_urls.length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "fbc741bf-bbc2-4f1f-aafe-740c209a330e",
+      "position": [
+        3120,
+        2170
+      ],
+      "name": "set_segment_external_source_links",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "99b2c48c-8dba-418a-ae6d-fc57c5d2ab82",
+              "name": "url",
+              "value": "={{ $('set_current_segment').first().json.external_urls.slice(0, 3) }}",
+              "type": "array"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "6514e1a2-0b2f-4832-a21a-189c819ea4b0",
+      "position": [
+        3380,
+        2170
+      ],
+      "name": "split_segment_external_source_urls",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "url",
+        "options": {}
+      }
+    },
+    {
+      "id": "4f3d97bb-1c61-47df-ad18-eb4bfaf2ff00",
+      "position": [
+        3640,
+        2170
+      ],
+      "name": "scrape_segment_external_source_url",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:scrape-page__"
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "e9f1c319-2c4b-459c-a668-832235b3cd02",
+      "position": [
+        3900,
+        2170
+      ],
+      "name": "filter_segment_external_source_errors",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7b3c172e-bb8e-43b7-aea8-84552bd814ae",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "4d8ec3de-cf92-472f-a025-ead5ff0b3956",
+      "position": [
+        4160,
+        2170
+      ],
+      "name": "aggregate_segment_external_source_content",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "parameters": {
+        "aggregate": "aggregateIndividualFields",
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "text",
+              "renameField": true,
+              "outputFieldName": "sources"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "52c9b9b5-d74f-4841-acad-fd1b9c84fc28",
+      "position": [
+        4520,
+        1950
+      ],
+      "name": "write_segment_content",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Story: ' + $('set_current_segment').first().json.title + '\\nWhy it leads: ' + $('set_current_segment').first().json.why + '\\n\\nResearch:\\n' + $('aggregate_segment_text_content').first().json.texts.join('\\n\\n') + '\\n\\nOutside sources:\\n' + (($json.sources ?? []).filter((t) => t).map((t) => String(t).slice(0, 4000)).join('\\n\\n') || 'none') }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "[task:write-segment] You are the editor of a daily industry newsletter. Use only what is in the research you are given: never add a fact, a number or a quote that is not there. Write one story for the issue: a headline and a body of 120 to 200 words in plain, direct prose. List the addresses of the sources you used."
+            }
+          ]
+        },
+        "batching": {}
+      }
+    },
+    {
+      "id": "c5a17587-9a0a-4644-a3bc-a16a4f0755ed",
+      "position": [
+        4420,
+        2170
+      ],
+      "name": "story_segment_auto_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "parameters": {
+        "options": {}
+      }
+    },
+    {
+      "id": "af1d248a-6a3b-443c-ab7b-cad4b43875e7",
+      "position": [
+        4320,
+        2390
+      ],
+      "name": "story_segment_output_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"headline\": \"The story's headline\",\n  \"body\": \"The story.\",\n  \"sources\": [\n    \"https://a-source-used\"\n  ]\n}"
+      }
+    },
+    {
+      "id": "d78f5226-1a06-4d53-afd8-7dfd3331d6ec",
+      "position": [
+        4980,
+        1950
+      ],
+      "name": "extract_image_urls",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Story: ' + $('set_current_segment').first().json.title + '\\n\\nResearch:\\n' + $('aggregate_segment_text_content').first().json.texts.join('\\n\\n') }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "[task:image-urls] List the addresses of images that appear in this research and belong with the story: charts, product photos, screenshots. Only addresses that are in the text. An empty list is a fine answer."
+            }
+          ]
+        },
+        "batching": {}
+      }
+    },
+    {
+      "id": "a096afd6-ad09-4b03-aa7a-d16d25f11959",
+      "position": [
+        4880,
+        2170
+      ],
+      "name": "image_urls_auto_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "parameters": {
+        "options": {}
+      }
+    },
+    {
+      "id": "1950b09d-eee9-433d-a2b5-8e68987e36e5",
+      "position": [
+        4780,
+        2390
+      ],
+      "name": "extract_image_urls_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"image_urls\": [\n    \"https://an-image-in-the-research\"\n  ]\n}"
+      }
+    },
+    {
+      "id": "304e3971-7ee3-4ba9-a5db-20bf2430627f",
+      "position": [
+        5340,
+        2170
+      ],
+      "name": "share_segment_msg",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ '-1000000000001' }}",
+        "text": "={{ $('write_segment_content').first().json.output.headline + '\\n\\n' + $('write_segment_content').first().json.output.body }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "7a9f59b2-24b3-4842-a73b-171fef52e4a7",
+      "position": [
+        5600,
+        2170
+      ],
+      "name": "set_story_segment",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0c5ce8bb-86e9-4846-aac5-f62221c0f7a8",
+              "name": "headline",
+              "value": "={{ $('write_segment_content').first().json.output.headline }}",
+              "type": "string"
+            },
+            {
+              "id": "d8bf7ed8-d630-4a5c-a799-28f24fcb19c3",
+              "name": "body",
+              "value": "={{ $('write_segment_content').first().json.output.body }}",
+              "type": "string"
+            },
+            {
+              "id": "1d779b57-4565-4a7c-a768-ab3b619ae38b",
+              "name": "sources",
+              "value": "={{ $('write_segment_content').first().json.output.sources ?? [] }}",
+              "type": "array"
+            },
+            {
+              "id": "211e282b-6cd8-4236-a878-ee5536afea24",
+              "name": "image_urls",
+              "value": "={{ $('extract_image_urls').first().json.output.image_urls ?? [] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "b99d58a9-f43b-4ad5-a6ff-375544f66c22",
+      "position": [
+        100,
+        2800
+      ],
+      "name": "write_intro",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Subject line: ' + $('set_current_subject_line').first().json.subject_line + '\\n\\nStories:\\n' + $input.all().map((i) => '## ' + i.json.headline + '\\n' + i.json.body).join('\\n\\n') }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "[task:write-intro] You are the editor of a daily industry newsletter. Use only what is in the research you are given: never add a fact, a number or a quote that is not there. Write the opening of the issue: two or three sentences that greet the reader and say what is in it, in the order the stories appear."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "04253ed0-5247-4545-a57f-0ce1e97815e9",
+      "position": [
+        0,
+        3020
+      ],
+      "name": "intro_auto_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "parameters": {
+        "options": {}
+      }
+    },
+    {
+      "id": "98488457-a783-4e3c-a5f8-f314a34ad480",
+      "position": [
+        -100,
+        3240
+      ],
+      "name": "intro_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"intro\": \"The opening of the issue.\"\n}"
+      }
+    },
+    {
+      "id": "77817319-6e86-4437-aa77-7bc3b6879182",
+      "position": [
+        100,
+        3650
+      ],
+      "name": "write_other_top_stories",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Already covered: ' + $('set_current_stories').first().json.stories.map((s) => s.title).join('; ') + '\\n\\nResearch not yet used:\\n' + ($('aggregate_markdown_content').first().json.items.filter((d) => !$('set_current_stories').first().json.stories.some((s) => (s.content_ids ?? []).includes(d.content_id))).map((d) => '- ' + d.title + ' (' + d.url + '): ' + String(d.text).slice(0, 600)).join('\\n') || 'none') }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "[task:other-stories] You are the editor of a daily industry newsletter. Use only what is in the research you are given: never add a fact, a number or a quote that is not there. From the research that was not chosen as a top story, list up to five items worth a line each: the title, its address and one sentence. If nothing is left, answer with an empty list."
+            }
+          ]
+        },
+        "batching": {}
+      }
+    },
+    {
+      "id": "7b5590e6-1d6f-4cfb-a07a-c8d7b0fa4bb3",
+      "position": [
+        0,
+        3870
+      ],
+      "name": "other_top_stories_auto_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "parameters": {
+        "options": {}
+      }
+    },
+    {
+      "id": "df51176d-cc05-4bf5-ad56-b8f48b7f2a77",
+      "position": [
+        -100,
+        4090
+      ],
+      "name": "other_top_stories_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"items\": [\n    {\n      \"title\": \"A title\",\n      \"url\": \"https://its-address\",\n      \"line\": \"One sentence.\"\n    }\n  ]\n}"
+      }
+    },
+    {
+      "id": "fbfacb32-651d-4778-a638-e0d2af6e6013",
+      "position": [
+        460,
+        3870
+      ],
+      "name": "set_full_newsletter",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2b129b1a-3920-411b-ac56-b4c246acba0a",
+              "name": "file_name",
+              "value": "={{ 'newsletter-' + $('submit_form').first().json['Newsletter date'] + '.md' }}",
+              "type": "string"
+            },
+            {
+              "id": "8d0f1cc9-98d1-426c-a452-437e3f2261ea",
+              "name": "subject_line",
+              "value": "={{ $('set_current_subject_line').first().json.subject_line }}",
+              "type": "string"
+            },
+            {
+              "id": "2111c9a5-657d-4ed3-a430-712989156584",
+              "name": "markdown",
+              "value": "={{ '# ' + $('set_current_subject_line').first().json.subject_line + '\\n\\n' + $('set_current_subject_line').first().json.preheader + '\\n\\n' + $('write_intro').first().json.output.intro + '\\n\\n' + $('iterate_stories').all().map((i) => i.json).map((s) => '## ' + s.headline + '\\n\\n' + s.body + (s.image_urls.length ? '\\n\\n![](' + s.image_urls[0] + ')' : '') + (s.sources.length ? '\\n\\nSources: ' + s.sources.join(', ') : '')).join('\\n\\n') + (($json.output.items ?? []).length ? '\\n\\n## Also worth reading\\n\\n' + $json.output.items.map((o) => '- [' + o.title + '](' + o.url + '): ' + o.line).join('\\n') : '') }}",
+              "type": "string"
+            },
+            {
+              "id": "4810320f-3343-4dbb-ae05-f45bff7b1c3d",
+              "name": "summary",
+              "value": "={{ 'Draft for ' + $('submit_form').first().json['Newsletter date'] + ' is attached. Subject line: ' + $('set_current_subject_line').first().json.subject_line + '. ' + $('iterate_stories').all().length + ' stories: ' + $('iterate_stories').all().map((i) => i.json.headline).join('; ') + '. Also worth reading: ' + ($json.output.items ?? []).length + ' items.' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "916f6ec0-473e-4d9f-a19f-23d761576715",
+      "position": [
+        720,
+        3870
+      ],
+      "name": "create_newsletter_file",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "markdown",
+        "binaryPropertyName": "data",
+        "options": {
+          "fileName": "={{ $json.file_name }}"
+        }
+      }
+    },
+    {
+      "id": "220594a1-f86e-4f90-a3db-8617d5cde0c2",
+      "position": [
+        980,
+        3870
+      ],
+      "name": "upload_newsletter_file",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendDocument",
+        "chatId": "={{ '-1000000000001' }}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "1217efe7-a644-41a5-aab2-c137034dd032",
+      "position": [
+        1240,
+        3870
+      ],
+      "name": "share_newsletter_msg",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ '-1000000000001' }}",
+        "text": "={{ $('set_full_newsletter').first().json.summary }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "85f1a58d-39d5-4cad-a367-d8c4050486c7",
+      "position": [
+        260,
+        830
+      ],
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "credentials": {
+        "googlePalmApi": {
+          "id": "__CRED:gemini__",
+          "name": "Gemini"
+        }
+      }
+    },
+    {
+      "id": "40a1746d-7615-48aa-af4c-9e96e4f11ffe",
+      "position": [
+        460,
+        830
+      ],
+      "name": "stories_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"stories\": [\n    {\n      \"title\": \"The story's headline\",\n      \"content_ids\": [\n        \"id-of-a-research-document\"\n      ],\n      \"external_urls\": [\n        \"https://a-source-worth-reading\"\n      ],\n      \"why\": \"One sentence on why it leads.\"\n    }\n  ],\n  \"reasoning\": \"Why these stories.\"\n}"
+      }
+    },
+    {
+      "id": "9d0a8ff6-dce0-40a8-a395-65fcfce6912a",
+      "position": [
+        720,
+        1500
+      ],
+      "name": "subject_line_parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"subject_line\": \"The subject line\",\n  \"preheader\": \"The preheader\",\n  \"reasoning\": \"One sentence.\"\n}"
+      }
+    },
+    {
+      "id": "13a4bcf2-2c53-4a86-a55e-e1504a2d863a",
+      "position": [
+        4520,
+        2390
+      ],
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "groqApi": {
+          "id": "__CRED:groq__",
+          "name": "Groq"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "submit_form": {
+      "main": [
+        [
+          {
+            "node": "get_files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_files": {
+      "main": [
+        [
+          {
+            "node": "filter_only_markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_only_markdown": {
+      "main": [
+        [
+          {
+            "node": "get_markdown_object_info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_markdown_object_info": {
+      "main": [
+        [
+          {
+            "node": "exclude_newsletters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "exclude_newsletters": {
+      "main": [
+        [
+          {
+            "node": "download_markdown_object",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download_markdown_object": {
+      "main": [
+        [
+          {
+            "node": "get_markdown_file_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_markdown_file_content": {
+      "main": [
+        [
+          {
+            "node": "prepare_markdown_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "prepare_markdown_content": {
+      "main": [
+        [
+          {
+            "node": "aggregate_markdown_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "aggregate_markdown_content": {
+      "main": [
+        [
+          {
+            "node": "combine_markdown_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "combine_markdown_content": {
+      "main": [
+        [
+          {
+            "node": "stories_prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "stories_prompt": {
+      "main": [
+        [
+          {
+            "node": "pick_top_stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pick_top_stories": {
+      "main": [
+        [
+          {
+            "node": "set_current_stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_current_stories": {
+      "main": [
+        [
+          {
+            "node": "share_selected_stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "share_selected_stories": {
+      "main": [
+        [
+          {
+            "node": "split_into_chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_into_chunks": {
+      "main": [
+        [
+          {
+            "node": "share_stories_reasoning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "share_stories_reasoning": {
+      "main": [
+        [
+          {
+            "node": "share_stories_approval_feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "share_stories_approval_feedback": {
+      "main": [
+        [
+          {
+            "node": "extract_stories_approval_feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract_stories_approval_feedback": {
+      "main": [
+        [
+          {
+            "node": "check_stories_feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_stories_feedback": {
+      "main": [
+        [
+          {
+            "node": "subject_examples",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "edit_top_stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "edit_top_stories": {
+      "main": [
+        [
+          {
+            "node": "set_current_stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "subject_examples": {
+      "main": [
+        [
+          {
+            "node": "set_subject_line_prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_subject_line_prompt": {
+      "main": [
+        [
+          {
+            "node": "write_subject_line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "write_subject_line": {
+      "main": [
+        [
+          {
+            "node": "set_current_subject_line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_current_subject_line": {
+      "main": [
+        [
+          {
+            "node": "share_subject_line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "share_subject_line": {
+      "main": [
+        [
+          {
+            "node": "share_subject_line_reasoning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "share_subject_line_reasoning": {
+      "main": [
+        [
+          {
+            "node": "share_subject_line_approval_feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "share_subject_line_approval_feedback": {
+      "main": [
+        [
+          {
+            "node": "extract_subject_line_approval_feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract_subject_line_approval_feedback": {
+      "main": [
+        [
+          {
+            "node": "check_subject_line_feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_subject_line_feedback": {
+      "main": [
+        [
+          {
+            "node": "set_selected_stories",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "edit_subject_line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "edit_subject_line": {
+      "main": [
+        [
+          {
+            "node": "set_current_subject_line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_selected_stories": {
+      "main": [
+        [
+          {
+            "node": "split_stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_stories": {
+      "main": [
+        [
+          {
+            "node": "iterate_stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "iterate_stories": {
+      "main": [
+        [
+          {
+            "node": "write_intro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "set_current_segment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_current_segment": {
+      "main": [
+        [
+          {
+            "node": "split_content_ids",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_content_ids": {
+      "main": [
+        [
+          {
+            "node": "get_segment_content_info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_segment_content_info": {
+      "main": [
+        [
+          {
+            "node": "get_segment_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_segment_content": {
+      "main": [
+        [
+          {
+            "node": "download_segment_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download_segment_content": {
+      "main": [
+        [
+          {
+            "node": "get_segment_content_text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_segment_content_text": {
+      "main": [
+        [
+          {
+            "node": "prepare_segment_content_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "prepare_segment_content_item": {
+      "main": [
+        [
+          {
+            "node": "aggregate_segment_text_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "aggregate_segment_text_content": {
+      "main": [
+        [
+          {
+            "node": "check_external_urls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_external_urls": {
+      "main": [
+        [
+          {
+            "node": "set_segment_external_source_links",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "write_segment_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_segment_external_source_links": {
+      "main": [
+        [
+          {
+            "node": "split_segment_external_source_urls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_segment_external_source_urls": {
+      "main": [
+        [
+          {
+            "node": "scrape_segment_external_source_url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "scrape_segment_external_source_url": {
+      "main": [
+        [
+          {
+            "node": "filter_segment_external_source_errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_segment_external_source_errors": {
+      "main": [
+        [
+          {
+            "node": "aggregate_segment_external_source_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "aggregate_segment_external_source_content": {
+      "main": [
+        [
+          {
+            "node": "write_segment_content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "write_segment_content": {
+      "main": [
+        [
+          {
+            "node": "extract_image_urls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract_image_urls": {
+      "main": [
+        [
+          {
+            "node": "share_segment_msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "share_segment_msg": {
+      "main": [
+        [
+          {
+            "node": "set_story_segment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_story_segment": {
+      "main": [
+        [
+          {
+            "node": "iterate_stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "write_intro": {
+      "main": [
+        [
+          {
+            "node": "write_other_top_stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "write_other_top_stories": {
+      "main": [
+        [
+          {
+            "node": "set_full_newsletter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_full_newsletter": {
+      "main": [
+        [
+          {
+            "node": "create_newsletter_file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_newsletter_file": {
+      "main": [
+        [
+          {
+            "node": "upload_newsletter_file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "upload_newsletter_file": {
+      "main": [
+        [
+          {
+            "node": "share_newsletter_msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "story_segment_auto_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "write_segment_content",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "story_segment_output_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "story_segment_auto_parser",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "image_urls_auto_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "extract_image_urls",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract_image_urls_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "image_urls_auto_parser",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "intro_auto_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "write_intro",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "intro_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "intro_auto_parser",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "other_top_stories_auto_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "write_other_top_stories",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "other_top_stories_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "other_top_stories_auto_parser",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "pick_top_stories",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "edit_top_stories",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "write_subject_line",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "edit_subject_line",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "write_segment_content",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "extract_image_urls",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "write_intro",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "write_other_top_stories",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "extract_stories_approval_feedback",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "extract_subject_line_approval_feedback",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "stories_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "pick_top_stories",
+            "type": "ai_outputParser",
+            "index": 0
+          },
+          {
+            "node": "edit_top_stories",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "subject_line_parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "write_subject_line",
+            "type": "ai_outputParser",
+            "index": 0
+          },
+          {
+            "node": "edit_subject_line",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "story_segment_auto_parser",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "image_urls_auto_parser",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "intro_auto_parser",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "other_top_stories_auto_parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

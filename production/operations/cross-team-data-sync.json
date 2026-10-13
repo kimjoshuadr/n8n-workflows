@@ -1,0 +1,384 @@
+{
+  "name": "Data · Cross-team data sync",
+  "nodes": [
+    {
+      "id": "a750b304-5f65-45a9-ad15-ec8dbc186b73",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -210
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 230,
+        "content": "## Data · Cross-team data sync\nOn a schedule, reads claims and users from the Bubble app's database, joins and sorts them, then clears a shared Google Sheet and refills it, so people without database access always see current data.\n\n**Platforms:** Bubble, Google Sheets\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `production/operations`"
+      }
+    },
+    {
+      "id": "ef016fa3-41ba-4b7e-aa43-c90e79a78a0e",
+      "position": [
+        0,
+        180
+      ],
+      "name": "schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "50acb739-4101-4eb4-a852-31bfbf2f19de",
+      "position": [
+        260,
+        90
+      ],
+      "name": "get_claims",
+      "type": "n8n-nodes-base.bubble",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "object",
+        "operation": "getAll",
+        "typeName": "claim",
+        "returnAll": true,
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "bubbleApi": {
+          "id": "__CRED:bubble__",
+          "name": "Bubble"
+        }
+      }
+    },
+    {
+      "id": "8b1fec26-243f-4110-a8d4-7e1432ff427d",
+      "position": [
+        260,
+        270
+      ],
+      "name": "get_users",
+      "type": "n8n-nodes-base.bubble",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "object",
+        "operation": "getAll",
+        "typeName": "user",
+        "returnAll": true,
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "bubbleApi": {
+          "id": "__CRED:bubble__",
+          "name": "Bubble"
+        }
+      }
+    },
+    {
+      "id": "02f1d52a-8a68-41f8-ab88-3250ef4c8743",
+      "position": [
+        520,
+        180
+      ],
+      "name": "merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByFields",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "user",
+              "field2": "_id"
+            }
+          ]
+        },
+        "joinMode": "enrichInput1",
+        "options": {
+          "clashHandling": {
+            "values": {
+              "resolveClash": "preferInput1"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "05ad149c-5730-42e0-a933-9e6e09000f2f",
+      "position": [
+        780,
+        180
+      ],
+      "name": "sort",
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "parameters": {
+        "type": "simple",
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "Created Date",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "dd648e83-0b3b-4f39-ab5e-230fa3772cec",
+      "position": [
+        1040,
+        180
+      ],
+      "name": "clear_sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "parameters": {
+        "resource": "sheet",
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "team-dashboard-sheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Dashboard"
+        },
+        "clear": "wholeSheet",
+        "keepFirstRow": true
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__CRED:googleSheets__",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "56a94ebb-07d8-4a4d-a2a7-3fa03e1f5e24",
+      "position": [
+        1300,
+        180
+      ],
+      "name": "merge_2",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "parameters": {
+        "mode": "chooseBranch",
+        "chooseBranchMode": "waitForAll",
+        "output": "specifiedInput",
+        "useDataOfInput": 1
+      }
+    },
+    {
+      "id": "d882049e-4b2c-4692-a6e1-2467f71aaf14",
+      "position": [
+        1560,
+        180
+      ],
+      "name": "create_row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "team-dashboard-sheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Dashboard"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "claim_id": "={{ $json._id }}",
+            "email": "={{ $json.email ?? '' }}",
+            "status": "={{ $json.status ?? '' }}",
+            "amount": "={{ $json.amount ?? '' }}",
+            "created": "={{ $json['Created Date'] ?? '' }}"
+          },
+          "matchingColumns": [
+            "claim_id"
+          ],
+          "schema": [
+            {
+              "id": "claim_id",
+              "displayName": "claim_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created",
+              "displayName": "created",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__CRED:googleSheets__",
+          "name": "Google Sheets"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "schedule": {
+      "main": [
+        [
+          {
+            "node": "get_claims",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "get_users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_claims": {
+      "main": [
+        [
+          {
+            "node": "merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_users": {
+      "main": [
+        [
+          {
+            "node": "merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "merge": {
+      "main": [
+        [
+          {
+            "node": "sort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sort": {
+      "main": [
+        [
+          {
+            "node": "merge_2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "clear_sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "clear_sheet": {
+      "main": [
+        [
+          {
+            "node": "merge_2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "merge_2": {
+      "main": [
+        [
+          {
+            "node": "create_row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

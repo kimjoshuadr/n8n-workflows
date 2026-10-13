@@ -79,6 +79,15 @@ services:
           - graph.facebook.com
           - api.x.com
           - api.twitter.com
+          - api.telegram.org
+          - acme.bubbleapps.io
+          - generativelanguage.googleapis.com
+          - api.groq.com
+          - api.apify.com
+          - www.wixapis.com
+          - api.skool.com
+          - feeds.acme.example
+          - events.acme.example
 
 volumes:
   n8n_data:

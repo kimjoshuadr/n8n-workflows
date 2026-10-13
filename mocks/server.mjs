@@ -256,6 +256,78 @@ function db(req, res, url, body, table = url.pathname.split("/")[2]) {
   send(res, 405, { error: "method not allowed" });
 }
 
+
+/** A canned reply of `{ __raw, type }` is sent as that text, not as JSON: a feed, a page, a file. */
+const reply = (res, body) => {
+  if (body && typeof body === "object" && "__raw" in body) {
+    res.writeHead(200, { "content-type": body.type ?? "text/plain; charset=utf-8" });
+    return res.end(body.__raw);
+  }
+  send(res, 200, body);
+};
+
+const PIXEL = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+/**
+ * Telegram. A "send and wait" message carries a link back into the waiting
+ * run; a person would tap it. Here the next seeded row of `telegram_replies`
+ * does: { approve: true | false } presses a button, { text } fills in the
+ * reply form. With nothing seeded, the answer is yes.
+ */
+const N8N_INSIDE = "http://n8n:5678";
+// n8n ignores link-preview bots on these links, so the tap has to look like a browser's.
+const BROWSER = { "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36" };
+async function answerTelegram(body) {
+  const markup = typeof body?.reply_markup === "string" ? JSON.parse(body.reply_markup) : body?.reply_markup;
+  const links = (markup?.inline_keyboard ?? []).flat().map((b) => b.url).filter((u) => u && u.includes("/webhook-waiting/"));
+  if (!links.length) return;
+  const answer = (tables.telegram_replies ?? []).shift() ?? { approve: true };
+  const inside = (u) => N8N_INSIDE + new URL(u).pathname + new URL(u).search;
+  await new Promise((r) => setTimeout(r, 700));
+  try {
+    if ("text" in answer) {
+      const form = new FormData();
+      form.set("field-0", answer.text);
+      const r = await fetch(inside(links[0]), { method: "POST", body: form, headers: BROWSER });
+      if (!r.ok) console.log("telegram answer refused:", r.status, (await r.text()).slice(0, 200));
+    } else {
+      const want = answer.approve ? "approved=true" : "approved=false";
+      const r = await fetch(inside(links.find((u) => u.includes(want)) ?? links[0]), { headers: BROWSER });
+      if (!r.ok) console.log("telegram answer refused:", r.status, (await r.text()).slice(0, 200));
+    }
+  } catch (e) {
+    console.log("telegram answer failed:", e.message);
+  }
+}
+
+/** Gemini's own API, answered from the same script as the other models. */
+function gemini(res, body, model, stream) {
+  const system = flat((body.systemInstruction?.parts ?? []).map((p) => p.text ?? "").join("\n"));
+  const lastParts = body.contents?.at(-1)?.parts ?? [];
+  const last = lastParts.map((p) => p.text ?? (p.functionResponse ? JSON.stringify(p.functionResponse.response) : "")).join("\n");
+  const wantsImage = /image/.test(model) || (body.generationConfig?.responseModalities ?? []).includes("IMAGE");
+  let parts;
+  if (wantsImage) parts = [{ inlineData: { mimeType: "image/png", data: PIXEL } }];
+  else {
+    const tools = (body.tools ?? []).flatMap((t) => t.functionDeclarations ?? []);
+    const r = settle(pick(system, last), tools);
+    parts = r.tool ? [{ functionCall: { name: r.tool.name, args: r.tool.input ?? {} } }] : [{ text: r.json ? JSON.stringify(r.json) : (r.text ?? "") }];
+  }
+  const out = { candidates: [{ content: { role: "model", parts }, finishReason: "STOP", index: 0 }], usageMetadata: { promptTokenCount: 120, candidatesTokenCount: 40, totalTokenCount: 160 }, modelVersion: model };
+  if (stream) return sse(res, [[null, out]]);
+  send(res, 200, out);
+}
+
+// The tabs any spreadsheet has here: the ones the library's workflows name.
+const SHEETS = ["Pack", "Import", "Luma events", "Dashboard", "Instagram posts", "Instagram reels", "X posts", "TikTok videos", "YouTube videos", "Facebook posts"];
+
+/** A Google Sheet: the seeded `sheet_data` rows under a header row made of their keys. */
+function sheetValues() {
+  const rows = tables.sheet_data ?? [];
+  const header = (tables.sheet_header ?? [])[0]?.columns ?? [...new Set(rows.flatMap((r) => Object.keys(r)))];
+  return [header.length ? header : ["month", "account", "amount", "prior", "change"], ...rows.map((r) => header.map((h) => r[h] ?? ""))];
+}
+
 const handle = (req, res) => {
     let raw = "";
     req.on("data", (c) => (raw += c));
@@ -307,15 +379,30 @@ const handle = (req, res) => {
         return send(res, failing.status ?? 503, { error: "mock failure" });
       }
       const host = (req.headers.host ?? "").split(":")[0];
-      if (`${host}${p}` in routes) return send(res, 200, routes[`${host}${p}`]);
-      if (p in routes) return send(res, 200, routes[p]);
+      if (`${host}${p}` in routes) return reply(res, routes[`${host}${p}`]);
+      if (p in routes) return reply(res, routes[p]);
       if (host === "api.anthropic.com" && p === "/v1/messages") return anthropic(res, body ?? {});
-      // Google Sheets: a spreadsheet has one sheet with a header row; appends are accepted.
+      // Google Sheets: every tab reads as the seeded rows under a header row; writes are accepted and kept.
       if (host === "sheets.googleapis.com" && req.method === "GET" && /^\/v4\/spreadsheets\/[^/]+$/.test(p)) {
-        return send(res, 200, { spreadsheetId: p.split("/").pop(), sheets: [{ properties: { sheetId: 0, title: "Pack", index: 0 } }] });
+        return send(res, 200, { spreadsheetId: p.split("/").pop(), sheets: SHEETS.map((title, index) => ({ properties: { sheetId: index, title, index } })) });
       }
       if (host === "sheets.googleapis.com" && req.method === "GET" && p.includes("/values/")) {
-        return send(res, 200, { range: "Pack!A1:Z1", majorDimension: "ROWS", values: [(tables.sheet_header ?? [{ columns: ["month", "account", "amount", "prior", "change"] }])[0].columns] });
+        const all = sheetValues();
+        const range = decodeURIComponent(p.split("/values/")[1]);
+        // "A1:Z1" or "1:1" asks for the header row only; a single column asks for that column.
+        const cell = range.split("!").pop();
+        const headerOnly = /^[A-Z]*1:[A-Z]*1$/.test(cell);
+        const column = /^([A-Z]):\1$/.exec(cell)?.[1] ?? /^([A-Z])\d*:\1\d*$/.exec(cell)?.[1];
+        const values = headerOnly ? [all[0]] : column ? all.map((r) => [r[column.charCodeAt(0) - 65] ?? ""]) : all;
+        return send(res, 200, { range, majorDimension: "ROWS", values });
+      }
+      if (host === "sheets.googleapis.com" && p.endsWith(":clear")) {
+        tables.sheet_data = [];
+        return send(res, 200, { spreadsheetId: "x", clearedRange: decodeURIComponent(p.split("/values/")[1] ?? "") });
+      }
+      if (host === "sheets.googleapis.com" && p.endsWith("values:batchUpdate")) {
+        (tables.sheet_rows ??= []).push(...(body?.data ?? []).flatMap((d) => (d.values ?? []).map((row) => ({ row, range: d.range }))));
+        return send(res, 200, { spreadsheetId: "x", totalUpdatedRows: (body?.data ?? []).length, responses: [] });
       }
       if (host === "sheets.googleapis.com" && p.includes(":append")) {
         (tables.sheet_rows ??= []).push(...(body?.values ?? []).map((row) => ({ row })));
@@ -337,6 +424,77 @@ const handle = (req, res) => {
       }
       if (host === "api.openai.com" && p === "/v1/chat/completions") return openai(res, body ?? {});
       if (host === "api.openai.com" && p === "/v1/embeddings") return send(res, 200, embeddings(body ?? {}));
+      // A HubSpot search with nothing canned finds nobody.
+      if (host === "api.hubapi.com" && p.endsWith("/search")) return send(res, 200, { total: 0, results: [] });
+      if (host === "api.groq.com" && p.endsWith("/chat/completions")) return openai(res, body ?? {});
+      if (host === "generativelanguage.googleapis.com") {
+        const m = /\/models\/([^:/]+):(generateContent|streamGenerateContent|predict)$/.exec(p);
+        if (m && m[2] === "predict") return send(res, 200, { predictions: [{ bytesBase64Encoded: PIXEL, mimeType: "image/png" }] });
+        if (m) return gemini(res, body ?? {}, m[1], m[2] === "streamGenerateContent");
+        if (p.endsWith("/models")) return send(res, 200, { models: [{ name: "models/gemini-2.5-flash", supportedGenerationMethods: ["generateContent"] }] });
+      }
+      if (host === "api.telegram.org") {
+        const method = p.split("/").pop();
+        if (p.startsWith("/file/")) return reply(res, { __raw: (tables.telegram_files ?? [])[0]?.content ?? "# Notes\n\nNothing seeded.", type: "text/markdown" });
+        if (method === "getFile") return send(res, 200, { ok: true, result: { file_id: body?.file_id ?? url.searchParams.get("file_id"), file_size: 100, file_path: "documents/" + ((tables.telegram_files ?? [])[0]?.name ?? "notes.md") } });
+        answerTelegram(body);
+        return send(res, 200, { ok: true, result: { message_id: ++seq, date: 0, chat: { id: Number(body?.chat_id) || 1, type: "private" }, text: body?.text } });
+      }
+      // Bubble's Data API: one in-memory table per data type, named bubble_<type>.
+      if (host.endsWith(".bubbleapps.io") && p.startsWith("/api/1.1/obj/")) {
+        const [type, id] = p.split("/").slice(4);
+        const rows = (tables[`bubble_${type}`] ??= []);
+        if (req.method === "GET" && !id) {
+          const cursor = Number(url.searchParams.get("cursor") ?? 0);
+          const limit = Number(url.searchParams.get("limit") ?? 100);
+          const empty = (v) => v === undefined || v === null || v === "";
+          const constraints = JSON.parse(url.searchParams.get("constraints") ?? "[]");
+          const kept = rows.filter((r) => constraints.every((c) => (c.constraint_type === "is_not_empty" ? !empty(r[c.key]) : c.constraint_type === "is_empty" ? empty(r[c.key]) : c.constraint_type === "equals" ? String(r[c.key]) === String(c.value) : true)));
+          const page = kept.slice(cursor, cursor + limit);
+          return send(res, 200, { response: { cursor, results: page, count: page.length, remaining: Math.max(0, kept.length - cursor - page.length) } });
+        }
+        if (req.method === "GET") return send(res, 200, { response: rows.find((r) => r._id === id) ?? {} });
+        if (req.method === "POST") {
+          const row = { _id: `obj_${++seq}`, ...body };
+          rows.push(row);
+          return send(res, 201, { status: "success", id: row._id });
+        }
+        if (req.method === "DELETE") {
+          tables[`bubble_${type}`] = rows.filter((r) => r._id !== id);
+          return send(res, 204, {});
+        }
+      }
+      // Apify: a task's run succeeds at once, and its dataset is the seeded table apify_<task>.
+      if (host === "api.apify.com") {
+        const run = /^\/v2\/actor-tasks\/([^/]+)\/runs$/.exec(p);
+        if (run) return send(res, 201, { data: { id: `run_${run[1]}`, actorTaskId: run[1], status: "RUNNING", defaultDatasetId: `ds_${run[1]}` } });
+        const poll = /^\/v2\/actor-runs\/run_([^/]+)(\/abort)?$/.exec(p);
+        if (poll) return send(res, 200, { data: { id: `run_${poll[1]}`, status: poll[2] ? "ABORTED" : "SUCCEEDED", defaultDatasetId: `ds_${poll[1]}` } });
+        const items = /^\/v2\/datasets\/ds_([^/]+)\/items$/.exec(p);
+        if (items) return send(res, 200, tables[`apify_${decodeURIComponent(items[1])}`] ?? []);
+      }
+      // Google Drive: a search lists the seeded `drive_files`; a download returns that file's text.
+      if (p === "/drive/v3/files" && req.method === "GET") {
+        const q = url.searchParams.get("q") ?? "";
+        const name = /name contains '([^']*)'/.exec(q)?.[1];
+        const files = (tables.drive_files ?? []).filter((f) => !name || String(f.name).includes(name));
+        return send(res, 200, { files: files.map(({ content, ...f }) => ({ mimeType: "text/markdown", ...f })) });
+      }
+      if (/^\/drive\/v3\/files\/[^/]+$/.test(p) && req.method === "GET") {
+        const file = (tables.drive_files ?? []).find((f) => f.id === p.split("/").pop());
+        if (url.searchParams.get("alt") === "media") return reply(res, { __raw: file?.content ?? "", type: "text/markdown" });
+        return send(res, 200, { id: p.split("/").pop(), name: file?.name ?? "file.md", mimeType: "text/markdown" });
+      }
+      if (p.startsWith("/upload/drive/v3/files")) {
+        const id = `file_${++seq}`;
+        (tables.drive_uploads ??= []).push({ id, body: typeof body === "string" ? body.slice(0, 4000) : body });
+        res.writeHead(200, { "content-type": "application/json", location: `https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=resumable&upload_id=${id}` });
+        return res.end(JSON.stringify({ id, name: "uploaded" }));
+      }
+      // Supabase's vector search is a stored function; it returns the seeded `documents`.
+      if (host.endsWith(".supabase.co") && p.startsWith("/rest/v1/rpc/")) {
+        return send(res, 200, (tables.documents ?? []).slice(0, body?.match_count ?? 4).map((d, i) => ({ id: d.id ?? i + 1, content: d.content, metadata: d.metadata ?? {}, similarity: 0.92 - i * 0.05 })));
+      }
       if (p.startsWith("/db/")) return db(req, res, url, body);
       if (host.endsWith(".supabase.co") && p.startsWith("/rest/v1/")) return db(req, res, url, body, p.split("/")[3]);
       send(res, 200, { ok: true, id: `mock_${++seq}` });

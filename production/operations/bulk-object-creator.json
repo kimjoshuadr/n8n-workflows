@@ -1,0 +1,170 @@
+{
+  "name": "Data · Bulk object creator",
+  "nodes": [
+    {
+      "id": "c3a9ae35-94b8-4e1e-aa27-1fbf69e2959c",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -210
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 230,
+        "content": "## Data · Bulk object creator\nOne click reads every row of a sheet and creates an object in the Bubble database for each, one at a time.\n\n**Platforms:** Google Sheets, Bubble\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `production/operations`"
+      }
+    },
+    {
+      "id": "172e4f8d-0c27-4f34-a4a5-0f99feac11d2",
+      "position": [
+        0,
+        90
+      ],
+      "name": "When clicking 'Execute workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "a4c917e4-7e21-46ab-ad09-0307344dea8a",
+      "position": [
+        260,
+        90
+      ],
+      "name": "get_data",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "import-sheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Import"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__CRED:googleSheets__",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "d3822949-6a0d-4bdb-aa74-5ebf285c7fe7",
+      "position": [
+        520,
+        90
+      ],
+      "name": "for_each_data",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "d54183a3-64bc-49e6-acb4-7b71ec4ad911",
+      "position": [
+        780,
+        90
+      ],
+      "name": "create_object",
+      "type": "n8n-nodes-base.bubble",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "object",
+        "operation": "create",
+        "typeName": "event",
+        "properties": {
+          "property": [
+            {
+              "key": "title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "key": "date",
+              "value": "={{ $json.date ?? '' }}"
+            },
+            {
+              "key": "location",
+              "value": "={{ $json.location ?? '' }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "bubbleApi": {
+          "id": "__CRED:bubble__",
+          "name": "Bubble"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "get_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_data": {
+      "main": [
+        [
+          {
+            "node": "for_each_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "for_each_data": {
+      "main": [
+        [],
+        [
+          {
+            "node": "create_object",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_object": {
+      "main": [
+        [
+          {
+            "node": "for_each_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

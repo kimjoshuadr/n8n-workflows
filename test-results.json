@@ -1,6 +1,6 @@
 {
   "n8n": "2.42.7",
-  "passed": 254,
+  "passed": 322,
   "failed": 0,
   "cases": [
     {
@@ -656,6 +656,346 @@
     {
       "id": "content-distribute",
       "name": "does nothing when nothing is new",
+      "ok": true
+    },
+    {
+      "id": "revenue-support-agents",
+      "name": "a support question is answered from the knowledge base",
+      "ok": true
+    },
+    {
+      "id": "revenue-support-agents",
+      "name": "what the knowledge base cannot answer goes to the fallback agent",
+      "ok": true
+    },
+    {
+      "id": "revenue-support-agents",
+      "name": "an unclear message skips the RAG agent",
+      "ok": true
+    },
+    {
+      "id": "revenue-support-agents",
+      "name": "a complaint reaches a person even when the router calls it support",
+      "ok": true
+    },
+    {
+      "id": "revenue-support-agents",
+      "name": "the customer still gets a reply when every model is down",
+      "ok": true
+    },
+    {
+      "id": "revenue-support-agents",
+      "name": "a qualified lead is emailed, created in HubSpot and logged",
+      "ok": true
+    },
+    {
+      "id": "revenue-support-agents",
+      "name": "a lead that fails the profile is not contacted, whatever the model scored",
+      "ok": true
+    },
+    {
+      "id": "revenue-support-agents",
+      "name": "someone already in HubSpot is not emailed again",
+      "ok": true
+    },
+    {
+      "id": "revenue-support-agents",
+      "name": "an email with a placeholder left in is not sent",
+      "ok": true
+    },
+    {
+      "id": "revenue-support-agents",
+      "name": "nothing runs without an active customer profile",
+      "ok": true
+    },
+    {
+      "id": "community-provisioning",
+      "name": "a new buyer gets a user record, a bot code and a Skool invitation",
+      "ok": true
+    },
+    {
+      "id": "community-provisioning",
+      "name": "a returning buyer keeps what they own and gains the new product",
+      "ok": true
+    },
+    {
+      "id": "community-provisioning",
+      "name": "two tiers in one purchase send two invitations to two groups",
+      "ok": true
+    },
+    {
+      "id": "community-provisioning",
+      "name": "bot access alone stores a 32-character code and sends no invitation",
+      "ok": true
+    },
+    {
+      "id": "community-provisioning",
+      "name": "a purchase of something else changes nothing",
+      "ok": true
+    },
+    {
+      "id": "community-provisioning",
+      "name": "retries the invitation when Skool is briefly down",
+      "ok": true
+    },
+    {
+      "id": "newsletter-drafting",
+      "name": "drafts the issue and delivers it as a file when the editor approves",
+      "ok": true
+    },
+    {
+      "id": "newsletter-drafting",
+      "name": "the editor's feedback on the stories revises the selection before going on",
+      "ok": true
+    },
+    {
+      "id": "newsletter-drafting",
+      "name": "the editor's feedback on the subject line rewrites it",
+      "ok": true
+    },
+    {
+      "id": "newsletter-drafting",
+      "name": "a thin day still produces a draft, with fewer stories asked for",
+      "ok": true
+    },
+    {
+      "id": "newsletter-drafting",
+      "name": "past newsletters stored with the research are left out",
+      "ok": true
+    },
+    {
+      "id": "newsletter-drafting",
+      "name": "outside sources are scraped, and one that fails does not stop the story",
+      "ok": true
+    },
+    {
+      "id": "newsletter-drafting",
+      "name": "a story in the wrong shape is repaired by the second model",
+      "ok": true
+    },
+    {
+      "id": "unified-event-api",
+      "name": "answers with platform and Luma events in one list",
+      "ok": true
+    },
+    {
+      "id": "unified-event-api",
+      "name": "leaves out past and inactive events",
+      "ok": true
+    },
+    {
+      "id": "unified-event-api",
+      "name": "answers with an empty list when nothing is active",
+      "ok": true
+    },
+    {
+      "id": "unified-event-api",
+      "name": "sends the session token it was given",
+      "ok": true
+    },
+    {
+      "id": "post-purchase-email",
+      "name": "sends the product's email to the buyer",
+      "ok": true
+    },
+    {
+      "id": "post-purchase-email",
+      "name": "a different product sends nothing",
+      "ok": true
+    },
+    {
+      "id": "post-purchase-email",
+      "name": "retries when SendGrid is briefly down",
+      "ok": true
+    },
+    {
+      "id": "cross-team-data-sync",
+      "name": "clears the sheet, then writes each claim with its user",
+      "ok": true
+    },
+    {
+      "id": "cross-team-data-sync",
+      "name": "sorts the newest claim first",
+      "ok": true
+    },
+    {
+      "id": "cross-team-data-sync",
+      "name": "an empty database leaves the sheet alone",
+      "ok": true
+    },
+    {
+      "id": "bulk-object-creator",
+      "name": "creates one object per row",
+      "ok": true
+    },
+    {
+      "id": "bulk-object-creator",
+      "name": "an empty sheet creates nothing",
+      "ok": true
+    },
+    {
+      "id": "database-cleansing",
+      "name": "deletes the duplicates and keeps the first of each",
+      "ok": true
+    },
+    {
+      "id": "database-cleansing",
+      "name": "deletes nothing when there are no duplicates",
+      "ok": true
+    },
+    {
+      "id": "database-cleansing",
+      "name": "never deletes an object that has no email",
+      "ok": true
+    },
+    {
+      "id": "scrape-page",
+      "name": "returns the page's text without scripts, styles or navigation",
+      "ok": true
+    },
+    {
+      "id": "scrape-page",
+      "name": "a page that fails to load comes back marked as failed",
+      "ok": true
+    },
+    {
+      "id": "newsletter-research",
+      "name": "a relevant article is scraped, saved to Drive and indexed",
+      "ok": true
+    },
+    {
+      "id": "newsletter-research",
+      "name": "an off-topic article is dropped and the next one still runs",
+      "ok": true
+    },
+    {
+      "id": "newsletter-research",
+      "name": "an article already in the store is not scraped again",
+      "ok": true
+    },
+    {
+      "id": "newsletter-research",
+      "name": "a page that fails to load is skipped and the next one still runs",
+      "ok": true
+    },
+    {
+      "id": "newsletter-research",
+      "name": "nothing is stored when the model is down",
+      "ok": true
+    },
+    {
+      "id": "newsletter-research",
+      "name": "an answer in the wrong shape is repaired by the second model",
+      "ok": true
+    },
+    {
+      "id": "newsletter-research",
+      "name": "a forum feed keeps only the last day's items",
+      "ok": true
+    },
+    {
+      "id": "social-intelligence-scraper",
+      "name": "writes each Instagram post to the sheet of the account it belongs to",
+      "ok": true
+    },
+    {
+      "id": "social-intelligence-scraper",
+      "name": "a post from an account that is not tracked is not written",
+      "ok": true
+    },
+    {
+      "id": "social-intelligence-scraper",
+      "name": "stops the reels run, then reads what it collected",
+      "ok": true
+    },
+    {
+      "id": "social-intelligence-scraper",
+      "name": "every X account is scraped even when one has nothing new",
+      "ok": true
+    },
+    {
+      "id": "social-intelligence-scraper",
+      "name": "writes tweets, TikTok and YouTube videos with one set of columns",
+      "ok": true
+    },
+    {
+      "id": "social-intelligence-scraper",
+      "name": "Facebook pages are scraped one at a time and the post date is normalised",
+      "ok": true
+    },
+    {
+      "id": "social-content-engine",
+      "name": "drafts each article and moves on when approved",
+      "ok": true
+    },
+    {
+      "id": "social-content-engine",
+      "name": "a rejected draft is made again for the same article",
+      "ok": true
+    },
+    {
+      "id": "social-content-engine",
+      "name": "an empty caption is redone before anyone sees it",
+      "ok": true
+    },
+    {
+      "id": "social-content-engine",
+      "name": "each brand reads its own feed with its own voice",
+      "ok": true
+    },
+    {
+      "id": "social-post-on-demand",
+      "name": "drafts a post from a topic and stops when approved",
+      "ok": true
+    },
+    {
+      "id": "social-post-on-demand",
+      "name": "a link becomes the post's source and goes into the caption",
+      "ok": true
+    },
+    {
+      "id": "social-post-on-demand",
+      "name": "a rejection draws a new image for the same caption",
+      "ok": true
+    },
+    {
+      "id": "social-post-on-demand",
+      "name": "a refusal from the model is redone before anyone sees it",
+      "ok": true
+    },
+    {
+      "id": "rss-to-caption",
+      "name": "sends a caption, then the source link, for each new article",
+      "ok": true
+    },
+    {
+      "id": "rss-to-caption",
+      "name": "an item with no link is dropped",
+      "ok": true
+    },
+    {
+      "id": "rss-to-caption",
+      "name": "an empty reply from the model sends the headline instead",
+      "ok": true
+    },
+    {
+      "id": "blog-conversion",
+      "name": "turns an uploaded Markdown file into a Wix draft with a video",
+      "ok": true
+    },
+    {
+      "id": "blog-conversion",
+      "name": "ignores a file that is not Markdown",
+      "ok": true
+    },
+    {
+      "id": "blog-conversion",
+      "name": "a reply in the wrong shape is repaired by the second model",
+      "ok": true
+    },
+    {
+      "id": "blog-conversion",
+      "name": "still drafts the post when no videos come back",
       "ok": true
     },
     {

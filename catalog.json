@@ -2,12 +2,12 @@
   "repo": "https://github.com/kimjoshuadr/n8n-workflows",
   "tested": {
     "n8n": "2.42.7",
-    "passed": 254,
+    "passed": 322,
     "failed": 0
   },
   "tiers": {
     "flagship": "Flagship systems",
-    "production": "Production workflows",
+    "production": "Single-purpose workflows",
     "block": "Building blocks"
   },
   "platforms": {
@@ -15,31 +15,31 @@
       "name": "Slack",
       "job": "Team chat and alerts",
       "icon": "slack.svg",
-      "workflows": 18
+      "workflows": 19
     },
     "hubspot": {
       "name": "HubSpot",
       "job": "CRM",
       "icon": "hubspot.svg",
-      "workflows": 9
+      "workflows": 10
     },
     "sendgrid": {
       "name": "SendGrid",
       "job": "Customer email",
       "icon": "sendgrid.svg",
-      "workflows": 21
+      "workflows": 22
     },
     "gmail": {
       "name": "Gmail",
       "job": "Shared inbox",
       "icon": "gmail.svg",
-      "workflows": 3
+      "workflows": 4
     },
     "supabase": {
       "name": "Supabase",
       "job": "Records and state",
       "icon": "supabase.svg",
-      "workflows": 53
+      "workflows": 57
     },
     "calendly": {
       "name": "Calendly",
@@ -93,7 +93,7 @@
       "name": "Stripe",
       "job": "Payments",
       "icon": "stripe.svg",
-      "workflows": 5
+      "workflows": 7
     },
     "quickbooks": {
       "name": "QuickBooks",
@@ -129,13 +129,13 @@
       "name": "Google Drive",
       "job": "Files",
       "icon": "googleDrive.svg",
-      "workflows": 1
+      "workflows": 3
     },
     "googleSheets": {
       "name": "Google Sheets",
       "job": "Sheets",
       "icon": "googleSheets.svg",
-      "workflows": 1
+      "workflows": 5
     },
     "clearbit": {
       "name": "Clearbit",
@@ -147,7 +147,7 @@
       "name": "SerpAPI",
       "job": "Web search",
       "icon": "serpapi.svg",
-      "workflows": 5
+      "workflows": 6
     },
     "bamboohr": {
       "name": "BambooHR",
@@ -171,7 +171,7 @@
       "name": "OpenAI",
       "job": "AI classification and embeddings",
       "icon": "openai.svg",
-      "workflows": 16
+      "workflows": 17
     },
     "pinecone": {
       "name": "Pinecone",
@@ -184,9 +184,113 @@
       "job": "AI voice",
       "icon": "elevenlabs.svg",
       "workflows": 1
+    },
+    "telegram": {
+      "name": "Telegram",
+      "job": "Review and approval chat",
+      "icon": "telegram.svg",
+      "workflows": 5
+    },
+    "bubble": {
+      "name": "Bubble",
+      "job": "App database",
+      "icon": "bubble.svg",
+      "workflows": 3
+    },
+    "apify": {
+      "name": "Apify",
+      "job": "Web and social scraping",
+      "icon": "apify.svg",
+      "workflows": 2
+    },
+    "gemini": {
+      "name": "Gemini",
+      "job": "AI writing and images",
+      "icon": "gemini.svg",
+      "workflows": 6
+    },
+    "groq": {
+      "name": "Groq",
+      "job": "AI output repair",
+      "icon": "groq.svg",
+      "workflows": 3
+    },
+    "wix": {
+      "name": "Wix",
+      "job": "Website and blog",
+      "icon": "wix.svg",
+      "workflows": 1
+    },
+    "skool": {
+      "name": "Skool",
+      "job": "Paid community",
+      "icon": "skool.svg",
+      "workflows": 1
+    },
+    "rss": {
+      "name": "RSS",
+      "job": "News feeds",
+      "icon": "rss.svg",
+      "workflows": 3
     }
   },
   "systems": [
+    {
+      "id": "newsletter-research",
+      "name": "Newsletter research engine",
+      "folder": "production/newsletter-research",
+      "line": "Ten sources read, scraped and vetted by a model, every day.",
+      "problem": "Finding what is worth putting in a daily newsletter meant reading forums, feeds and blogs by hand before any writing could start.",
+      "outcome": "Each source is checked on a schedule, every article is read in full, a model keeps only what is relevant to the audience, and the result is stored as Markdown ready for drafting.",
+      "workflows": [
+        "newsletter-research",
+        "scrape-page"
+      ]
+    },
+    {
+      "id": "newsletter-drafting",
+      "name": "Newsletter drafting engine",
+      "folder": "production/newsletter-drafting",
+      "line": "From a day's research to a draft, with the editor approving each step.",
+      "problem": "Each issue began with a blank page: reading the day's research, choosing stories, writing a subject line and formatting the draft.",
+      "outcome": "The stored research becomes proposed stories and a subject line, the editor's feedback on Telegram is applied until they approve, and a formatted draft arrives with a summary.",
+      "workflows": [
+        "newsletter-drafting"
+      ]
+    },
+    {
+      "id": "revenue-support-agents",
+      "name": "Revenue and support agent pipeline",
+      "folder": "production/revenue-support-agents",
+      "line": "Six agents: three answer the inbox, three run outbound.",
+      "problem": "First-line support and top-of-funnel prospecting are both repetitive, and both stop when the people doing them are busy.",
+      "outcome": "Inbound messages are routed, answered from the knowledge base and CRM or handed to a person with a brief. Outbound, agents find companies and people who fit the customer profile and write to them, with the profile and the email checked in code.",
+      "workflows": [
+        "revenue-support-agents"
+      ]
+    },
+    {
+      "id": "social-intelligence",
+      "name": "Social intelligence scraper",
+      "folder": "production/social-intelligence",
+      "line": "Five networks scraped each morning into the sheets a dashboard reads.",
+      "problem": "Tracking how the brand's and its competitors' posts perform meant opening five networks and copying numbers by hand.",
+      "outcome": "Apify tasks collect the posts for every tracked account, each post is routed by account, and every record lands in one format in a Google Sheet that Tableau reads.",
+      "workflows": [
+        "social-intelligence-scraper"
+      ]
+    },
+    {
+      "id": "community-provisioning",
+      "name": "Community onboarding and provisioning",
+      "folder": "production/community-provisioning",
+      "line": "A Stripe charge becomes a user, Discord roles and a Skool invitation.",
+      "problem": "Every purchase meant someone checking what was bought, updating the member's record, granting Discord roles and sending the right Skool invitation by hand.",
+      "outcome": "The purchase is read from Stripe, the member is created or updated in Supabase, the Discord bot is given a secret code with the right roles, and a Skool invitation goes out for each tier.",
+      "workflows": [
+        "community-provisioning"
+      ]
+    },
     {
       "id": "ai-sales-team",
       "name": "AI sales team",
@@ -339,6 +443,4295 @@
     }
   ],
   "workflows": [
+    {
+      "id": "newsletter-research",
+      "name": "Research · Content aggregation engine",
+      "tier": "flagship",
+      "system": "newsletter-research",
+      "category": "Content and SEO",
+      "kind": null,
+      "summary": "Ten sources are checked on their own schedules: forum feeds and industry blogs. Each new article is scraped in full, judged for relevance to the audience by Gemini, and the ones that pass are saved as Markdown in Google Drive and indexed in Supabase for the newsletter.",
+      "source": "production",
+      "trigger": "scheduleTrigger",
+      "platforms": [
+        "rss",
+        "googleDrive",
+        "gemini",
+        "groq",
+        "supabase"
+      ],
+      "env": [],
+      "calls": [
+        "scrape-page",
+        "error-handler"
+      ],
+      "folder": "production/newsletter-research",
+      "nodeCount": 62,
+      "tests": [
+        "a relevant article is scraped, saved to Drive and indexed",
+        "an off-topic article is dropped and the next one still runs",
+        "an article already in the store is not scraped again",
+        "a page that fails to load is skipped and the next one still runs",
+        "nothing is stored when the model is down",
+        "an answer in the wrong shape is repaired by the second model",
+        "a forum feed keeps only the last day's items"
+      ],
+      "story": [
+        {
+          "title": "Ten sources, ten schedules",
+          "copy": "Each source has its own trigger a few minutes apart, so one slow site never holds up the others.",
+          "nodes": [
+            "schedule_1",
+            "schedule_2",
+            "schedule_3",
+            "schedule_4",
+            "schedule_5",
+            "schedule_6",
+            "schedule_7",
+            "schedule_8",
+            "schedule_9",
+            "schedule_10"
+          ]
+        },
+        {
+          "title": "Forum feeds",
+          "copy": "For the three forums, an index of threads is fetched, each thread is read as RSS, and only items from the last day are kept.",
+          "nodes": [
+            "get_feed_1",
+            "split_results_1",
+            "read_feed_1",
+            "filter_recent_1",
+            "data_manipulation_1",
+            "get_feed_2",
+            "split_results_2",
+            "read_feed_2",
+            "filter_recent_2",
+            "data_manipulation_2",
+            "get_feed_3",
+            "split_results_3",
+            "read_feed_3",
+            "filter_recent_3",
+            "data_manipulation_3"
+          ]
+        },
+        {
+          "title": "Industry blogs",
+          "copy": "For the seven blogs, the listing of recent posts is fetched and split into single articles.",
+          "nodes": [
+            "get_blog_1",
+            "split_results_4",
+            "data_manipulation_4",
+            "get_blog_2",
+            "split_results_5",
+            "data_manipulation_5",
+            "get_blog_3",
+            "split_results_6",
+            "data_manipulation_6",
+            "get_blog_4",
+            "split_results_7",
+            "data_manipulation_7",
+            "get_blog_5",
+            "split_results_8",
+            "data_manipulation_8",
+            "get_blog_6",
+            "split_results_9",
+            "data_manipulation_9",
+            "get_blog_7",
+            "split_results_10",
+            "data_manipulation_10"
+          ]
+        },
+        {
+          "title": "One shape for every source",
+          "copy": "Whatever the source, an article becomes the same record: address, title, source, date and a file-safe name.",
+          "nodes": [
+            "set_item"
+          ]
+        },
+        {
+          "title": "Already stored?",
+          "copy": "Articles are taken one at a time. Google Drive is searched for the article's file name, and one that is already there is skipped.",
+          "nodes": [
+            "for_each_content",
+            "get_files",
+            "skip_existing"
+          ]
+        },
+        {
+          "title": "The full article is fetched",
+          "copy": "A headline is not enough to judge by. The page is scraped for its full text and the links it cites.",
+          "nodes": [
+            "set_url",
+            "scrape_url"
+          ]
+        },
+        {
+          "title": "Did the page load?",
+          "copy": "A page that failed, or came back with too little text to be an article, is dropped and the loop moves on.",
+          "nodes": [
+            "filter_scrape_errors"
+          ]
+        },
+        {
+          "title": "A model judges relevance",
+          "copy": "Gemini reads the article and says whether it belongs in the newsletter, with a topic and a short summary. If its answer is not in the required shape, a second model on Groq repairs it.",
+          "nodes": [
+            "validate_content",
+            "Google Gemini Chat Model",
+            "content_parser",
+            "Groq Chat Model",
+            "Structured Output Parser"
+          ]
+        },
+        {
+          "title": "Only relevant articles go on",
+          "copy": "An article judged off-topic is dropped. If the model is down, the article is dropped too: nothing is stored on a guess.",
+          "nodes": [
+            "filter_relevant"
+          ]
+        },
+        {
+          "title": "Saved for the newsletter",
+          "copy": "The article becomes a Markdown file in Google Drive, and a row in Supabase records its date, topic, summary, links and where the file is.",
+          "nodes": [
+            "format_markdown",
+            "upload_file",
+            "create_object_info"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "schedule_1",
+            "kind": "trigger",
+            "x": 0,
+            "y": 200
+          },
+          {
+            "id": "get_feed_1",
+            "kind": "http",
+            "x": 260,
+            "y": 200
+          },
+          {
+            "id": "split_results_1",
+            "kind": "split",
+            "x": 520,
+            "y": 200
+          },
+          {
+            "id": "read_feed_1",
+            "kind": "app",
+            "platform": "rss",
+            "x": 780,
+            "y": 200
+          },
+          {
+            "id": "filter_recent_1",
+            "kind": "filter",
+            "x": 1040,
+            "y": 830
+          },
+          {
+            "id": "data_manipulation_1",
+            "kind": "code",
+            "x": 1300,
+            "y": 830
+          },
+          {
+            "id": "schedule_2",
+            "kind": "trigger",
+            "x": 0,
+            "y": 380
+          },
+          {
+            "id": "get_feed_2",
+            "kind": "http",
+            "x": 260,
+            "y": 380
+          },
+          {
+            "id": "split_results_2",
+            "kind": "split",
+            "x": 520,
+            "y": 380
+          },
+          {
+            "id": "read_feed_2",
+            "kind": "app",
+            "platform": "rss",
+            "x": 780,
+            "y": 380
+          },
+          {
+            "id": "filter_recent_2",
+            "kind": "filter",
+            "x": 1040,
+            "y": 1010
+          },
+          {
+            "id": "data_manipulation_2",
+            "kind": "code",
+            "x": 1300,
+            "y": 1010
+          },
+          {
+            "id": "schedule_3",
+            "kind": "trigger",
+            "x": 0,
+            "y": 560
+          },
+          {
+            "id": "get_feed_3",
+            "kind": "http",
+            "x": 260,
+            "y": 560
+          },
+          {
+            "id": "split_results_3",
+            "kind": "split",
+            "x": 520,
+            "y": 560
+          },
+          {
+            "id": "read_feed_3",
+            "kind": "app",
+            "platform": "rss",
+            "x": 780,
+            "y": 560
+          },
+          {
+            "id": "filter_recent_3",
+            "kind": "filter",
+            "x": 1040,
+            "y": 1190
+          },
+          {
+            "id": "data_manipulation_3",
+            "kind": "code",
+            "x": 1300,
+            "y": 1190
+          },
+          {
+            "id": "schedule_4",
+            "kind": "trigger",
+            "x": 0,
+            "y": 740
+          },
+          {
+            "id": "get_blog_1",
+            "kind": "http",
+            "x": 260,
+            "y": 740
+          },
+          {
+            "id": "split_results_4",
+            "kind": "split",
+            "x": 520,
+            "y": 740
+          },
+          {
+            "id": "data_manipulation_4",
+            "kind": "code",
+            "x": 780,
+            "y": 740
+          },
+          {
+            "id": "schedule_5",
+            "kind": "trigger",
+            "x": 0,
+            "y": 920
+          },
+          {
+            "id": "get_blog_2",
+            "kind": "http",
+            "x": 260,
+            "y": 920
+          },
+          {
+            "id": "split_results_5",
+            "kind": "split",
+            "x": 520,
+            "y": 920
+          },
+          {
+            "id": "data_manipulation_5",
+            "kind": "code",
+            "x": 780,
+            "y": 920
+          },
+          {
+            "id": "schedule_6",
+            "kind": "trigger",
+            "x": 0,
+            "y": 1100
+          },
+          {
+            "id": "get_blog_3",
+            "kind": "http",
+            "x": 260,
+            "y": 1100
+          },
+          {
+            "id": "split_results_6",
+            "kind": "split",
+            "x": 520,
+            "y": 1100
+          },
+          {
+            "id": "data_manipulation_6",
+            "kind": "code",
+            "x": 780,
+            "y": 1100
+          },
+          {
+            "id": "schedule_7",
+            "kind": "trigger",
+            "x": 0,
+            "y": 1280
+          },
+          {
+            "id": "get_blog_4",
+            "kind": "http",
+            "x": 260,
+            "y": 1280
+          },
+          {
+            "id": "split_results_7",
+            "kind": "split",
+            "x": 520,
+            "y": 1280
+          },
+          {
+            "id": "data_manipulation_7",
+            "kind": "code",
+            "x": 780,
+            "y": 1280
+          },
+          {
+            "id": "schedule_8",
+            "kind": "trigger",
+            "x": 0,
+            "y": 1460
+          },
+          {
+            "id": "get_blog_5",
+            "kind": "http",
+            "x": 260,
+            "y": 1460
+          },
+          {
+            "id": "split_results_8",
+            "kind": "split",
+            "x": 520,
+            "y": 1460
+          },
+          {
+            "id": "data_manipulation_8",
+            "kind": "code",
+            "x": 780,
+            "y": 1460
+          },
+          {
+            "id": "schedule_9",
+            "kind": "trigger",
+            "x": 0,
+            "y": 1640
+          },
+          {
+            "id": "get_blog_6",
+            "kind": "http",
+            "x": 260,
+            "y": 1640
+          },
+          {
+            "id": "split_results_9",
+            "kind": "split",
+            "x": 520,
+            "y": 1640
+          },
+          {
+            "id": "data_manipulation_9",
+            "kind": "code",
+            "x": 780,
+            "y": 1640
+          },
+          {
+            "id": "schedule_10",
+            "kind": "trigger",
+            "x": 0,
+            "y": 1820
+          },
+          {
+            "id": "get_blog_7",
+            "kind": "http",
+            "x": 260,
+            "y": 1820
+          },
+          {
+            "id": "split_results_10",
+            "kind": "split",
+            "x": 520,
+            "y": 1820
+          },
+          {
+            "id": "data_manipulation_10",
+            "kind": "code",
+            "x": 780,
+            "y": 1820
+          },
+          {
+            "id": "set_item",
+            "kind": "set",
+            "x": 1560,
+            "y": 1010
+          },
+          {
+            "id": "for_each_content",
+            "kind": "loop",
+            "x": 0,
+            "y": 2230
+          },
+          {
+            "id": "get_files",
+            "kind": "app",
+            "platform": "googleDrive",
+            "x": 0,
+            "y": 2410
+          },
+          {
+            "id": "skip_existing",
+            "kind": "branch",
+            "x": 0,
+            "y": 2590
+          },
+          {
+            "id": "set_url",
+            "kind": "set",
+            "x": 0,
+            "y": 2770
+          },
+          {
+            "id": "scrape_url",
+            "kind": "call",
+            "x": 0,
+            "y": 2950
+          },
+          {
+            "id": "filter_scrape_errors",
+            "kind": "branch",
+            "x": 0,
+            "y": 3580
+          },
+          {
+            "id": "validate_content",
+            "kind": "agent",
+            "x": 360,
+            "y": 3360
+          },
+          {
+            "id": "Google Gemini Chat Model",
+            "kind": "part",
+            "platform": "gemini",
+            "x": 260,
+            "y": 3580
+          },
+          {
+            "id": "content_parser",
+            "kind": "part",
+            "x": 460,
+            "y": 3580
+          },
+          {
+            "id": "Groq Chat Model",
+            "kind": "part",
+            "platform": "groq",
+            "x": 360,
+            "y": 3800
+          },
+          {
+            "id": "Structured Output Parser",
+            "kind": "part",
+            "x": 560,
+            "y": 3800
+          },
+          {
+            "id": "filter_relevant",
+            "kind": "branch",
+            "x": 720,
+            "y": 3580
+          },
+          {
+            "id": "format_markdown",
+            "kind": "set",
+            "x": 0,
+            "y": 4210
+          },
+          {
+            "id": "upload_file",
+            "kind": "app",
+            "platform": "googleDrive",
+            "x": 260,
+            "y": 4210
+          },
+          {
+            "id": "create_object_info",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 520,
+            "y": 4210
+          }
+        ],
+        "edges": [
+          {
+            "from": "schedule_1",
+            "to": "get_feed_1",
+            "out": 0
+          },
+          {
+            "from": "get_feed_1",
+            "to": "split_results_1",
+            "out": 0
+          },
+          {
+            "from": "split_results_1",
+            "to": "read_feed_1",
+            "out": 0
+          },
+          {
+            "from": "read_feed_1",
+            "to": "filter_recent_1",
+            "out": 0
+          },
+          {
+            "from": "filter_recent_1",
+            "to": "data_manipulation_1",
+            "out": 0
+          },
+          {
+            "from": "data_manipulation_1",
+            "to": "set_item",
+            "out": 0
+          },
+          {
+            "from": "schedule_2",
+            "to": "get_feed_2",
+            "out": 0
+          },
+          {
+            "from": "get_feed_2",
+            "to": "split_results_2",
+            "out": 0
+          },
+          {
+            "from": "split_results_2",
+            "to": "read_feed_2",
+            "out": 0
+          },
+          {
+            "from": "read_feed_2",
+            "to": "filter_recent_2",
+            "out": 0
+          },
+          {
+            "from": "filter_recent_2",
+            "to": "data_manipulation_2",
+            "out": 0
+          },
+          {
+            "from": "data_manipulation_2",
+            "to": "set_item",
+            "out": 0
+          },
+          {
+            "from": "schedule_3",
+            "to": "get_feed_3",
+            "out": 0
+          },
+          {
+            "from": "get_feed_3",
+            "to": "split_results_3",
+            "out": 0
+          },
+          {
+            "from": "split_results_3",
+            "to": "read_feed_3",
+            "out": 0
+          },
+          {
+            "from": "read_feed_3",
+            "to": "filter_recent_3",
+            "out": 0
+          },
+          {
+            "from": "filter_recent_3",
+            "to": "data_manipulation_3",
+            "out": 0
+          },
+          {
+            "from": "data_manipulation_3",
+            "to": "set_item",
+            "out": 0
+          },
+          {
+            "from": "schedule_4",
+            "to": "get_blog_1",
+            "out": 0
+          },
+          {
+            "from": "get_blog_1",
+            "to": "split_results_4",
+            "out": 0
+          },
+          {
+            "from": "split_results_4",
+            "to": "data_manipulation_4",
+            "out": 0
+          },
+          {
+            "from": "data_manipulation_4",
+            "to": "set_item",
+            "out": 0
+          },
+          {
+            "from": "schedule_5",
+            "to": "get_blog_2",
+            "out": 0
+          },
+          {
+            "from": "get_blog_2",
+            "to": "split_results_5",
+            "out": 0
+          },
+          {
+            "from": "split_results_5",
+            "to": "data_manipulation_5",
+            "out": 0
+          },
+          {
+            "from": "data_manipulation_5",
+            "to": "set_item",
+            "out": 0
+          },
+          {
+            "from": "schedule_6",
+            "to": "get_blog_3",
+            "out": 0
+          },
+          {
+            "from": "get_blog_3",
+            "to": "split_results_6",
+            "out": 0
+          },
+          {
+            "from": "split_results_6",
+            "to": "data_manipulation_6",
+            "out": 0
+          },
+          {
+            "from": "data_manipulation_6",
+            "to": "set_item",
+            "out": 0
+          },
+          {
+            "from": "schedule_7",
+            "to": "get_blog_4",
+            "out": 0
+          },
+          {
+            "from": "get_blog_4",
+            "to": "split_results_7",
+            "out": 0
+          },
+          {
+            "from": "split_results_7",
+            "to": "data_manipulation_7",
+            "out": 0
+          },
+          {
+            "from": "data_manipulation_7",
+            "to": "set_item",
+            "out": 0
+          },
+          {
+            "from": "schedule_8",
+            "to": "get_blog_5",
+            "out": 0
+          },
+          {
+            "from": "get_blog_5",
+            "to": "split_results_8",
+            "out": 0
+          },
+          {
+            "from": "split_results_8",
+            "to": "data_manipulation_8",
+            "out": 0
+          },
+          {
+            "from": "data_manipulation_8",
+            "to": "set_item",
+            "out": 0
+          },
+          {
+            "from": "schedule_9",
+            "to": "get_blog_6",
+            "out": 0
+          },
+          {
+            "from": "get_blog_6",
+            "to": "split_results_9",
+            "out": 0
+          },
+          {
+            "from": "split_results_9",
+            "to": "data_manipulation_9",
+            "out": 0
+          },
+          {
+            "from": "data_manipulation_9",
+            "to": "set_item",
+            "out": 0
+          },
+          {
+            "from": "schedule_10",
+            "to": "get_blog_7",
+            "out": 0
+          },
+          {
+            "from": "get_blog_7",
+            "to": "split_results_10",
+            "out": 0
+          },
+          {
+            "from": "split_results_10",
+            "to": "data_manipulation_10",
+            "out": 0
+          },
+          {
+            "from": "data_manipulation_10",
+            "to": "set_item",
+            "out": 0
+          },
+          {
+            "from": "set_item",
+            "to": "for_each_content",
+            "out": 0
+          },
+          {
+            "from": "for_each_content",
+            "to": "get_files",
+            "out": 1
+          },
+          {
+            "from": "get_files",
+            "to": "skip_existing",
+            "out": 0
+          },
+          {
+            "from": "skip_existing",
+            "to": "set_url",
+            "out": 0
+          },
+          {
+            "from": "set_url",
+            "to": "scrape_url",
+            "out": 0
+          },
+          {
+            "from": "scrape_url",
+            "to": "filter_scrape_errors",
+            "out": 0
+          },
+          {
+            "from": "filter_scrape_errors",
+            "to": "validate_content",
+            "out": 0
+          },
+          {
+            "from": "validate_content",
+            "to": "filter_relevant",
+            "out": 0
+          },
+          {
+            "from": "filter_relevant",
+            "to": "format_markdown",
+            "out": 0
+          },
+          {
+            "from": "format_markdown",
+            "to": "upload_file",
+            "out": 0
+          },
+          {
+            "from": "upload_file",
+            "to": "create_object_info",
+            "out": 0
+          },
+          {
+            "from": "create_object_info",
+            "to": "for_each_content",
+            "out": 0
+          },
+          {
+            "from": "skip_existing",
+            "to": "for_each_content",
+            "out": 1
+          },
+          {
+            "from": "filter_scrape_errors",
+            "to": "for_each_content",
+            "out": 1
+          },
+          {
+            "from": "filter_relevant",
+            "to": "for_each_content",
+            "out": 1
+          },
+          {
+            "from": "Google Gemini Chat Model",
+            "to": "validate_content",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "content_parser",
+            "to": "validate_content",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Groq Chat Model",
+            "to": "content_parser",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Structured Output Parser",
+            "to": "content_parser",
+            "out": 0,
+            "part": "outputParser"
+          }
+        ],
+        "sections": [
+          {
+            "title": "Scrape sources",
+            "nodes": [
+              "schedule_1",
+              "get_feed_1",
+              "split_results_1",
+              "read_feed_1",
+              "filter_recent_1",
+              "data_manipulation_1",
+              "schedule_2",
+              "get_feed_2",
+              "split_results_2",
+              "read_feed_2",
+              "filter_recent_2",
+              "data_manipulation_2",
+              "schedule_3",
+              "get_feed_3",
+              "split_results_3",
+              "read_feed_3",
+              "filter_recent_3",
+              "data_manipulation_3",
+              "schedule_4",
+              "get_blog_1",
+              "split_results_4",
+              "data_manipulation_4",
+              "schedule_5",
+              "get_blog_2",
+              "split_results_5",
+              "data_manipulation_5",
+              "schedule_6",
+              "get_blog_3",
+              "split_results_6",
+              "data_manipulation_6",
+              "schedule_7",
+              "get_blog_4",
+              "split_results_7",
+              "data_manipulation_7",
+              "schedule_8",
+              "get_blog_5",
+              "split_results_8",
+              "data_manipulation_8",
+              "schedule_9",
+              "get_blog_6",
+              "split_results_9",
+              "data_manipulation_9",
+              "schedule_10",
+              "get_blog_7",
+              "split_results_10",
+              "data_manipulation_10",
+              "set_item"
+            ]
+          },
+          {
+            "title": "Scrape content",
+            "nodes": [
+              "for_each_content",
+              "get_files",
+              "skip_existing",
+              "set_url",
+              "scrape_url"
+            ]
+          },
+          {
+            "title": "Validation",
+            "nodes": [
+              "filter_scrape_errors",
+              "validate_content",
+              "filter_relevant"
+            ]
+          },
+          {
+            "title": "Store data",
+            "nodes": [
+              "format_markdown",
+              "upload_file",
+              "create_object_info"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "newsletter-drafting",
+      "name": "Newsletter · AI drafting engine",
+      "tier": "flagship",
+      "system": "newsletter-drafting",
+      "category": "Content and SEO",
+      "kind": null,
+      "summary": "For a chosen date, gathers that day's stored research, proposes the top stories and a subject line, and takes the editor's written feedback on each over Telegram until they approve. It then writes each story from its research and outside sources, adds an intro and a round-up, and sends the editor a draft file with a summary.",
+      "source": "production",
+      "trigger": "formTrigger",
+      "platforms": [
+        "googleDrive",
+        "supabase",
+        "telegram",
+        "gemini",
+        "groq"
+      ],
+      "env": [],
+      "calls": [
+        "scrape-page",
+        "error-handler"
+      ],
+      "folder": "production/newsletter-drafting",
+      "nodeCount": 69,
+      "tests": [
+        "drafts the issue and delivers it as a file when the editor approves",
+        "the editor's feedback on the stories revises the selection before going on",
+        "the editor's feedback on the subject line rewrites it",
+        "a thin day still produces a draft, with fewer stories asked for",
+        "past newsletters stored with the research are left out",
+        "outside sources are scraped, and one that fails does not stop the story",
+        "a story in the wrong shape is repaired by the second model"
+      ],
+      "story": [
+        {
+          "title": "An editor picks a date",
+          "copy": "The form takes the date of the issue and, if the editor wants, a focus for it.",
+          "nodes": [
+            "submit_form"
+          ]
+        },
+        {
+          "title": "That day's research is gathered",
+          "copy": "Google Drive is searched for the date's Markdown files and Supabase for their index rows. Past newsletters stored alongside the research are left out.",
+          "nodes": [
+            "get_files",
+            "filter_only_markdown",
+            "get_markdown_object_info",
+            "exclude_newsletters"
+          ]
+        },
+        {
+          "title": "Every document is read",
+          "copy": "Each file is downloaded and its text extracted, then all of it is joined into one body of research, each document under its id.",
+          "nodes": [
+            "download_markdown_object",
+            "get_markdown_file_content",
+            "prepare_markdown_content",
+            "aggregate_markdown_content",
+            "combine_markdown_content"
+          ]
+        },
+        {
+          "title": "A thin day is handled",
+          "copy": "With fewer than three documents, the prompt tells the model to choose fewer stories instead of padding the issue.",
+          "nodes": [
+            "stories_prompt"
+          ]
+        },
+        {
+          "title": "The top stories are proposed",
+          "copy": "Gemini chooses the stories, names the documents each draws on, and explains the selection.",
+          "nodes": [
+            "pick_top_stories",
+            "set_current_stories",
+            "Google Gemini Chat Model",
+            "stories_parser"
+          ]
+        },
+        {
+          "title": "The editor sees the proposal and the reasoning",
+          "copy": "The selection arrives on Telegram, followed by the reasoning, cut into parts if it is too long for one message.",
+          "nodes": [
+            "share_selected_stories",
+            "split_into_chunks",
+            "share_stories_reasoning"
+          ]
+        },
+        {
+          "title": "The run waits for a written reply",
+          "copy": "The editor answers in their own words. A model reads the reply and decides one thing: approved, or what to change.",
+          "nodes": [
+            "share_stories_approval_feedback",
+            "extract_stories_approval_feedback",
+            "check_stories_feedback"
+          ]
+        },
+        {
+          "title": "Changes go round again",
+          "copy": "If the editor asked for changes, the selection is revised with exactly that feedback and shown again. This repeats until they approve.",
+          "nodes": [
+            "edit_top_stories"
+          ]
+        },
+        {
+          "title": "The subject line gets the same treatment",
+          "copy": "A subject line and preheader are written in the house style, shown with their reasoning, and revised on the editor's feedback until approved.",
+          "nodes": [
+            "subject_examples",
+            "set_subject_line_prompt",
+            "write_subject_line",
+            "set_current_subject_line",
+            "share_subject_line",
+            "share_subject_line_reasoning",
+            "share_subject_line_approval_feedback",
+            "extract_subject_line_approval_feedback",
+            "check_subject_line_feedback",
+            "edit_subject_line",
+            "subject_line_parser"
+          ]
+        },
+        {
+          "title": "Stories are written one at a time",
+          "copy": "The approved stories are split up and taken in order.",
+          "nodes": [
+            "set_selected_stories",
+            "split_stories",
+            "iterate_stories",
+            "set_current_segment"
+          ]
+        },
+        {
+          "title": "A story's own research is loaded",
+          "copy": "Only the documents that story draws on are fetched again and read, so the model writes from the right material and nothing else.",
+          "nodes": [
+            "split_content_ids",
+            "get_segment_content_info",
+            "get_segment_content",
+            "download_segment_content",
+            "get_segment_content_text",
+            "prepare_segment_content_item",
+            "aggregate_segment_text_content"
+          ]
+        },
+        {
+          "title": "Outside sources are read too",
+          "copy": "If the story names outside links, each is scraped in full. A link that fails to load is dropped and the story is still written.",
+          "nodes": [
+            "check_external_urls",
+            "set_segment_external_source_links",
+            "split_segment_external_source_urls",
+            "scrape_segment_external_source_url",
+            "filter_segment_external_source_errors",
+            "aggregate_segment_external_source_content"
+          ]
+        },
+        {
+          "title": "The story is written",
+          "copy": "Gemini writes the headline and body and lists its sources, then a second pass pulls out any images in the research. An answer in the wrong shape is repaired by a second model on Groq.",
+          "nodes": [
+            "write_segment_content",
+            "story_segment_auto_parser",
+            "story_segment_output_parser",
+            "extract_image_urls",
+            "image_urls_auto_parser",
+            "extract_image_urls_parser",
+            "Groq Chat Model"
+          ]
+        },
+        {
+          "title": "Each story is shared as it lands",
+          "copy": "The finished story goes to Telegram straight away, so the editor reads along while the rest is written.",
+          "nodes": [
+            "share_segment_msg",
+            "set_story_segment"
+          ]
+        },
+        {
+          "title": "An intro and a round-up",
+          "copy": "With every story written, the intro is written from them, and the research that was not chosen becomes a short list of other things worth reading.",
+          "nodes": [
+            "write_intro",
+            "intro_auto_parser",
+            "intro_parser",
+            "write_other_top_stories",
+            "other_top_stories_auto_parser",
+            "other_top_stories_parser"
+          ]
+        },
+        {
+          "title": "The draft is delivered",
+          "copy": "Everything is assembled into one Markdown file and sent to the editor on Telegram, followed by a summary of what is in it.",
+          "nodes": [
+            "set_full_newsletter",
+            "create_newsletter_file",
+            "upload_newsletter_file",
+            "share_newsletter_msg"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "submit_form",
+            "kind": "trigger",
+            "x": 0,
+            "y": 200
+          },
+          {
+            "id": "get_files",
+            "kind": "app",
+            "platform": "googleDrive",
+            "x": 260,
+            "y": 200
+          },
+          {
+            "id": "filter_only_markdown",
+            "kind": "filter",
+            "x": 520,
+            "y": 200
+          },
+          {
+            "id": "get_markdown_object_info",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 780,
+            "y": 200
+          },
+          {
+            "id": "exclude_newsletters",
+            "kind": "filter",
+            "x": 1040,
+            "y": 200
+          },
+          {
+            "id": "download_markdown_object",
+            "kind": "app",
+            "platform": "googleDrive",
+            "x": 1300,
+            "y": 200
+          },
+          {
+            "id": "get_markdown_file_content",
+            "kind": "set",
+            "x": 1560,
+            "y": 200
+          },
+          {
+            "id": "prepare_markdown_content",
+            "kind": "set",
+            "x": 1820,
+            "y": 200
+          },
+          {
+            "id": "aggregate_markdown_content",
+            "kind": "merge",
+            "x": 2080,
+            "y": 200
+          },
+          {
+            "id": "combine_markdown_content",
+            "kind": "set",
+            "x": 2340,
+            "y": 200
+          },
+          {
+            "id": "stories_prompt",
+            "kind": "set",
+            "x": 0,
+            "y": 740
+          },
+          {
+            "id": "pick_top_stories",
+            "kind": "agent",
+            "x": 360,
+            "y": 610
+          },
+          {
+            "id": "edit_top_stories",
+            "kind": "agent",
+            "x": 2640,
+            "y": 610
+          },
+          {
+            "id": "set_current_stories",
+            "kind": "set",
+            "x": 720,
+            "y": 740
+          },
+          {
+            "id": "share_selected_stories",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 980,
+            "y": 740
+          },
+          {
+            "id": "split_into_chunks",
+            "kind": "code",
+            "x": 1240,
+            "y": 740
+          },
+          {
+            "id": "share_stories_reasoning",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 1500,
+            "y": 740
+          },
+          {
+            "id": "share_stories_approval_feedback",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 1760,
+            "y": 740
+          },
+          {
+            "id": "extract_stories_approval_feedback",
+            "kind": "agent",
+            "x": 2020,
+            "y": 610
+          },
+          {
+            "id": "check_stories_feedback",
+            "kind": "branch",
+            "x": 2280,
+            "y": 740
+          },
+          {
+            "id": "subject_examples",
+            "kind": "set",
+            "x": 0,
+            "y": 1410
+          },
+          {
+            "id": "set_subject_line_prompt",
+            "kind": "set",
+            "x": 260,
+            "y": 1410
+          },
+          {
+            "id": "write_subject_line",
+            "kind": "agent",
+            "x": 620,
+            "y": 1280
+          },
+          {
+            "id": "edit_subject_line",
+            "kind": "agent",
+            "x": 2640,
+            "y": 1280
+          },
+          {
+            "id": "set_current_subject_line",
+            "kind": "set",
+            "x": 980,
+            "y": 1410
+          },
+          {
+            "id": "share_subject_line",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 1240,
+            "y": 1410
+          },
+          {
+            "id": "share_subject_line_reasoning",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 1500,
+            "y": 1410
+          },
+          {
+            "id": "share_subject_line_approval_feedback",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 1760,
+            "y": 1410
+          },
+          {
+            "id": "extract_subject_line_approval_feedback",
+            "kind": "agent",
+            "x": 2020,
+            "y": 1280
+          },
+          {
+            "id": "check_subject_line_feedback",
+            "kind": "branch",
+            "x": 2280,
+            "y": 1410
+          },
+          {
+            "id": "set_selected_stories",
+            "kind": "set",
+            "x": 0,
+            "y": 2170
+          },
+          {
+            "id": "split_stories",
+            "kind": "split",
+            "x": 260,
+            "y": 2170
+          },
+          {
+            "id": "iterate_stories",
+            "kind": "loop",
+            "x": 520,
+            "y": 2170
+          },
+          {
+            "id": "set_current_segment",
+            "kind": "set",
+            "x": 780,
+            "y": 2170
+          },
+          {
+            "id": "split_content_ids",
+            "kind": "split",
+            "x": 1040,
+            "y": 2170
+          },
+          {
+            "id": "get_segment_content_info",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1300,
+            "y": 2170
+          },
+          {
+            "id": "get_segment_content",
+            "kind": "app",
+            "platform": "googleDrive",
+            "x": 1560,
+            "y": 2170
+          },
+          {
+            "id": "download_segment_content",
+            "kind": "app",
+            "platform": "googleDrive",
+            "x": 1820,
+            "y": 2170
+          },
+          {
+            "id": "get_segment_content_text",
+            "kind": "set",
+            "x": 2080,
+            "y": 2170
+          },
+          {
+            "id": "prepare_segment_content_item",
+            "kind": "set",
+            "x": 2340,
+            "y": 2170
+          },
+          {
+            "id": "aggregate_segment_text_content",
+            "kind": "merge",
+            "x": 2600,
+            "y": 2170
+          },
+          {
+            "id": "check_external_urls",
+            "kind": "branch",
+            "x": 2860,
+            "y": 2170
+          },
+          {
+            "id": "set_segment_external_source_links",
+            "kind": "set",
+            "x": 3120,
+            "y": 2170
+          },
+          {
+            "id": "split_segment_external_source_urls",
+            "kind": "split",
+            "x": 3380,
+            "y": 2170
+          },
+          {
+            "id": "scrape_segment_external_source_url",
+            "kind": "call",
+            "x": 3640,
+            "y": 2170
+          },
+          {
+            "id": "filter_segment_external_source_errors",
+            "kind": "filter",
+            "x": 3900,
+            "y": 2170
+          },
+          {
+            "id": "aggregate_segment_external_source_content",
+            "kind": "merge",
+            "x": 4160,
+            "y": 2170
+          },
+          {
+            "id": "write_segment_content",
+            "kind": "agent",
+            "x": 4520,
+            "y": 1950
+          },
+          {
+            "id": "story_segment_auto_parser",
+            "kind": "part",
+            "x": 4420,
+            "y": 2170
+          },
+          {
+            "id": "story_segment_output_parser",
+            "kind": "part",
+            "x": 4320,
+            "y": 2390
+          },
+          {
+            "id": "extract_image_urls",
+            "kind": "agent",
+            "x": 4980,
+            "y": 1950
+          },
+          {
+            "id": "image_urls_auto_parser",
+            "kind": "part",
+            "x": 4880,
+            "y": 2170
+          },
+          {
+            "id": "extract_image_urls_parser",
+            "kind": "part",
+            "x": 4780,
+            "y": 2390
+          },
+          {
+            "id": "share_segment_msg",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 5340,
+            "y": 2170
+          },
+          {
+            "id": "set_story_segment",
+            "kind": "set",
+            "x": 5600,
+            "y": 2170
+          },
+          {
+            "id": "write_intro",
+            "kind": "agent",
+            "x": 100,
+            "y": 2800
+          },
+          {
+            "id": "intro_auto_parser",
+            "kind": "part",
+            "x": 0,
+            "y": 3020
+          },
+          {
+            "id": "intro_parser",
+            "kind": "part",
+            "x": -100,
+            "y": 3240
+          },
+          {
+            "id": "write_other_top_stories",
+            "kind": "agent",
+            "x": 100,
+            "y": 3650
+          },
+          {
+            "id": "other_top_stories_auto_parser",
+            "kind": "part",
+            "x": 0,
+            "y": 3870
+          },
+          {
+            "id": "other_top_stories_parser",
+            "kind": "part",
+            "x": -100,
+            "y": 4090
+          },
+          {
+            "id": "set_full_newsletter",
+            "kind": "set",
+            "x": 460,
+            "y": 3870
+          },
+          {
+            "id": "create_newsletter_file",
+            "kind": "set",
+            "x": 720,
+            "y": 3870
+          },
+          {
+            "id": "upload_newsletter_file",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 980,
+            "y": 3870
+          },
+          {
+            "id": "share_newsletter_msg",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 1240,
+            "y": 3870
+          },
+          {
+            "id": "Google Gemini Chat Model",
+            "kind": "part",
+            "platform": "gemini",
+            "x": 260,
+            "y": 830
+          },
+          {
+            "id": "stories_parser",
+            "kind": "part",
+            "x": 460,
+            "y": 830
+          },
+          {
+            "id": "subject_line_parser",
+            "kind": "part",
+            "x": 720,
+            "y": 1500
+          },
+          {
+            "id": "Groq Chat Model",
+            "kind": "part",
+            "platform": "groq",
+            "x": 4520,
+            "y": 2390
+          }
+        ],
+        "edges": [
+          {
+            "from": "submit_form",
+            "to": "get_files",
+            "out": 0
+          },
+          {
+            "from": "get_files",
+            "to": "filter_only_markdown",
+            "out": 0
+          },
+          {
+            "from": "filter_only_markdown",
+            "to": "get_markdown_object_info",
+            "out": 0
+          },
+          {
+            "from": "get_markdown_object_info",
+            "to": "exclude_newsletters",
+            "out": 0
+          },
+          {
+            "from": "exclude_newsletters",
+            "to": "download_markdown_object",
+            "out": 0
+          },
+          {
+            "from": "download_markdown_object",
+            "to": "get_markdown_file_content",
+            "out": 0
+          },
+          {
+            "from": "get_markdown_file_content",
+            "to": "prepare_markdown_content",
+            "out": 0
+          },
+          {
+            "from": "prepare_markdown_content",
+            "to": "aggregate_markdown_content",
+            "out": 0
+          },
+          {
+            "from": "aggregate_markdown_content",
+            "to": "combine_markdown_content",
+            "out": 0
+          },
+          {
+            "from": "combine_markdown_content",
+            "to": "stories_prompt",
+            "out": 0
+          },
+          {
+            "from": "stories_prompt",
+            "to": "pick_top_stories",
+            "out": 0
+          },
+          {
+            "from": "pick_top_stories",
+            "to": "set_current_stories",
+            "out": 0
+          },
+          {
+            "from": "set_current_stories",
+            "to": "share_selected_stories",
+            "out": 0
+          },
+          {
+            "from": "share_selected_stories",
+            "to": "split_into_chunks",
+            "out": 0
+          },
+          {
+            "from": "split_into_chunks",
+            "to": "share_stories_reasoning",
+            "out": 0
+          },
+          {
+            "from": "share_stories_reasoning",
+            "to": "share_stories_approval_feedback",
+            "out": 0
+          },
+          {
+            "from": "share_stories_approval_feedback",
+            "to": "extract_stories_approval_feedback",
+            "out": 0
+          },
+          {
+            "from": "extract_stories_approval_feedback",
+            "to": "check_stories_feedback",
+            "out": 0
+          },
+          {
+            "from": "check_stories_feedback",
+            "to": "edit_top_stories",
+            "out": 1
+          },
+          {
+            "from": "edit_top_stories",
+            "to": "set_current_stories",
+            "out": 0
+          },
+          {
+            "from": "check_stories_feedback",
+            "to": "subject_examples",
+            "out": 0
+          },
+          {
+            "from": "subject_examples",
+            "to": "set_subject_line_prompt",
+            "out": 0
+          },
+          {
+            "from": "set_subject_line_prompt",
+            "to": "write_subject_line",
+            "out": 0
+          },
+          {
+            "from": "write_subject_line",
+            "to": "set_current_subject_line",
+            "out": 0
+          },
+          {
+            "from": "set_current_subject_line",
+            "to": "share_subject_line",
+            "out": 0
+          },
+          {
+            "from": "share_subject_line",
+            "to": "share_subject_line_reasoning",
+            "out": 0
+          },
+          {
+            "from": "share_subject_line_reasoning",
+            "to": "share_subject_line_approval_feedback",
+            "out": 0
+          },
+          {
+            "from": "share_subject_line_approval_feedback",
+            "to": "extract_subject_line_approval_feedback",
+            "out": 0
+          },
+          {
+            "from": "extract_subject_line_approval_feedback",
+            "to": "check_subject_line_feedback",
+            "out": 0
+          },
+          {
+            "from": "check_subject_line_feedback",
+            "to": "edit_subject_line",
+            "out": 1
+          },
+          {
+            "from": "edit_subject_line",
+            "to": "set_current_subject_line",
+            "out": 0
+          },
+          {
+            "from": "check_subject_line_feedback",
+            "to": "set_selected_stories",
+            "out": 0
+          },
+          {
+            "from": "set_selected_stories",
+            "to": "split_stories",
+            "out": 0
+          },
+          {
+            "from": "split_stories",
+            "to": "iterate_stories",
+            "out": 0
+          },
+          {
+            "from": "iterate_stories",
+            "to": "set_current_segment",
+            "out": 1
+          },
+          {
+            "from": "set_current_segment",
+            "to": "split_content_ids",
+            "out": 0
+          },
+          {
+            "from": "split_content_ids",
+            "to": "get_segment_content_info",
+            "out": 0
+          },
+          {
+            "from": "get_segment_content_info",
+            "to": "get_segment_content",
+            "out": 0
+          },
+          {
+            "from": "get_segment_content",
+            "to": "download_segment_content",
+            "out": 0
+          },
+          {
+            "from": "download_segment_content",
+            "to": "get_segment_content_text",
+            "out": 0
+          },
+          {
+            "from": "get_segment_content_text",
+            "to": "prepare_segment_content_item",
+            "out": 0
+          },
+          {
+            "from": "prepare_segment_content_item",
+            "to": "aggregate_segment_text_content",
+            "out": 0
+          },
+          {
+            "from": "aggregate_segment_text_content",
+            "to": "check_external_urls",
+            "out": 0
+          },
+          {
+            "from": "check_external_urls",
+            "to": "set_segment_external_source_links",
+            "out": 0
+          },
+          {
+            "from": "set_segment_external_source_links",
+            "to": "split_segment_external_source_urls",
+            "out": 0
+          },
+          {
+            "from": "split_segment_external_source_urls",
+            "to": "scrape_segment_external_source_url",
+            "out": 0
+          },
+          {
+            "from": "scrape_segment_external_source_url",
+            "to": "filter_segment_external_source_errors",
+            "out": 0
+          },
+          {
+            "from": "filter_segment_external_source_errors",
+            "to": "aggregate_segment_external_source_content",
+            "out": 0
+          },
+          {
+            "from": "aggregate_segment_external_source_content",
+            "to": "write_segment_content",
+            "out": 0
+          },
+          {
+            "from": "check_external_urls",
+            "to": "write_segment_content",
+            "out": 1
+          },
+          {
+            "from": "write_segment_content",
+            "to": "extract_image_urls",
+            "out": 0
+          },
+          {
+            "from": "extract_image_urls",
+            "to": "share_segment_msg",
+            "out": 0
+          },
+          {
+            "from": "share_segment_msg",
+            "to": "set_story_segment",
+            "out": 0
+          },
+          {
+            "from": "set_story_segment",
+            "to": "iterate_stories",
+            "out": 0
+          },
+          {
+            "from": "iterate_stories",
+            "to": "write_intro",
+            "out": 0
+          },
+          {
+            "from": "write_intro",
+            "to": "write_other_top_stories",
+            "out": 0
+          },
+          {
+            "from": "write_other_top_stories",
+            "to": "set_full_newsletter",
+            "out": 0
+          },
+          {
+            "from": "set_full_newsletter",
+            "to": "create_newsletter_file",
+            "out": 0
+          },
+          {
+            "from": "create_newsletter_file",
+            "to": "upload_newsletter_file",
+            "out": 0
+          },
+          {
+            "from": "upload_newsletter_file",
+            "to": "share_newsletter_msg",
+            "out": 0
+          },
+          {
+            "from": "story_segment_auto_parser",
+            "to": "write_segment_content",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "story_segment_output_parser",
+            "to": "story_segment_auto_parser",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "image_urls_auto_parser",
+            "to": "extract_image_urls",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "extract_image_urls_parser",
+            "to": "image_urls_auto_parser",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "intro_auto_parser",
+            "to": "write_intro",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "intro_parser",
+            "to": "intro_auto_parser",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "other_top_stories_auto_parser",
+            "to": "write_other_top_stories",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "other_top_stories_parser",
+            "to": "other_top_stories_auto_parser",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Google Gemini Chat Model",
+            "to": "pick_top_stories",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Google Gemini Chat Model",
+            "to": "edit_top_stories",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Google Gemini Chat Model",
+            "to": "write_subject_line",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Google Gemini Chat Model",
+            "to": "edit_subject_line",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Google Gemini Chat Model",
+            "to": "write_segment_content",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Google Gemini Chat Model",
+            "to": "extract_image_urls",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Google Gemini Chat Model",
+            "to": "write_intro",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Google Gemini Chat Model",
+            "to": "write_other_top_stories",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Google Gemini Chat Model",
+            "to": "extract_stories_approval_feedback",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Google Gemini Chat Model",
+            "to": "extract_subject_line_approval_feedback",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "stories_parser",
+            "to": "pick_top_stories",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "stories_parser",
+            "to": "edit_top_stories",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "subject_line_parser",
+            "to": "write_subject_line",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "subject_line_parser",
+            "to": "edit_subject_line",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Groq Chat Model",
+            "to": "story_segment_auto_parser",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Groq Chat Model",
+            "to": "image_urls_auto_parser",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Groq Chat Model",
+            "to": "intro_auto_parser",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Groq Chat Model",
+            "to": "other_top_stories_auto_parser",
+            "out": 0,
+            "part": "languageModel"
+          }
+        ],
+        "sections": [
+          {
+            "title": "Retrieve Markdown content",
+            "nodes": [
+              "submit_form",
+              "get_files",
+              "filter_only_markdown",
+              "get_markdown_object_info",
+              "exclude_newsletters",
+              "download_markdown_object",
+              "get_markdown_file_content",
+              "prepare_markdown_content",
+              "aggregate_markdown_content",
+              "combine_markdown_content"
+            ]
+          },
+          {
+            "title": "Pick top stories",
+            "nodes": [
+              "stories_prompt",
+              "pick_top_stories",
+              "edit_top_stories",
+              "set_current_stories",
+              "share_selected_stories",
+              "split_into_chunks",
+              "share_stories_reasoning",
+              "share_stories_approval_feedback",
+              "extract_stories_approval_feedback",
+              "check_stories_feedback"
+            ]
+          },
+          {
+            "title": "Subject line",
+            "nodes": [
+              "subject_examples",
+              "set_subject_line_prompt",
+              "write_subject_line",
+              "edit_subject_line",
+              "set_current_subject_line",
+              "share_subject_line",
+              "share_subject_line_reasoning",
+              "share_subject_line_approval_feedback",
+              "extract_subject_line_approval_feedback",
+              "check_subject_line_feedback"
+            ]
+          },
+          {
+            "title": "Write each story",
+            "nodes": [
+              "set_selected_stories",
+              "split_stories",
+              "iterate_stories",
+              "set_current_segment",
+              "split_content_ids",
+              "get_segment_content_info",
+              "get_segment_content",
+              "download_segment_content",
+              "get_segment_content_text",
+              "prepare_segment_content_item",
+              "aggregate_segment_text_content",
+              "check_external_urls",
+              "set_segment_external_source_links",
+              "split_segment_external_source_urls",
+              "scrape_segment_external_source_url",
+              "filter_segment_external_source_errors",
+              "aggregate_segment_external_source_content",
+              "write_segment_content",
+              "extract_image_urls",
+              "share_segment_msg",
+              "set_story_segment"
+            ]
+          },
+          {
+            "title": "Write intro section",
+            "nodes": [
+              "write_intro"
+            ]
+          },
+          {
+            "title": "Format full newsletter",
+            "nodes": [
+              "write_other_top_stories",
+              "set_full_newsletter",
+              "create_newsletter_file",
+              "upload_newsletter_file",
+              "share_newsletter_msg"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "revenue-support-agents",
+      "name": "AI agents · Revenue and support pipeline",
+      "tier": "flagship",
+      "system": "revenue-support-agents",
+      "category": "AI agents",
+      "kind": null,
+      "summary": "Two tracks on one canvas. Inbound messages go to a router agent, which hands each one to a RAG agent that answers from the Supabase knowledge base and HubSpot, to a fallback agent, or to a human escalation agent that briefs a person. On weekdays, research and lead gen agents find people who fit the ideal customer profile, and a cold outreach agent writes to them and files them in the CRM.",
+      "source": "production",
+      "trigger": "webhook",
+      "platforms": [
+        "supabase",
+        "openai",
+        "hubspot",
+        "slack",
+        "serpapi",
+        "gmail"
+      ],
+      "env": [],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/revenue-support-agents",
+      "nodeCount": 49,
+      "tests": [
+        "a support question is answered from the knowledge base",
+        "what the knowledge base cannot answer goes to the fallback agent",
+        "an unclear message skips the RAG agent",
+        "a complaint reaches a person even when the router calls it support",
+        "the customer still gets a reply when every model is down",
+        "a qualified lead is emailed, created in HubSpot and logged",
+        "a lead that fails the profile is not contacted, whatever the model scored",
+        "someone already in HubSpot is not emailed again",
+        "an email with a placeholder left in is not sent",
+        "nothing runs without an active customer profile"
+      ],
+      "story": [
+        {
+          "title": "A message arrives",
+          "copy": "The webhook takes the message and puts it in one shape: who it is from, which conversation it belongs to and what it says.",
+          "nodes": [
+            "on_message_received",
+            "normalise_message"
+          ]
+        },
+        {
+          "title": "The router agent reads it",
+          "copy": "It names the intent and how sure it is. It does not answer.",
+          "nodes": [
+            "Router Agent",
+            "router_parser",
+            "OpenAI Chat Model"
+          ]
+        },
+        {
+          "title": "Code decides the route",
+          "copy": "A clear support or sales question goes to be answered. A low-confidence reading goes to the fallback agent. Anything that mentions a refund, a complaint, legal action or asks for a person goes to a human, whatever the model thought.",
+          "nodes": [
+            "read_route",
+            "switch_intent"
+          ]
+        },
+        {
+          "title": "The RAG agent answers from what is known",
+          "copy": "It searches the knowledge base held in Supabase, can look the customer up in HubSpot, and remembers the conversation so far. It is told to say so when the tools do not hold the answer.",
+          "nodes": [
+            "RAG Agent",
+            "conversation_memory",
+            "knowledge_base",
+            "embeddings",
+            "crm_lookup"
+          ]
+        },
+        {
+          "title": "No answer, no guess",
+          "copy": "If the RAG agent could not answer, the message goes to the fallback agent, which asks the one question that would make it answerable or says the team will follow up. If that model is down too, a fixed reply is sent.",
+          "nodes": [
+            "read_answer",
+            "if_answered",
+            "Fallback Agent",
+            "read_fallback"
+          ]
+        },
+        {
+          "title": "A person is briefed",
+          "copy": "The human escalation agent writes a summary for the colleague who picks the conversation up, rates its urgency and writes a holding reply. A task is created in HubSpot and the team is told in Slack.",
+          "nodes": [
+            "Human Escalation Agent",
+            "escalation_parser",
+            "read_escalation",
+            "create_handover_task",
+            "notify_team",
+            "set_escalation_reply"
+          ]
+        },
+        {
+          "title": "Logged and answered",
+          "copy": "Every conversation is stored in Supabase with who handled it, and the reply goes back to the customer.",
+          "nodes": [
+            "log_conversation",
+            "respond_to_customer"
+          ]
+        },
+        {
+          "title": "Outbound starts from the profile",
+          "copy": "On weekdays the ideal customer profile is read from Supabase: industry, size, region, the role to reach and what is on offer. With no active profile, nothing runs.",
+          "nodes": [
+            "daily_prospecting",
+            "get_icp",
+            "if_icp"
+          ]
+        },
+        {
+          "title": "The research agent finds companies",
+          "copy": "It searches the web and fetches each company's own site to confirm the fit before listing it. The list is deduplicated and capped in code.",
+          "nodes": [
+            "Research Agent",
+            "web_search",
+            "fetch_page",
+            "research_parser",
+            "OpenAI Chat Model 1",
+            "read_companies"
+          ]
+        },
+        {
+          "title": "The lead gen agent finds the person",
+          "copy": "For each company it reads the team and contact pages for the person in the right role, and can check the CRM.",
+          "nodes": [
+            "for_each_company",
+            "Lead Gen Agent",
+            "fetch_company_page",
+            "crm_search",
+            "lead_parser"
+          ]
+        },
+        {
+          "title": "The profile is applied in code",
+          "copy": "A lead qualifies only with a named person, an email at the company's own domain, evidence for the role and a fit score of 70 or more. Someone already in HubSpot is not contacted again.",
+          "nodes": [
+            "check_icp",
+            "if_qualified",
+            "find_contact",
+            "if_new_lead"
+          ]
+        },
+        {
+          "title": "The cold outreach agent writes",
+          "copy": "One short email built on what was found about the company. Code checks its length and that no placeholder was left in before it can be sent.",
+          "nodes": [
+            "Cold Outreach Agent",
+            "outreach_parser",
+            "check_email",
+            "if_sendable"
+          ]
+        },
+        {
+          "title": "Sent, filed and logged",
+          "copy": "The email goes out through Gmail, the lead is created in HubSpot, and the send is logged in Supabase.",
+          "nodes": [
+            "send_outreach",
+            "create_lead",
+            "log_outreach"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "on_message_received",
+            "kind": "trigger",
+            "x": 0,
+            "y": 330
+          },
+          {
+            "id": "normalise_message",
+            "kind": "code",
+            "x": 260,
+            "y": 330
+          },
+          {
+            "id": "Router Agent",
+            "kind": "agent",
+            "x": 620,
+            "y": 200
+          },
+          {
+            "id": "router_parser",
+            "kind": "part",
+            "x": 520,
+            "y": 420
+          },
+          {
+            "id": "read_route",
+            "kind": "code",
+            "x": 980,
+            "y": 330
+          },
+          {
+            "id": "switch_intent",
+            "kind": "branch",
+            "x": 1240,
+            "y": 330
+          },
+          {
+            "id": "RAG Agent",
+            "kind": "agent",
+            "x": 300,
+            "y": 870
+          },
+          {
+            "id": "conversation_memory",
+            "kind": "part",
+            "x": 0,
+            "y": 1090
+          },
+          {
+            "id": "knowledge_base",
+            "kind": "part",
+            "platform": "supabase",
+            "x": 200,
+            "y": 1090
+          },
+          {
+            "id": "embeddings",
+            "kind": "part",
+            "platform": "openai",
+            "x": 200,
+            "y": 1310
+          },
+          {
+            "id": "crm_lookup",
+            "kind": "part",
+            "platform": "hubspot",
+            "x": 400,
+            "y": 1090
+          },
+          {
+            "id": "read_answer",
+            "kind": "code",
+            "x": 860,
+            "y": 1220
+          },
+          {
+            "id": "if_answered",
+            "kind": "branch",
+            "x": 1120,
+            "y": 1220
+          },
+          {
+            "id": "Fallback Agent",
+            "kind": "agent",
+            "x": 1380,
+            "y": 1090
+          },
+          {
+            "id": "read_fallback",
+            "kind": "code",
+            "x": 1640,
+            "y": 1220
+          },
+          {
+            "id": "Human Escalation Agent",
+            "kind": "agent",
+            "x": 300,
+            "y": 1490
+          },
+          {
+            "id": "escalation_parser",
+            "kind": "part",
+            "x": 200,
+            "y": 1710
+          },
+          {
+            "id": "read_escalation",
+            "kind": "code",
+            "x": 860,
+            "y": 1400
+          },
+          {
+            "id": "create_handover_task",
+            "kind": "app",
+            "platform": "hubspot",
+            "x": 1120,
+            "y": 1400
+          },
+          {
+            "id": "notify_team",
+            "kind": "app",
+            "platform": "slack",
+            "x": 1380,
+            "y": 1530
+          },
+          {
+            "id": "set_escalation_reply",
+            "kind": "set",
+            "x": 1640,
+            "y": 1400
+          },
+          {
+            "id": "log_conversation",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1900,
+            "y": 1310
+          },
+          {
+            "id": "respond_to_customer",
+            "kind": "respond",
+            "x": 2160,
+            "y": 1310
+          },
+          {
+            "id": "daily_prospecting",
+            "kind": "trigger",
+            "x": 0,
+            "y": 2290
+          },
+          {
+            "id": "get_icp",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 260,
+            "y": 2290
+          },
+          {
+            "id": "if_icp",
+            "kind": "branch",
+            "x": 520,
+            "y": 2290
+          },
+          {
+            "id": "Research Agent",
+            "kind": "agent",
+            "x": 1080,
+            "y": 2160
+          },
+          {
+            "id": "web_search",
+            "kind": "part",
+            "platform": "serpapi",
+            "x": 780,
+            "y": 2380
+          },
+          {
+            "id": "fetch_page",
+            "kind": "part",
+            "x": 980,
+            "y": 2380
+          },
+          {
+            "id": "research_parser",
+            "kind": "part",
+            "x": 1180,
+            "y": 2380
+          },
+          {
+            "id": "read_companies",
+            "kind": "code",
+            "x": 1640,
+            "y": 2290
+          },
+          {
+            "id": "for_each_company",
+            "kind": "loop",
+            "x": 300,
+            "y": 2830
+          },
+          {
+            "id": "Lead Gen Agent",
+            "kind": "agent",
+            "x": 300,
+            "y": 3010
+          },
+          {
+            "id": "fetch_company_page",
+            "kind": "part",
+            "x": 0,
+            "y": 3230
+          },
+          {
+            "id": "crm_search",
+            "kind": "part",
+            "platform": "hubspot",
+            "x": 200,
+            "y": 3230
+          },
+          {
+            "id": "lead_parser",
+            "kind": "part",
+            "x": 400,
+            "y": 3230
+          },
+          {
+            "id": "check_icp",
+            "kind": "code",
+            "x": 300,
+            "y": 3450
+          },
+          {
+            "id": "if_qualified",
+            "kind": "branch",
+            "x": 300,
+            "y": 3630
+          },
+          {
+            "id": "find_contact",
+            "kind": "app",
+            "platform": "hubspot",
+            "x": 300,
+            "y": 3810
+          },
+          {
+            "id": "if_new_lead",
+            "kind": "branch",
+            "x": 300,
+            "y": 3990
+          },
+          {
+            "id": "Cold Outreach Agent",
+            "kind": "agent",
+            "x": 300,
+            "y": 4170
+          },
+          {
+            "id": "outreach_parser",
+            "kind": "part",
+            "x": 200,
+            "y": 4390
+          },
+          {
+            "id": "check_email",
+            "kind": "code",
+            "x": 300,
+            "y": 4610
+          },
+          {
+            "id": "if_sendable",
+            "kind": "branch",
+            "x": 300,
+            "y": 4790
+          },
+          {
+            "id": "send_outreach",
+            "kind": "app",
+            "platform": "gmail",
+            "x": 300,
+            "y": 4970
+          },
+          {
+            "id": "create_lead",
+            "kind": "app",
+            "platform": "hubspot",
+            "x": 300,
+            "y": 5150
+          },
+          {
+            "id": "log_outreach",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 300,
+            "y": 5330
+          },
+          {
+            "id": "OpenAI Chat Model",
+            "kind": "part",
+            "platform": "openai",
+            "x": 720,
+            "y": 420
+          },
+          {
+            "id": "OpenAI Chat Model 1",
+            "kind": "part",
+            "platform": "openai",
+            "x": 1380,
+            "y": 2380
+          }
+        ],
+        "edges": [
+          {
+            "from": "on_message_received",
+            "to": "normalise_message",
+            "out": 0
+          },
+          {
+            "from": "normalise_message",
+            "to": "Router Agent",
+            "out": 0
+          },
+          {
+            "from": "Router Agent",
+            "to": "read_route",
+            "out": 0
+          },
+          {
+            "from": "read_route",
+            "to": "switch_intent",
+            "out": 0
+          },
+          {
+            "from": "switch_intent",
+            "to": "RAG Agent",
+            "out": 0
+          },
+          {
+            "from": "RAG Agent",
+            "to": "read_answer",
+            "out": 0
+          },
+          {
+            "from": "read_answer",
+            "to": "if_answered",
+            "out": 0
+          },
+          {
+            "from": "if_answered",
+            "to": "log_conversation",
+            "out": 0
+          },
+          {
+            "from": "if_answered",
+            "to": "Fallback Agent",
+            "out": 1
+          },
+          {
+            "from": "switch_intent",
+            "to": "Fallback Agent",
+            "out": 2
+          },
+          {
+            "from": "Fallback Agent",
+            "to": "read_fallback",
+            "out": 0
+          },
+          {
+            "from": "read_fallback",
+            "to": "log_conversation",
+            "out": 0
+          },
+          {
+            "from": "switch_intent",
+            "to": "Human Escalation Agent",
+            "out": 1
+          },
+          {
+            "from": "Human Escalation Agent",
+            "to": "read_escalation",
+            "out": 0
+          },
+          {
+            "from": "read_escalation",
+            "to": "create_handover_task",
+            "out": 0
+          },
+          {
+            "from": "create_handover_task",
+            "to": "notify_team",
+            "out": 0
+          },
+          {
+            "from": "notify_team",
+            "to": "set_escalation_reply",
+            "out": 0
+          },
+          {
+            "from": "set_escalation_reply",
+            "to": "log_conversation",
+            "out": 0
+          },
+          {
+            "from": "log_conversation",
+            "to": "respond_to_customer",
+            "out": 0
+          },
+          {
+            "from": "daily_prospecting",
+            "to": "get_icp",
+            "out": 0
+          },
+          {
+            "from": "get_icp",
+            "to": "if_icp",
+            "out": 0
+          },
+          {
+            "from": "if_icp",
+            "to": "Research Agent",
+            "out": 0
+          },
+          {
+            "from": "Research Agent",
+            "to": "read_companies",
+            "out": 0
+          },
+          {
+            "from": "read_companies",
+            "to": "for_each_company",
+            "out": 0
+          },
+          {
+            "from": "for_each_company",
+            "to": "Lead Gen Agent",
+            "out": 1
+          },
+          {
+            "from": "Lead Gen Agent",
+            "to": "check_icp",
+            "out": 0
+          },
+          {
+            "from": "check_icp",
+            "to": "if_qualified",
+            "out": 0
+          },
+          {
+            "from": "if_qualified",
+            "to": "find_contact",
+            "out": 0
+          },
+          {
+            "from": "find_contact",
+            "to": "if_new_lead",
+            "out": 0
+          },
+          {
+            "from": "if_new_lead",
+            "to": "Cold Outreach Agent",
+            "out": 0
+          },
+          {
+            "from": "Cold Outreach Agent",
+            "to": "check_email",
+            "out": 0
+          },
+          {
+            "from": "check_email",
+            "to": "if_sendable",
+            "out": 0
+          },
+          {
+            "from": "if_sendable",
+            "to": "send_outreach",
+            "out": 0
+          },
+          {
+            "from": "send_outreach",
+            "to": "create_lead",
+            "out": 0
+          },
+          {
+            "from": "create_lead",
+            "to": "log_outreach",
+            "out": 0
+          },
+          {
+            "from": "log_outreach",
+            "to": "for_each_company",
+            "out": 0
+          },
+          {
+            "from": "if_qualified",
+            "to": "for_each_company",
+            "out": 1
+          },
+          {
+            "from": "if_new_lead",
+            "to": "for_each_company",
+            "out": 1
+          },
+          {
+            "from": "if_sendable",
+            "to": "for_each_company",
+            "out": 1
+          },
+          {
+            "from": "router_parser",
+            "to": "Router Agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "conversation_memory",
+            "to": "RAG Agent",
+            "out": 0,
+            "part": "memory"
+          },
+          {
+            "from": "knowledge_base",
+            "to": "RAG Agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "embeddings",
+            "to": "knowledge_base",
+            "out": 0,
+            "part": "embedding"
+          },
+          {
+            "from": "crm_lookup",
+            "to": "RAG Agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "escalation_parser",
+            "to": "Human Escalation Agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "web_search",
+            "to": "Research Agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "fetch_page",
+            "to": "Research Agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "research_parser",
+            "to": "Research Agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "fetch_company_page",
+            "to": "Lead Gen Agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "crm_search",
+            "to": "Lead Gen Agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "lead_parser",
+            "to": "Lead Gen Agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "outreach_parser",
+            "to": "Cold Outreach Agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "OpenAI Chat Model",
+            "to": "Router Agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "OpenAI Chat Model",
+            "to": "RAG Agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "OpenAI Chat Model",
+            "to": "Fallback Agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "OpenAI Chat Model",
+            "to": "Human Escalation Agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "OpenAI Chat Model 1",
+            "to": "Research Agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "OpenAI Chat Model 1",
+            "to": "Lead Gen Agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "OpenAI Chat Model 1",
+            "to": "Cold Outreach Agent",
+            "out": 0,
+            "part": "languageModel"
+          }
+        ],
+        "sections": [
+          {
+            "title": "Inbound: route the message",
+            "nodes": [
+              "on_message_received",
+              "normalise_message",
+              "Router Agent",
+              "read_route",
+              "switch_intent"
+            ]
+          },
+          {
+            "title": "Inbound: answer, fall back or hand over",
+            "nodes": [
+              "RAG Agent",
+              "read_answer",
+              "if_answered",
+              "Fallback Agent",
+              "read_fallback",
+              "Human Escalation Agent",
+              "read_escalation",
+              "create_handover_task",
+              "notify_team",
+              "set_escalation_reply",
+              "log_conversation",
+              "respond_to_customer"
+            ]
+          },
+          {
+            "title": "Outbound: research",
+            "nodes": [
+              "daily_prospecting",
+              "get_icp",
+              "if_icp",
+              "Research Agent",
+              "read_companies"
+            ]
+          },
+          {
+            "title": "Outbound: find the person, write, send",
+            "nodes": [
+              "for_each_company",
+              "Lead Gen Agent",
+              "check_icp",
+              "if_qualified",
+              "find_contact",
+              "if_new_lead",
+              "Cold Outreach Agent",
+              "check_email",
+              "if_sendable",
+              "send_outreach",
+              "create_lead",
+              "log_outreach"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "social-intelligence-scraper",
+      "name": "Social intelligence · Omnichannel scraper",
+      "tier": "flagship",
+      "system": "social-intelligence",
+      "category": "Reporting and monitoring",
+      "kind": null,
+      "summary": "Every morning, Apify tasks collect posts from Instagram (posts and reels), X, TikTok, YouTube and Facebook for the brand's own accounts and its competitors'. Each post is routed by account and written to that account's Google Sheet, which is the source a Tableau dashboard reads.",
+      "source": "production",
+      "trigger": "scheduleTrigger",
+      "platforms": [
+        "apify",
+        "googleSheets"
+      ],
+      "env": [],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/social-intelligence",
+      "nodeCount": 47,
+      "tests": [
+        "writes each Instagram post to the sheet of the account it belongs to",
+        "a post from an account that is not tracked is not written",
+        "stops the reels run, then reads what it collected",
+        "every X account is scraped even when one has nothing new",
+        "writes tweets, TikTok and YouTube videos with one set of columns",
+        "Facebook pages are scraped one at a time and the post date is normalised"
+      ],
+      "story": [
+        {
+          "title": "One schedule, five networks",
+          "copy": "Each morning the schedule starts a track for Instagram, X, TikTok, YouTube and Facebook at the same time. Each track starts from its own list of accounts.",
+          "nodes": [
+            "schedule",
+            "set_instagram_accounts",
+            "set_x_accounts",
+            "set_tiktok_accounts",
+            "set_youtube_accounts",
+            "set_facebook_accounts"
+          ]
+        },
+        {
+          "title": "Instagram posts",
+          "copy": "A saved Apify task scrapes the latest posts for all six accounts and hands back its dataset.",
+          "nodes": [
+            "scrape_post"
+          ]
+        },
+        {
+          "title": "Sorted by account",
+          "copy": "A switch sends each post to the branch for the account it belongs to. A post from an account that is not on the list goes nowhere.",
+          "nodes": [
+            "switch_accounts_1"
+          ]
+        },
+        {
+          "title": "Written to that account's sheet",
+          "copy": "Each account has its own spreadsheet. A post already in the sheet is updated with today's numbers instead of being added twice.",
+          "nodes": [
+            "create_row_1",
+            "create_row_2",
+            "create_row_3",
+            "create_row_4",
+            "create_row_5",
+            "create_row_6"
+          ]
+        },
+        {
+          "title": "Instagram reels",
+          "copy": "Reels run as a separate task with a time limit. The run is stopped through Apify's API, then whatever it collected is read and sorted the same way.",
+          "nodes": [
+            "scrape_reel",
+            "abort",
+            "get_dataset_1",
+            "switch_accounts_2",
+            "create_row_7",
+            "create_row_8",
+            "create_row_9",
+            "create_row_10",
+            "create_row_11",
+            "create_row_12"
+          ]
+        },
+        {
+          "title": "X, one account at a time",
+          "copy": "The X accounts are looped over. An account with nothing new hands the loop straight back so the next one still runs.",
+          "nodes": [
+            "split_accounts_1",
+            "for_each_account_1",
+            "scrape_tweet",
+            "switch_accounts_3",
+            "create_row_13",
+            "create_row_14"
+          ]
+        },
+        {
+          "title": "TikTok and YouTube",
+          "copy": "TikTok covers the brand's own account. YouTube covers the brand and one competitor, split by channel.",
+          "nodes": [
+            "scrape_tiktok",
+            "create_row_15",
+            "scrape_yt",
+            "switch_accounts_4",
+            "create_row_16",
+            "create_row_17"
+          ]
+        },
+        {
+          "title": "Facebook, one page at a time",
+          "copy": "Each page is scraped in turn. The post date is put in one format before the row is written, so the dashboard can chart every network on the same axis.",
+          "nodes": [
+            "split_accounts_2",
+            "for_each_account_2",
+            "scrape_fb",
+            "abort1",
+            "get_dataset_2",
+            "set_postdate",
+            "switch_accounts_5",
+            "create_row_18",
+            "create_row_19",
+            "create_row_20",
+            "create_row_21"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "schedule",
+            "kind": "trigger",
+            "x": 0,
+            "y": 740
+          },
+          {
+            "id": "set_instagram_accounts",
+            "kind": "set",
+            "x": 260,
+            "y": 740
+          },
+          {
+            "id": "scrape_post",
+            "kind": "app",
+            "platform": "apify",
+            "x": 520,
+            "y": 650
+          },
+          {
+            "id": "switch_accounts_1",
+            "kind": "branch",
+            "x": 780,
+            "y": 650
+          },
+          {
+            "id": "create_row_1",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1040,
+            "y": 200
+          },
+          {
+            "id": "create_row_2",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1040,
+            "y": 380
+          },
+          {
+            "id": "create_row_3",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1040,
+            "y": 560
+          },
+          {
+            "id": "create_row_4",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1040,
+            "y": 740
+          },
+          {
+            "id": "create_row_5",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1040,
+            "y": 920
+          },
+          {
+            "id": "create_row_6",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1040,
+            "y": 1100
+          },
+          {
+            "id": "scrape_reel",
+            "kind": "app",
+            "platform": "apify",
+            "x": 520,
+            "y": 830
+          },
+          {
+            "id": "abort",
+            "kind": "http",
+            "platform": "apify",
+            "x": 780,
+            "y": 830
+          },
+          {
+            "id": "get_dataset_1",
+            "kind": "app",
+            "platform": "apify",
+            "x": 1040,
+            "y": 1280
+          },
+          {
+            "id": "switch_accounts_2",
+            "kind": "branch",
+            "x": 1300,
+            "y": 740
+          },
+          {
+            "id": "create_row_7",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1560,
+            "y": 290
+          },
+          {
+            "id": "create_row_8",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1560,
+            "y": 470
+          },
+          {
+            "id": "create_row_9",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1560,
+            "y": 650
+          },
+          {
+            "id": "create_row_10",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1560,
+            "y": 830
+          },
+          {
+            "id": "create_row_11",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1560,
+            "y": 1010
+          },
+          {
+            "id": "create_row_12",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1560,
+            "y": 1190
+          },
+          {
+            "id": "set_x_accounts",
+            "kind": "set",
+            "x": 0,
+            "y": 1780
+          },
+          {
+            "id": "split_accounts_1",
+            "kind": "split",
+            "x": 260,
+            "y": 1780
+          },
+          {
+            "id": "for_each_account_1",
+            "kind": "loop",
+            "x": 520,
+            "y": 1780
+          },
+          {
+            "id": "scrape_tweet",
+            "kind": "app",
+            "platform": "apify",
+            "x": 780,
+            "y": 1780
+          },
+          {
+            "id": "switch_accounts_3",
+            "kind": "branch",
+            "x": 1040,
+            "y": 1780
+          },
+          {
+            "id": "create_row_13",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1300,
+            "y": 1690
+          },
+          {
+            "id": "create_row_14",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1300,
+            "y": 1870
+          },
+          {
+            "id": "set_tiktok_accounts",
+            "kind": "set",
+            "x": 0,
+            "y": 2280
+          },
+          {
+            "id": "scrape_tiktok",
+            "kind": "app",
+            "platform": "apify",
+            "x": 260,
+            "y": 2280
+          },
+          {
+            "id": "create_row_15",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 520,
+            "y": 2280
+          },
+          {
+            "id": "set_youtube_accounts",
+            "kind": "set",
+            "x": 0,
+            "y": 2780
+          },
+          {
+            "id": "scrape_yt",
+            "kind": "app",
+            "platform": "apify",
+            "x": 260,
+            "y": 2780
+          },
+          {
+            "id": "switch_accounts_4",
+            "kind": "branch",
+            "x": 520,
+            "y": 2780
+          },
+          {
+            "id": "create_row_16",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 780,
+            "y": 2690
+          },
+          {
+            "id": "create_row_17",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 780,
+            "y": 2870
+          },
+          {
+            "id": "set_facebook_accounts",
+            "kind": "set",
+            "x": 0,
+            "y": 3550
+          },
+          {
+            "id": "split_accounts_2",
+            "kind": "split",
+            "x": 260,
+            "y": 3550
+          },
+          {
+            "id": "for_each_account_2",
+            "kind": "loop",
+            "x": 520,
+            "y": 3550
+          },
+          {
+            "id": "scrape_fb",
+            "kind": "app",
+            "platform": "apify",
+            "x": 780,
+            "y": 3550
+          },
+          {
+            "id": "abort1",
+            "kind": "http",
+            "platform": "apify",
+            "x": 1040,
+            "y": 3550
+          },
+          {
+            "id": "get_dataset_2",
+            "kind": "app",
+            "platform": "apify",
+            "x": 1300,
+            "y": 3550
+          },
+          {
+            "id": "set_postdate",
+            "kind": "set",
+            "x": 1560,
+            "y": 3550
+          },
+          {
+            "id": "switch_accounts_5",
+            "kind": "branch",
+            "x": 1820,
+            "y": 3550
+          },
+          {
+            "id": "create_row_18",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 2080,
+            "y": 3280
+          },
+          {
+            "id": "create_row_19",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 2080,
+            "y": 3460
+          },
+          {
+            "id": "create_row_20",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 2080,
+            "y": 3640
+          },
+          {
+            "id": "create_row_21",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 2080,
+            "y": 3820
+          }
+        ],
+        "edges": [
+          {
+            "from": "schedule",
+            "to": "set_instagram_accounts",
+            "out": 0
+          },
+          {
+            "from": "set_instagram_accounts",
+            "to": "scrape_post",
+            "out": 0
+          },
+          {
+            "from": "scrape_post",
+            "to": "switch_accounts_1",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_1",
+            "to": "create_row_1",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_1",
+            "to": "create_row_2",
+            "out": 1
+          },
+          {
+            "from": "switch_accounts_1",
+            "to": "create_row_3",
+            "out": 2
+          },
+          {
+            "from": "switch_accounts_1",
+            "to": "create_row_4",
+            "out": 3
+          },
+          {
+            "from": "switch_accounts_1",
+            "to": "create_row_5",
+            "out": 4
+          },
+          {
+            "from": "switch_accounts_1",
+            "to": "create_row_6",
+            "out": 5
+          },
+          {
+            "from": "set_instagram_accounts",
+            "to": "scrape_reel",
+            "out": 0
+          },
+          {
+            "from": "scrape_reel",
+            "to": "abort",
+            "out": 0
+          },
+          {
+            "from": "abort",
+            "to": "get_dataset_1",
+            "out": 0
+          },
+          {
+            "from": "get_dataset_1",
+            "to": "switch_accounts_2",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_2",
+            "to": "create_row_7",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_2",
+            "to": "create_row_8",
+            "out": 1
+          },
+          {
+            "from": "switch_accounts_2",
+            "to": "create_row_9",
+            "out": 2
+          },
+          {
+            "from": "switch_accounts_2",
+            "to": "create_row_10",
+            "out": 3
+          },
+          {
+            "from": "switch_accounts_2",
+            "to": "create_row_11",
+            "out": 4
+          },
+          {
+            "from": "switch_accounts_2",
+            "to": "create_row_12",
+            "out": 5
+          },
+          {
+            "from": "schedule",
+            "to": "set_x_accounts",
+            "out": 0
+          },
+          {
+            "from": "set_x_accounts",
+            "to": "split_accounts_1",
+            "out": 0
+          },
+          {
+            "from": "split_accounts_1",
+            "to": "for_each_account_1",
+            "out": 0
+          },
+          {
+            "from": "for_each_account_1",
+            "to": "scrape_tweet",
+            "out": 1
+          },
+          {
+            "from": "scrape_tweet",
+            "to": "switch_accounts_3",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_3",
+            "to": "create_row_13",
+            "out": 0
+          },
+          {
+            "from": "create_row_13",
+            "to": "for_each_account_1",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_3",
+            "to": "create_row_14",
+            "out": 1
+          },
+          {
+            "from": "create_row_14",
+            "to": "for_each_account_1",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_3",
+            "to": "for_each_account_1",
+            "out": 2
+          },
+          {
+            "from": "schedule",
+            "to": "set_tiktok_accounts",
+            "out": 0
+          },
+          {
+            "from": "set_tiktok_accounts",
+            "to": "scrape_tiktok",
+            "out": 0
+          },
+          {
+            "from": "scrape_tiktok",
+            "to": "create_row_15",
+            "out": 0
+          },
+          {
+            "from": "schedule",
+            "to": "set_youtube_accounts",
+            "out": 0
+          },
+          {
+            "from": "set_youtube_accounts",
+            "to": "scrape_yt",
+            "out": 0
+          },
+          {
+            "from": "scrape_yt",
+            "to": "switch_accounts_4",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_4",
+            "to": "create_row_16",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_4",
+            "to": "create_row_17",
+            "out": 1
+          },
+          {
+            "from": "schedule",
+            "to": "set_facebook_accounts",
+            "out": 0
+          },
+          {
+            "from": "set_facebook_accounts",
+            "to": "split_accounts_2",
+            "out": 0
+          },
+          {
+            "from": "split_accounts_2",
+            "to": "for_each_account_2",
+            "out": 0
+          },
+          {
+            "from": "for_each_account_2",
+            "to": "scrape_fb",
+            "out": 1
+          },
+          {
+            "from": "scrape_fb",
+            "to": "abort1",
+            "out": 0
+          },
+          {
+            "from": "abort1",
+            "to": "get_dataset_2",
+            "out": 0
+          },
+          {
+            "from": "get_dataset_2",
+            "to": "set_postdate",
+            "out": 0
+          },
+          {
+            "from": "set_postdate",
+            "to": "switch_accounts_5",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_5",
+            "to": "create_row_18",
+            "out": 0
+          },
+          {
+            "from": "create_row_18",
+            "to": "for_each_account_2",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_5",
+            "to": "create_row_19",
+            "out": 1
+          },
+          {
+            "from": "create_row_19",
+            "to": "for_each_account_2",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_5",
+            "to": "create_row_20",
+            "out": 2
+          },
+          {
+            "from": "create_row_20",
+            "to": "for_each_account_2",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_5",
+            "to": "create_row_21",
+            "out": 3
+          },
+          {
+            "from": "create_row_21",
+            "to": "for_each_account_2",
+            "out": 0
+          },
+          {
+            "from": "switch_accounts_5",
+            "to": "for_each_account_2",
+            "out": 4
+          }
+        ],
+        "sections": [
+          {
+            "title": "Instagram",
+            "nodes": [
+              "schedule",
+              "set_instagram_accounts",
+              "scrape_post",
+              "switch_accounts_1",
+              "create_row_1",
+              "create_row_2",
+              "create_row_3",
+              "create_row_4",
+              "create_row_5",
+              "create_row_6",
+              "scrape_reel",
+              "abort",
+              "get_dataset_1",
+              "switch_accounts_2",
+              "create_row_7",
+              "create_row_8",
+              "create_row_9",
+              "create_row_10",
+              "create_row_11",
+              "create_row_12"
+            ]
+          },
+          {
+            "title": "X",
+            "nodes": [
+              "set_x_accounts",
+              "split_accounts_1",
+              "for_each_account_1",
+              "scrape_tweet",
+              "switch_accounts_3",
+              "create_row_13",
+              "create_row_14"
+            ]
+          },
+          {
+            "title": "TikTok",
+            "nodes": [
+              "set_tiktok_accounts",
+              "scrape_tiktok",
+              "create_row_15"
+            ]
+          },
+          {
+            "title": "YouTube",
+            "nodes": [
+              "set_youtube_accounts",
+              "scrape_yt",
+              "switch_accounts_4",
+              "create_row_16",
+              "create_row_17"
+            ]
+          },
+          {
+            "title": "Facebook",
+            "nodes": [
+              "set_facebook_accounts",
+              "split_accounts_2",
+              "for_each_account_2",
+              "scrape_fb",
+              "abort1",
+              "get_dataset_2",
+              "set_postdate",
+              "switch_accounts_5",
+              "create_row_18",
+              "create_row_19",
+              "create_row_20",
+              "create_row_21"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "community-provisioning",
+      "name": "Community · Onboarding and provisioning",
+      "tier": "flagship",
+      "system": "community-provisioning",
+      "category": "Community",
+      "kind": null,
+      "summary": "When a Stripe charge succeeds, reads what was bought, creates or updates the buyer in Supabase, stores a secret code that the Discord bot exchanges for the right roles, and sends a Skool invitation for each community tier in the purchase.",
+      "source": "production",
+      "trigger": "stripeTrigger",
+      "platforms": [
+        "stripe",
+        "supabase",
+        "skool"
+      ],
+      "env": [],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/community-provisioning",
+      "nodeCount": 30,
+      "tests": [
+        "a new buyer gets a user record, a bot code and a Skool invitation",
+        "a returning buyer keeps what they own and gains the new product",
+        "two tiers in one purchase send two invitations to two groups",
+        "bot access alone stores a 32-character code and sends no invitation",
+        "a purchase of something else changes nothing",
+        "retries the invitation when Skool is briefly down"
+      ],
+      "story": [
+        {
+          "title": "A charge succeeds",
+          "copy": "Stripe sends the charge. It does not say what was bought, so the workflow finds the checkout it belongs to and reads its line items.",
+          "nodes": [
+            "on_charge_succeeded",
+            "get_checkout_session",
+            "get_line_items",
+            "split_line_items"
+          ]
+        },
+        {
+          "title": "Each product is sorted",
+          "copy": "Community memberships go one way and bot access the other. Each is labelled with what it grants: a tier and its Skool group, or a Discord role.",
+          "nodes": [
+            "filter_community_products",
+            "set_community_access",
+            "filter_bot_products",
+            "set_bot_access",
+            "merge_products",
+            "aggregate_products"
+          ]
+        },
+        {
+          "title": "New buyer or returning one",
+          "copy": "The buyer is looked up in Supabase by email. A returning buyer keeps what they already own and the new products are added to it.",
+          "nodes": [
+            "set_buyer",
+            "get_user",
+            "if_existing_user",
+            "set_existing_user",
+            "set_new_user",
+            "merge_user"
+          ]
+        },
+        {
+          "title": "A secret code for the bot",
+          "copy": "A random code is generated for this purchase, and everything it grants is gathered into one record.",
+          "nodes": [
+            "generate_secret_code",
+            "prepare_access"
+          ]
+        },
+        {
+          "title": "The database is updated",
+          "copy": "The user is created or updated. If the purchase includes bot access, the code and its roles are stored where the Discord bot reads them, so the member can redeem the code for the right roles.",
+          "nodes": [
+            "upsert_user",
+            "if_bot_access",
+            "store_secret_code"
+          ]
+        },
+        {
+          "title": "One invitation per tier",
+          "copy": "Each community tier in the purchase gets its own Skool invitation to its own group, sent one at a time and logged.",
+          "nodes": [
+            "if_community",
+            "set_invites",
+            "split_invites",
+            "for_each_invite",
+            "switch_tier",
+            "invite_skool_standard",
+            "invite_skool_premium",
+            "log_invite"
+          ]
+        },
+        {
+          "title": "The user is marked invited",
+          "copy": "Once every invitation has gone, the user's record says so.",
+          "nodes": [
+            "update_user_status"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "on_charge_succeeded",
+            "kind": "trigger",
+            "platform": "stripe",
+            "x": 0,
+            "y": 290
+          },
+          {
+            "id": "get_checkout_session",
+            "kind": "http",
+            "platform": "stripe",
+            "x": 260,
+            "y": 290
+          },
+          {
+            "id": "get_line_items",
+            "kind": "http",
+            "platform": "stripe",
+            "x": 520,
+            "y": 290
+          },
+          {
+            "id": "split_line_items",
+            "kind": "split",
+            "x": 780,
+            "y": 290
+          },
+          {
+            "id": "filter_community_products",
+            "kind": "filter",
+            "x": 1040,
+            "y": 200
+          },
+          {
+            "id": "set_community_access",
+            "kind": "set",
+            "x": 1300,
+            "y": 200
+          },
+          {
+            "id": "filter_bot_products",
+            "kind": "filter",
+            "x": 1040,
+            "y": 380
+          },
+          {
+            "id": "set_bot_access",
+            "kind": "set",
+            "x": 1300,
+            "y": 380
+          },
+          {
+            "id": "merge_products",
+            "kind": "merge",
+            "x": 1560,
+            "y": 290
+          },
+          {
+            "id": "aggregate_products",
+            "kind": "merge",
+            "x": 1820,
+            "y": 290
+          },
+          {
+            "id": "set_buyer",
+            "kind": "set",
+            "x": 0,
+            "y": 880
+          },
+          {
+            "id": "get_user",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 260,
+            "y": 880
+          },
+          {
+            "id": "if_existing_user",
+            "kind": "branch",
+            "x": 520,
+            "y": 880
+          },
+          {
+            "id": "set_existing_user",
+            "kind": "set",
+            "x": 780,
+            "y": 790
+          },
+          {
+            "id": "set_new_user",
+            "kind": "set",
+            "x": 780,
+            "y": 970
+          },
+          {
+            "id": "merge_user",
+            "kind": "merge",
+            "x": 1040,
+            "y": 880
+          },
+          {
+            "id": "generate_secret_code",
+            "kind": "code",
+            "x": 1300,
+            "y": 880
+          },
+          {
+            "id": "prepare_access",
+            "kind": "code",
+            "x": 1560,
+            "y": 880
+          },
+          {
+            "id": "upsert_user",
+            "kind": "http",
+            "platform": "supabase",
+            "x": 0,
+            "y": 1470
+          },
+          {
+            "id": "if_bot_access",
+            "kind": "branch",
+            "x": 260,
+            "y": 1380
+          },
+          {
+            "id": "store_secret_code",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 520,
+            "y": 1380
+          },
+          {
+            "id": "if_community",
+            "kind": "branch",
+            "x": 260,
+            "y": 1560
+          },
+          {
+            "id": "set_invites",
+            "kind": "set",
+            "x": 520,
+            "y": 1560
+          },
+          {
+            "id": "split_invites",
+            "kind": "split",
+            "x": 780,
+            "y": 1470
+          },
+          {
+            "id": "for_each_invite",
+            "kind": "loop",
+            "x": 1040,
+            "y": 1470
+          },
+          {
+            "id": "switch_tier",
+            "kind": "branch",
+            "x": 1300,
+            "y": 1380
+          },
+          {
+            "id": "invite_skool_standard",
+            "kind": "http",
+            "platform": "skool",
+            "x": 1560,
+            "y": 1380
+          },
+          {
+            "id": "invite_skool_premium",
+            "kind": "http",
+            "platform": "skool",
+            "x": 1560,
+            "y": 1560
+          },
+          {
+            "id": "log_invite",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1820,
+            "y": 1470
+          },
+          {
+            "id": "update_user_status",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1300,
+            "y": 1560
+          }
+        ],
+        "edges": [
+          {
+            "from": "on_charge_succeeded",
+            "to": "get_checkout_session",
+            "out": 0
+          },
+          {
+            "from": "get_checkout_session",
+            "to": "get_line_items",
+            "out": 0
+          },
+          {
+            "from": "get_line_items",
+            "to": "split_line_items",
+            "out": 0
+          },
+          {
+            "from": "split_line_items",
+            "to": "filter_community_products",
+            "out": 0
+          },
+          {
+            "from": "filter_community_products",
+            "to": "set_community_access",
+            "out": 0
+          },
+          {
+            "from": "set_community_access",
+            "to": "merge_products",
+            "out": 0
+          },
+          {
+            "from": "split_line_items",
+            "to": "filter_bot_products",
+            "out": 0
+          },
+          {
+            "from": "filter_bot_products",
+            "to": "set_bot_access",
+            "out": 0
+          },
+          {
+            "from": "set_bot_access",
+            "to": "merge_products",
+            "out": 0
+          },
+          {
+            "from": "merge_products",
+            "to": "aggregate_products",
+            "out": 0
+          },
+          {
+            "from": "aggregate_products",
+            "to": "set_buyer",
+            "out": 0
+          },
+          {
+            "from": "set_buyer",
+            "to": "get_user",
+            "out": 0
+          },
+          {
+            "from": "get_user",
+            "to": "if_existing_user",
+            "out": 0
+          },
+          {
+            "from": "if_existing_user",
+            "to": "set_existing_user",
+            "out": 0
+          },
+          {
+            "from": "set_existing_user",
+            "to": "merge_user",
+            "out": 0
+          },
+          {
+            "from": "if_existing_user",
+            "to": "set_new_user",
+            "out": 1
+          },
+          {
+            "from": "set_new_user",
+            "to": "merge_user",
+            "out": 0
+          },
+          {
+            "from": "merge_user",
+            "to": "generate_secret_code",
+            "out": 0
+          },
+          {
+            "from": "generate_secret_code",
+            "to": "prepare_access",
+            "out": 0
+          },
+          {
+            "from": "prepare_access",
+            "to": "upsert_user",
+            "out": 0
+          },
+          {
+            "from": "upsert_user",
+            "to": "if_bot_access",
+            "out": 0
+          },
+          {
+            "from": "if_bot_access",
+            "to": "store_secret_code",
+            "out": 0
+          },
+          {
+            "from": "upsert_user",
+            "to": "if_community",
+            "out": 0
+          },
+          {
+            "from": "if_community",
+            "to": "set_invites",
+            "out": 0
+          },
+          {
+            "from": "set_invites",
+            "to": "split_invites",
+            "out": 0
+          },
+          {
+            "from": "split_invites",
+            "to": "for_each_invite",
+            "out": 0
+          },
+          {
+            "from": "for_each_invite",
+            "to": "switch_tier",
+            "out": 1
+          },
+          {
+            "from": "switch_tier",
+            "to": "invite_skool_standard",
+            "out": 0
+          },
+          {
+            "from": "invite_skool_standard",
+            "to": "log_invite",
+            "out": 0
+          },
+          {
+            "from": "switch_tier",
+            "to": "invite_skool_premium",
+            "out": 1
+          },
+          {
+            "from": "invite_skool_premium",
+            "to": "log_invite",
+            "out": 0
+          },
+          {
+            "from": "log_invite",
+            "to": "for_each_invite",
+            "out": 0
+          },
+          {
+            "from": "for_each_invite",
+            "to": "update_user_status",
+            "out": 0
+          }
+        ],
+        "sections": [
+          {
+            "title": "Get checkout details",
+            "nodes": [
+              "on_charge_succeeded",
+              "get_checkout_session",
+              "get_line_items",
+              "split_line_items",
+              "filter_community_products",
+              "set_community_access",
+              "filter_bot_products",
+              "set_bot_access",
+              "merge_products",
+              "aggregate_products"
+            ]
+          },
+          {
+            "title": "Data manipulation",
+            "nodes": [
+              "set_buyer",
+              "get_user",
+              "if_existing_user",
+              "set_existing_user",
+              "set_new_user",
+              "merge_user",
+              "generate_secret_code",
+              "prepare_access"
+            ]
+          },
+          {
+            "title": "Database update and invitations",
+            "nodes": [
+              "upsert_user",
+              "if_bot_access",
+              "store_secret_code",
+              "if_community",
+              "set_invites",
+              "split_invites",
+              "for_each_invite",
+              "switch_tier",
+              "invite_skool_standard",
+              "invite_skool_premium",
+              "log_invite",
+              "update_user_status"
+            ]
+          }
+        ]
+      }
+    },
     {
       "id": "ai-sales-team",
       "name": "AI sales team · Research, outreach and replies",
@@ -10904,6 +15297,1445 @@
       }
     },
     {
+      "id": "unified-event-api",
+      "name": "Events · Unified event API",
+      "tier": "production",
+      "system": null,
+      "category": "Data and operations",
+      "kind": null,
+      "summary": "One web address that returns every active event. It signs in to the self-hosted event platform, reads its events, adds the Luma events kept in a Google Sheet, drops the past and inactive ones, and answers with one list in one format.",
+      "source": "production",
+      "trigger": "webhook",
+      "platforms": [
+        "googleSheets"
+      ],
+      "env": [
+        "EVENTS_BASE_URL",
+        "EVENTS_EMAIL",
+        "EVENTS_PASSWORD"
+      ],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/operations",
+      "nodeCount": 9,
+      "tests": [
+        "answers with platform and Luma events in one list",
+        "leaves out past and inactive events",
+        "answers with an empty list when nothing is active",
+        "sends the session token it was given"
+      ],
+      "story": [
+        {
+          "title": "A request comes in",
+          "copy": "The workflow signs in to the event platform with its own account and keeps the session token for the next call.",
+          "nodes": [
+            "get_request",
+            "platform_login"
+          ]
+        },
+        {
+          "title": "Two sources are read",
+          "copy": "The platform's own events come from its API. The Luma events are read from the Google Sheet they are kept in.",
+          "nodes": [
+            "get_events",
+            "get_external_events"
+          ]
+        },
+        {
+          "title": "One list goes back",
+          "copy": "Both sets are put in one shape and split into single events. Past and inactive ones are dropped, and what is left is the answer. No active events is an empty list, not an error.",
+          "nodes": [
+            "set_data",
+            "split_data",
+            "check_active",
+            "data_manipulation",
+            "respond"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "get_request",
+            "kind": "trigger",
+            "x": 0,
+            "y": 200
+          },
+          {
+            "id": "platform_login",
+            "kind": "http",
+            "x": 260,
+            "y": 200
+          },
+          {
+            "id": "get_events",
+            "kind": "http",
+            "x": 0,
+            "y": 610
+          },
+          {
+            "id": "get_external_events",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 260,
+            "y": 610
+          },
+          {
+            "id": "set_data",
+            "kind": "set",
+            "x": 0,
+            "y": 1020
+          },
+          {
+            "id": "split_data",
+            "kind": "split",
+            "x": 260,
+            "y": 1020
+          },
+          {
+            "id": "check_active",
+            "kind": "filter",
+            "x": 520,
+            "y": 1020
+          },
+          {
+            "id": "data_manipulation",
+            "kind": "set",
+            "x": 780,
+            "y": 1020
+          },
+          {
+            "id": "respond",
+            "kind": "respond",
+            "x": 1040,
+            "y": 1020
+          }
+        ],
+        "edges": [
+          {
+            "from": "get_request",
+            "to": "platform_login",
+            "out": 0
+          },
+          {
+            "from": "platform_login",
+            "to": "get_events",
+            "out": 0
+          },
+          {
+            "from": "get_events",
+            "to": "get_external_events",
+            "out": 0
+          },
+          {
+            "from": "get_external_events",
+            "to": "set_data",
+            "out": 0
+          },
+          {
+            "from": "set_data",
+            "to": "split_data",
+            "out": 0
+          },
+          {
+            "from": "split_data",
+            "to": "check_active",
+            "out": 0
+          },
+          {
+            "from": "check_active",
+            "to": "data_manipulation",
+            "out": 0
+          },
+          {
+            "from": "data_manipulation",
+            "to": "respond",
+            "out": 0
+          }
+        ],
+        "sections": [
+          {
+            "title": "Authentication",
+            "nodes": [
+              "get_request",
+              "platform_login"
+            ]
+          },
+          {
+            "title": "Get events",
+            "nodes": [
+              "get_events",
+              "get_external_events"
+            ]
+          },
+          {
+            "title": "Data manipulation",
+            "nodes": [
+              "set_data",
+              "split_data",
+              "check_active",
+              "data_manipulation",
+              "respond"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "post-purchase-email",
+      "name": "Payments · Post-purchase email",
+      "tier": "production",
+      "system": null,
+      "category": "Data and operations",
+      "kind": null,
+      "summary": "When a Stripe checkout completes, reads the line items, checks which product was bought, and sends that product's email through SendGrid. A purchase of anything else sends nothing.",
+      "source": "production",
+      "trigger": "stripeTrigger",
+      "platforms": [
+        "stripe",
+        "sendgrid"
+      ],
+      "env": [],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/operations",
+      "nodeCount": 4,
+      "tests": [
+        "sends the product's email to the buyer",
+        "a different product sends nothing",
+        "retries when SendGrid is briefly down"
+      ],
+      "story": [
+        {
+          "title": "A checkout completes",
+          "copy": "Stripe sends the event. The event does not say what was bought, so the line items are fetched from Stripe.",
+          "nodes": [
+            "on_checkout_success",
+            "get_line_items"
+          ]
+        },
+        {
+          "title": "Only the right product",
+          "copy": "The line items are checked for the product this email belongs to. Anything else stops here.",
+          "nodes": [
+            "if_product"
+          ]
+        },
+        {
+          "title": "The email goes out",
+          "copy": "SendGrid sends the product's template to the buyer's address. The call retries if SendGrid is briefly down.",
+          "nodes": [
+            "send_email"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "on_checkout_success",
+            "kind": "trigger",
+            "platform": "stripe",
+            "x": 0,
+            "y": 200
+          },
+          {
+            "id": "get_line_items",
+            "kind": "http",
+            "platform": "stripe",
+            "x": 260,
+            "y": 200
+          },
+          {
+            "id": "if_product",
+            "kind": "filter",
+            "x": 0,
+            "y": 610
+          },
+          {
+            "id": "send_email",
+            "kind": "http",
+            "platform": "sendgrid",
+            "x": 260,
+            "y": 610
+          }
+        ],
+        "edges": [
+          {
+            "from": "on_checkout_success",
+            "to": "get_line_items",
+            "out": 0
+          },
+          {
+            "from": "get_line_items",
+            "to": "if_product",
+            "out": 0
+          },
+          {
+            "from": "if_product",
+            "to": "send_email",
+            "out": 0
+          }
+        ],
+        "sections": [
+          {
+            "title": "Get checkout details",
+            "nodes": [
+              "on_checkout_success",
+              "get_line_items"
+            ]
+          },
+          {
+            "title": "Email",
+            "nodes": [
+              "if_product",
+              "send_email"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cross-team-data-sync",
+      "name": "Data · Cross-team data sync",
+      "tier": "production",
+      "system": null,
+      "category": "Data and operations",
+      "kind": null,
+      "summary": "On a schedule, reads claims and users from the Bubble app's database, joins and sorts them, then clears a shared Google Sheet and refills it, so people without database access always see current data.",
+      "source": "production",
+      "trigger": "scheduleTrigger",
+      "platforms": [
+        "bubble",
+        "googleSheets"
+      ],
+      "env": [],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/operations",
+      "nodeCount": 8,
+      "tests": [
+        "clears the sheet, then writes each claim with its user",
+        "sorts the newest claim first",
+        "an empty database leaves the sheet alone"
+      ],
+      "story": [
+        {
+          "title": "Two tables are read",
+          "copy": "On each run the claims and the users are read from the Bubble database.",
+          "nodes": [
+            "schedule",
+            "get_claims",
+            "get_users"
+          ]
+        },
+        {
+          "title": "Joined and sorted",
+          "copy": "Each claim is matched to its user, and the result is sorted newest first.",
+          "nodes": [
+            "merge",
+            "sort"
+          ]
+        },
+        {
+          "title": "The sheet is replaced",
+          "copy": "The old rows are cleared, and only once that has finished are the new rows written. If the database returns nothing, the sheet is left as it was.",
+          "nodes": [
+            "clear_sheet",
+            "merge_2",
+            "create_row"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "schedule",
+            "kind": "trigger",
+            "x": 0,
+            "y": 180
+          },
+          {
+            "id": "get_claims",
+            "kind": "app",
+            "platform": "bubble",
+            "x": 260,
+            "y": 90
+          },
+          {
+            "id": "get_users",
+            "kind": "app",
+            "platform": "bubble",
+            "x": 260,
+            "y": 270
+          },
+          {
+            "id": "merge",
+            "kind": "merge",
+            "x": 520,
+            "y": 180
+          },
+          {
+            "id": "sort",
+            "kind": "set",
+            "x": 780,
+            "y": 180
+          },
+          {
+            "id": "clear_sheet",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1040,
+            "y": 180
+          },
+          {
+            "id": "merge_2",
+            "kind": "merge",
+            "x": 1300,
+            "y": 180
+          },
+          {
+            "id": "create_row",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1560,
+            "y": 180
+          }
+        ],
+        "edges": [
+          {
+            "from": "schedule",
+            "to": "get_claims",
+            "out": 0
+          },
+          {
+            "from": "get_claims",
+            "to": "merge",
+            "out": 0
+          },
+          {
+            "from": "schedule",
+            "to": "get_users",
+            "out": 0
+          },
+          {
+            "from": "get_users",
+            "to": "merge",
+            "out": 0
+          },
+          {
+            "from": "merge",
+            "to": "sort",
+            "out": 0
+          },
+          {
+            "from": "sort",
+            "to": "merge_2",
+            "out": 0
+          },
+          {
+            "from": "sort",
+            "to": "clear_sheet",
+            "out": 0
+          },
+          {
+            "from": "clear_sheet",
+            "to": "merge_2",
+            "out": 0
+          },
+          {
+            "from": "merge_2",
+            "to": "create_row",
+            "out": 0
+          }
+        ],
+        "sections": []
+      }
+    },
+    {
+      "id": "social-content-engine",
+      "name": "Social · News to social content engine",
+      "tier": "production",
+      "system": null,
+      "category": "Content and SEO",
+      "kind": null,
+      "summary": "A form request picks a media brand. The workflow applies that brand's voice, reads its news feed, and for each article drafts a caption and an image with Gemini, checks its own output, and sends the draft to the social manager on Telegram. Approved moves to the next article; rejected is drafted again.",
+      "source": "production",
+      "trigger": "formTrigger",
+      "platforms": [
+        "rss",
+        "gemini",
+        "telegram"
+      ],
+      "env": [],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/social-content",
+      "nodeCount": 18,
+      "tests": [
+        "drafts each article and moves on when approved",
+        "a rejected draft is made again for the same article",
+        "an empty caption is redone before anyone sees it",
+        "each brand reads its own feed with its own voice"
+      ],
+      "story": [
+        {
+          "title": "A request names the brand",
+          "copy": "The form asks which media house the posts are for and how many. The switch sends the request to that brand's profile: its voice, its visual style, its hashtags and its feed.",
+          "nodes": [
+            "submit_form",
+            "switch_mediahouse",
+            "mediahouse_1",
+            "mediahouse_2",
+            "mediahouse_3",
+            "store_temp"
+          ]
+        },
+        {
+          "title": "The news is fetched",
+          "copy": "The brand's feed is read and cut to the number of posts asked for.",
+          "nodes": [
+            "get_news",
+            "limit_output"
+          ]
+        },
+        {
+          "title": "One article at a time",
+          "copy": "Each article gets a caption in the brand's voice and an image in its style, both from Gemini.",
+          "nodes": [
+            "for_each_news",
+            "generate_caption",
+            "generate_image"
+          ]
+        },
+        {
+          "title": "It checks its own work",
+          "copy": "An empty caption, one that is too long, a refusal or a missing image never reaches a person. The draft is made again.",
+          "nodes": [
+            "if_valid"
+          ]
+        },
+        {
+          "title": "A person decides",
+          "copy": "The image and the caption arrive on Telegram with Approve and Decline. The run waits for the answer.",
+          "nodes": [
+            "send_image",
+            "send_caption",
+            "wait_approval"
+          ]
+        },
+        {
+          "title": "Approved moves on, rejected is redone",
+          "copy": "Approval moves to the next article. A rejection goes back to Gemini for a new draft of the same article. An unanswered request ends the run instead of looping.",
+          "nodes": [
+            "if_approved",
+            "timeout",
+            "send_done"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "submit_form",
+            "kind": "trigger",
+            "x": 0,
+            "y": 380
+          },
+          {
+            "id": "switch_mediahouse",
+            "kind": "branch",
+            "x": 260,
+            "y": 380
+          },
+          {
+            "id": "mediahouse_1",
+            "kind": "set",
+            "x": 520,
+            "y": 200
+          },
+          {
+            "id": "mediahouse_2",
+            "kind": "set",
+            "x": 520,
+            "y": 380
+          },
+          {
+            "id": "mediahouse_3",
+            "kind": "set",
+            "x": 520,
+            "y": 560
+          },
+          {
+            "id": "store_temp",
+            "kind": "set",
+            "x": 780,
+            "y": 380
+          },
+          {
+            "id": "get_news",
+            "kind": "app",
+            "platform": "rss",
+            "x": 1040,
+            "y": 380
+          },
+          {
+            "id": "limit_output",
+            "kind": "filter",
+            "x": 1300,
+            "y": 380
+          },
+          {
+            "id": "for_each_news",
+            "kind": "loop",
+            "x": 0,
+            "y": 1060
+          },
+          {
+            "id": "generate_caption",
+            "kind": "app",
+            "platform": "gemini",
+            "x": 260,
+            "y": 970
+          },
+          {
+            "id": "generate_image",
+            "kind": "app",
+            "platform": "gemini",
+            "x": 520,
+            "y": 1060
+          },
+          {
+            "id": "if_valid",
+            "kind": "branch",
+            "x": 780,
+            "y": 1060
+          },
+          {
+            "id": "send_image",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 0,
+            "y": 1560
+          },
+          {
+            "id": "send_caption",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 260,
+            "y": 1560
+          },
+          {
+            "id": "wait_approval",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 520,
+            "y": 1560
+          },
+          {
+            "id": "if_approved",
+            "kind": "branch",
+            "x": 780,
+            "y": 1560
+          },
+          {
+            "id": "timeout",
+            "kind": "filter",
+            "x": 1040,
+            "y": 1560
+          },
+          {
+            "id": "send_done",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 260,
+            "y": 1150
+          }
+        ],
+        "edges": [
+          {
+            "from": "submit_form",
+            "to": "switch_mediahouse",
+            "out": 0
+          },
+          {
+            "from": "switch_mediahouse",
+            "to": "mediahouse_1",
+            "out": 0
+          },
+          {
+            "from": "mediahouse_1",
+            "to": "store_temp",
+            "out": 0
+          },
+          {
+            "from": "switch_mediahouse",
+            "to": "mediahouse_2",
+            "out": 1
+          },
+          {
+            "from": "mediahouse_2",
+            "to": "store_temp",
+            "out": 0
+          },
+          {
+            "from": "switch_mediahouse",
+            "to": "mediahouse_3",
+            "out": 2
+          },
+          {
+            "from": "mediahouse_3",
+            "to": "store_temp",
+            "out": 0
+          },
+          {
+            "from": "store_temp",
+            "to": "get_news",
+            "out": 0
+          },
+          {
+            "from": "get_news",
+            "to": "limit_output",
+            "out": 0
+          },
+          {
+            "from": "limit_output",
+            "to": "for_each_news",
+            "out": 0
+          },
+          {
+            "from": "for_each_news",
+            "to": "generate_caption",
+            "out": 1
+          },
+          {
+            "from": "generate_caption",
+            "to": "generate_image",
+            "out": 0
+          },
+          {
+            "from": "generate_image",
+            "to": "if_valid",
+            "out": 0
+          },
+          {
+            "from": "if_valid",
+            "to": "send_image",
+            "out": 0
+          },
+          {
+            "from": "send_image",
+            "to": "send_caption",
+            "out": 0
+          },
+          {
+            "from": "send_caption",
+            "to": "wait_approval",
+            "out": 0
+          },
+          {
+            "from": "wait_approval",
+            "to": "if_approved",
+            "out": 0
+          },
+          {
+            "from": "if_approved",
+            "to": "for_each_news",
+            "out": 0
+          },
+          {
+            "from": "if_valid",
+            "to": "generate_caption",
+            "out": 1
+          },
+          {
+            "from": "if_approved",
+            "to": "timeout",
+            "out": 1
+          },
+          {
+            "from": "timeout",
+            "to": "generate_caption",
+            "out": 0
+          },
+          {
+            "from": "for_each_news",
+            "to": "send_done",
+            "out": 0
+          }
+        ],
+        "sections": [
+          {
+            "title": "Generate news",
+            "nodes": [
+              "submit_form",
+              "switch_mediahouse",
+              "mediahouse_1",
+              "mediahouse_2",
+              "mediahouse_3",
+              "store_temp",
+              "get_news",
+              "limit_output"
+            ]
+          },
+          {
+            "title": "Generate result",
+            "nodes": [
+              "for_each_news",
+              "generate_caption",
+              "generate_image",
+              "if_valid",
+              "send_done"
+            ]
+          },
+          {
+            "title": "Human in the loop",
+            "nodes": [
+              "send_image",
+              "send_caption",
+              "wait_approval",
+              "if_approved",
+              "timeout"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "social-post-on-demand",
+      "name": "Social · On-demand post generator",
+      "tier": "production",
+      "system": null,
+      "category": "Content and SEO",
+      "kind": null,
+      "summary": "A form takes a topic, a prompt or a link and a media brand. The workflow applies the brand's voice, keeps the link as the post's source, drafts a caption and an image with Gemini, checks them, and sends them to Telegram for approval. A rejection produces a new image.",
+      "source": "production",
+      "trigger": "formTrigger",
+      "platforms": [
+        "gemini",
+        "telegram"
+      ],
+      "env": [],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/social-content",
+      "nodeCount": 14,
+      "tests": [
+        "drafts a post from a topic and stops when approved",
+        "a link becomes the post's source and goes into the caption",
+        "a rejection draws a new image for the same caption",
+        "a refusal from the model is redone before anyone sees it"
+      ],
+      "story": [
+        {
+          "title": "A topic, a prompt or a link",
+          "copy": "The form takes the request and the media house. The switch applies that brand's voice and visual style.",
+          "nodes": [
+            "submit_form",
+            "switch_mediahouse",
+            "mediahouse_1",
+            "mediahouse_2",
+            "mediahouse_3"
+          ]
+        },
+        {
+          "title": "A link is kept as the source",
+          "copy": "If the request holds a link, it is pulled out, the post is marked as an article, and the link goes into the caption.",
+          "nodes": [
+            "store_temp"
+          ]
+        },
+        {
+          "title": "Caption and image",
+          "copy": "Gemini drafts the caption and a matching image, and the workflow checks both before going further.",
+          "nodes": [
+            "generate_caption",
+            "generate_image",
+            "if_valid"
+          ]
+        },
+        {
+          "title": "A person decides",
+          "copy": "The draft goes to the social manager on Telegram. Approval ends the run with the post ready. A rejection produces a new image for the same caption.",
+          "nodes": [
+            "send_image",
+            "send_caption",
+            "wait_approval",
+            "if_approved",
+            "timeout"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "submit_form",
+            "kind": "trigger",
+            "x": 0,
+            "y": 380
+          },
+          {
+            "id": "switch_mediahouse",
+            "kind": "branch",
+            "x": 260,
+            "y": 380
+          },
+          {
+            "id": "mediahouse_1",
+            "kind": "set",
+            "x": 520,
+            "y": 200
+          },
+          {
+            "id": "mediahouse_2",
+            "kind": "set",
+            "x": 520,
+            "y": 380
+          },
+          {
+            "id": "mediahouse_3",
+            "kind": "set",
+            "x": 520,
+            "y": 560
+          },
+          {
+            "id": "store_temp",
+            "kind": "set",
+            "x": 780,
+            "y": 380
+          },
+          {
+            "id": "generate_caption",
+            "kind": "app",
+            "platform": "gemini",
+            "x": 0,
+            "y": 970
+          },
+          {
+            "id": "generate_image",
+            "kind": "app",
+            "platform": "gemini",
+            "x": 0,
+            "y": 1150
+          },
+          {
+            "id": "if_valid",
+            "kind": "branch",
+            "x": 0,
+            "y": 1330
+          },
+          {
+            "id": "send_image",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 0,
+            "y": 1740
+          },
+          {
+            "id": "send_caption",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 260,
+            "y": 1740
+          },
+          {
+            "id": "wait_approval",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 520,
+            "y": 1740
+          },
+          {
+            "id": "if_approved",
+            "kind": "branch",
+            "x": 780,
+            "y": 1740
+          },
+          {
+            "id": "timeout",
+            "kind": "filter",
+            "x": 1040,
+            "y": 1740
+          }
+        ],
+        "edges": [
+          {
+            "from": "submit_form",
+            "to": "switch_mediahouse",
+            "out": 0
+          },
+          {
+            "from": "switch_mediahouse",
+            "to": "mediahouse_1",
+            "out": 0
+          },
+          {
+            "from": "mediahouse_1",
+            "to": "store_temp",
+            "out": 0
+          },
+          {
+            "from": "switch_mediahouse",
+            "to": "mediahouse_2",
+            "out": 1
+          },
+          {
+            "from": "mediahouse_2",
+            "to": "store_temp",
+            "out": 0
+          },
+          {
+            "from": "switch_mediahouse",
+            "to": "mediahouse_3",
+            "out": 2
+          },
+          {
+            "from": "mediahouse_3",
+            "to": "store_temp",
+            "out": 0
+          },
+          {
+            "from": "store_temp",
+            "to": "generate_caption",
+            "out": 0
+          },
+          {
+            "from": "generate_caption",
+            "to": "generate_image",
+            "out": 0
+          },
+          {
+            "from": "generate_image",
+            "to": "if_valid",
+            "out": 0
+          },
+          {
+            "from": "if_valid",
+            "to": "send_image",
+            "out": 0
+          },
+          {
+            "from": "send_image",
+            "to": "send_caption",
+            "out": 0
+          },
+          {
+            "from": "send_caption",
+            "to": "wait_approval",
+            "out": 0
+          },
+          {
+            "from": "wait_approval",
+            "to": "if_approved",
+            "out": 0
+          },
+          {
+            "from": "if_valid",
+            "to": "generate_caption",
+            "out": 1
+          },
+          {
+            "from": "if_approved",
+            "to": "timeout",
+            "out": 1
+          },
+          {
+            "from": "timeout",
+            "to": "generate_image",
+            "out": 0
+          }
+        ],
+        "sections": [
+          {
+            "title": "Input",
+            "nodes": [
+              "submit_form",
+              "switch_mediahouse",
+              "mediahouse_1",
+              "mediahouse_2",
+              "mediahouse_3",
+              "store_temp"
+            ]
+          },
+          {
+            "title": "Generate result",
+            "nodes": [
+              "generate_caption",
+              "generate_image",
+              "if_valid"
+            ]
+          },
+          {
+            "title": "Human in the loop",
+            "nodes": [
+              "send_image",
+              "send_caption",
+              "wait_approval",
+              "if_approved",
+              "timeout"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "rss-to-caption",
+      "name": "Social · RSS to caption",
+      "tier": "production",
+      "system": null,
+      "category": "Content and SEO",
+      "kind": null,
+      "summary": "Watches an RSS feed. Each new article is turned into a summary-style caption by Gemini and sent to the social manager's Telegram, followed by the source link, ready to copy and post.",
+      "source": "production",
+      "trigger": "rssFeedReadTrigger",
+      "platforms": [
+        "rss",
+        "gemini",
+        "telegram"
+      ],
+      "env": [],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/social-content",
+      "nodeCount": 6,
+      "tests": [
+        "sends a caption, then the source link, for each new article",
+        "an item with no link is dropped",
+        "an empty reply from the model sends the headline instead"
+      ],
+      "story": [
+        {
+          "title": "The feed is watched",
+          "copy": "The trigger fires only for items it has not seen. An item with no link or no text is dropped.",
+          "nodes": [
+            "get_recent_news",
+            "does_exist"
+          ]
+        },
+        {
+          "title": "A caption per article",
+          "copy": "Each article goes to Gemini, which writes a short summary-style caption.",
+          "nodes": [
+            "for_each_news",
+            "generate_caption"
+          ]
+        },
+        {
+          "title": "Delivered to Telegram",
+          "copy": "The caption arrives first and the source link straight after it, as two messages, so each can be copied on its own.",
+          "nodes": [
+            "send_caption",
+            "send_source"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "get_recent_news",
+            "kind": "trigger",
+            "platform": "rss",
+            "x": 0,
+            "y": 200
+          },
+          {
+            "id": "does_exist",
+            "kind": "filter",
+            "x": 260,
+            "y": 200
+          },
+          {
+            "id": "for_each_news",
+            "kind": "loop",
+            "x": 0,
+            "y": 610
+          },
+          {
+            "id": "generate_caption",
+            "kind": "app",
+            "platform": "gemini",
+            "x": 0,
+            "y": 790
+          },
+          {
+            "id": "send_caption",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 0,
+            "y": 970
+          },
+          {
+            "id": "send_source",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 0,
+            "y": 1150
+          }
+        ],
+        "edges": [
+          {
+            "from": "get_recent_news",
+            "to": "does_exist",
+            "out": 0
+          },
+          {
+            "from": "does_exist",
+            "to": "for_each_news",
+            "out": 0
+          },
+          {
+            "from": "for_each_news",
+            "to": "generate_caption",
+            "out": 1
+          },
+          {
+            "from": "generate_caption",
+            "to": "send_caption",
+            "out": 0
+          },
+          {
+            "from": "send_caption",
+            "to": "send_source",
+            "out": 0
+          },
+          {
+            "from": "send_source",
+            "to": "for_each_news",
+            "out": 0
+          }
+        ],
+        "sections": [
+          {
+            "title": "RSS",
+            "nodes": [
+              "get_recent_news",
+              "does_exist"
+            ]
+          },
+          {
+            "title": "Generate content",
+            "nodes": [
+              "for_each_news",
+              "generate_caption",
+              "send_caption",
+              "send_source"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "blog-conversion",
+      "name": "Publishing · Markdown to blog draft",
+      "tier": "production",
+      "system": null,
+      "category": "Content and SEO",
+      "kind": null,
+      "summary": "A Markdown file sent to a Telegram bot is turned into a blog post. Gemini restructures the notes, picks a recent YouTube video fetched through Apify to embed, and works in the promotion of the week. The post is saved to Wix as a draft for an editor to review.",
+      "source": "production",
+      "trigger": "telegramTrigger",
+      "platforms": [
+        "telegram",
+        "apify",
+        "gemini",
+        "groq",
+        "wix"
+      ],
+      "env": [],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/publishing",
+      "nodeCount": 11,
+      "tests": [
+        "turns an uploaded Markdown file into a Wix draft with a video",
+        "ignores a file that is not Markdown",
+        "a reply in the wrong shape is repaired by the second model",
+        "still drafts the post when no videos come back"
+      ],
+      "story": [
+        {
+          "title": "A file is sent to the bot",
+          "copy": "An editor sends a Markdown file to the Telegram bot. Anything that is not a Markdown file is ignored.",
+          "nodes": [
+            "get_file",
+            "check_file"
+          ]
+        },
+        {
+          "title": "The text is read",
+          "copy": "The file is downloaded from Telegram and its text extracted.",
+          "nodes": [
+            "download_md",
+            "extract_md"
+          ]
+        },
+        {
+          "title": "Recent videos are fetched",
+          "copy": "An Apify task returns the channel's latest YouTube videos, so the post can embed one that fits.",
+          "nodes": [
+            "get_latest_yt_videos"
+          ]
+        },
+        {
+          "title": "The post is written",
+          "copy": "Gemini restructures the notes into a title, an excerpt and a body, chooses a video and works the promotion in. If its answer is not in the required shape, a second model on Groq repairs it.",
+          "nodes": [
+            "generate_content",
+            "Google Gemini Chat Model",
+            "blog_parser",
+            "Groq Chat Model",
+            "Structured Output Parser"
+          ]
+        },
+        {
+          "title": "Saved as a draft",
+          "copy": "The post goes to Wix as a draft. Nothing is published until an editor has read it.",
+          "nodes": [
+            "draft_wix"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "get_file",
+            "kind": "trigger",
+            "platform": "telegram",
+            "x": 0,
+            "y": 310
+          },
+          {
+            "id": "check_file",
+            "kind": "filter",
+            "x": 260,
+            "y": 310
+          },
+          {
+            "id": "download_md",
+            "kind": "app",
+            "platform": "telegram",
+            "x": 520,
+            "y": 310
+          },
+          {
+            "id": "extract_md",
+            "kind": "set",
+            "x": 780,
+            "y": 310
+          },
+          {
+            "id": "get_latest_yt_videos",
+            "kind": "app",
+            "platform": "apify",
+            "x": 1040,
+            "y": 310
+          },
+          {
+            "id": "generate_content",
+            "kind": "agent",
+            "x": 1400,
+            "y": 90
+          },
+          {
+            "id": "Google Gemini Chat Model",
+            "kind": "part",
+            "platform": "gemini",
+            "x": 1300,
+            "y": 310
+          },
+          {
+            "id": "blog_parser",
+            "kind": "part",
+            "x": 1500,
+            "y": 310
+          },
+          {
+            "id": "Groq Chat Model",
+            "kind": "part",
+            "platform": "groq",
+            "x": 1400,
+            "y": 530
+          },
+          {
+            "id": "Structured Output Parser",
+            "kind": "part",
+            "x": 1600,
+            "y": 530
+          },
+          {
+            "id": "draft_wix",
+            "kind": "http",
+            "platform": "wix",
+            "x": 1760,
+            "y": 310
+          }
+        ],
+        "edges": [
+          {
+            "from": "get_file",
+            "to": "check_file",
+            "out": 0
+          },
+          {
+            "from": "check_file",
+            "to": "download_md",
+            "out": 0
+          },
+          {
+            "from": "download_md",
+            "to": "extract_md",
+            "out": 0
+          },
+          {
+            "from": "extract_md",
+            "to": "get_latest_yt_videos",
+            "out": 0
+          },
+          {
+            "from": "get_latest_yt_videos",
+            "to": "generate_content",
+            "out": 0
+          },
+          {
+            "from": "generate_content",
+            "to": "draft_wix",
+            "out": 0
+          },
+          {
+            "from": "Google Gemini Chat Model",
+            "to": "generate_content",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "blog_parser",
+            "to": "generate_content",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Groq Chat Model",
+            "to": "blog_parser",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Structured Output Parser",
+            "to": "blog_parser",
+            "out": 0,
+            "part": "outputParser"
+          }
+        ],
+        "sections": []
+      }
+    },
+    {
       "id": "feed-digest",
       "name": "Content · Industry news digest",
       "tier": "production",
@@ -16830,6 +22662,322 @@
             "to": "Classify",
             "out": 0,
             "part": "outputParser"
+          }
+        ],
+        "sections": []
+      }
+    },
+    {
+      "id": "bulk-object-creator",
+      "name": "Data · Bulk object creator",
+      "tier": "block",
+      "system": null,
+      "category": "Data and operations",
+      "kind": null,
+      "summary": "One click reads every row of a sheet and creates an object in the Bubble database for each, one at a time.",
+      "source": "production",
+      "trigger": "manualTrigger",
+      "platforms": [
+        "googleSheets",
+        "bubble"
+      ],
+      "env": [],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/operations",
+      "nodeCount": 4,
+      "tests": [
+        "creates one object per row",
+        "an empty sheet creates nothing"
+      ],
+      "story": [
+        {
+          "title": "One click",
+          "copy": "The rows to import are read from the sheet.",
+          "nodes": [
+            "When clicking 'Execute workflow'",
+            "get_data"
+          ]
+        },
+        {
+          "title": "One object per row",
+          "copy": "Each row becomes an object in Bubble, with its columns mapped to the object's fields. A row at a time keeps the app's rate limit safe.",
+          "nodes": [
+            "for_each_data",
+            "create_object"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "When clicking 'Execute workflow'",
+            "kind": "trigger",
+            "x": 0,
+            "y": 90
+          },
+          {
+            "id": "get_data",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 260,
+            "y": 90
+          },
+          {
+            "id": "for_each_data",
+            "kind": "loop",
+            "x": 520,
+            "y": 90
+          },
+          {
+            "id": "create_object",
+            "kind": "app",
+            "platform": "bubble",
+            "x": 780,
+            "y": 90
+          }
+        ],
+        "edges": [
+          {
+            "from": "When clicking 'Execute workflow'",
+            "to": "get_data",
+            "out": 0
+          },
+          {
+            "from": "get_data",
+            "to": "for_each_data",
+            "out": 0
+          },
+          {
+            "from": "for_each_data",
+            "to": "create_object",
+            "out": 1
+          },
+          {
+            "from": "create_object",
+            "to": "for_each_data",
+            "out": 0
+          }
+        ],
+        "sections": []
+      }
+    },
+    {
+      "id": "database-cleansing",
+      "name": "Data · Database cleansing",
+      "tier": "block",
+      "system": null,
+      "category": "Data and operations",
+      "kind": null,
+      "summary": "On demand, reads every object of one type from the Bubble database, keeps the first of each set of duplicates as the master, and deletes the rest.",
+      "source": "production",
+      "trigger": "manualTrigger",
+      "platforms": [
+        "bubble"
+      ],
+      "env": [],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/operations",
+      "nodeCount": 8,
+      "tests": [
+        "deletes the duplicates and keeps the first of each",
+        "deletes nothing when there are no duplicates",
+        "never deletes an object that has no email"
+      ],
+      "story": [
+        {
+          "title": "Find the masters",
+          "copy": "Every object that has an email is read, and the first one for each email is kept as the master. Objects with no email are never asked for: they cannot be called duplicates of anything.",
+          "nodes": [
+            "execute",
+            "get_objects_1",
+            "remove_duplicates",
+            "filter_criteria_1",
+            "aggregate"
+          ]
+        },
+        {
+          "title": "Isolate the duplicates",
+          "copy": "The objects are read again and compared with the list of masters. Only an object that has an email and is not a master goes forward.",
+          "nodes": [
+            "get_objects_2",
+            "filter_criteria_3"
+          ]
+        },
+        {
+          "title": "Delete them",
+          "copy": "Each duplicate is deleted by its id. With no duplicates, nothing is deleted.",
+          "nodes": [
+            "delete_object"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "execute",
+            "kind": "trigger",
+            "x": 0,
+            "y": 90
+          },
+          {
+            "id": "get_objects_1",
+            "kind": "app",
+            "platform": "bubble",
+            "x": 260,
+            "y": 90
+          },
+          {
+            "id": "remove_duplicates",
+            "kind": "filter",
+            "x": 520,
+            "y": 90
+          },
+          {
+            "id": "filter_criteria_1",
+            "kind": "filter",
+            "x": 780,
+            "y": 90
+          },
+          {
+            "id": "aggregate",
+            "kind": "merge",
+            "x": 1040,
+            "y": 90
+          },
+          {
+            "id": "get_objects_2",
+            "kind": "app",
+            "platform": "bubble",
+            "x": 1300,
+            "y": 90
+          },
+          {
+            "id": "filter_criteria_3",
+            "kind": "filter",
+            "x": 1560,
+            "y": 90
+          },
+          {
+            "id": "delete_object",
+            "kind": "app",
+            "platform": "bubble",
+            "x": 1820,
+            "y": 90
+          }
+        ],
+        "edges": [
+          {
+            "from": "execute",
+            "to": "get_objects_1",
+            "out": 0
+          },
+          {
+            "from": "get_objects_1",
+            "to": "remove_duplicates",
+            "out": 0
+          },
+          {
+            "from": "remove_duplicates",
+            "to": "filter_criteria_1",
+            "out": 0
+          },
+          {
+            "from": "filter_criteria_1",
+            "to": "aggregate",
+            "out": 0
+          },
+          {
+            "from": "aggregate",
+            "to": "get_objects_2",
+            "out": 0
+          },
+          {
+            "from": "get_objects_2",
+            "to": "filter_criteria_3",
+            "out": 0
+          },
+          {
+            "from": "filter_criteria_3",
+            "to": "delete_object",
+            "out": 0
+          }
+        ],
+        "sections": []
+      }
+    },
+    {
+      "id": "scrape-page",
+      "name": "Research · Scrape a page",
+      "tier": "block",
+      "system": "newsletter-research",
+      "category": "Content and SEO",
+      "kind": null,
+      "summary": "Called with a URL. Fetches the page and returns its readable text and the links in it. A page that fails to load comes back marked as failed instead of stopping the caller.",
+      "source": "production",
+      "trigger": "executeWorkflowTrigger",
+      "platforms": [],
+      "env": [],
+      "calls": [
+        "error-handler"
+      ],
+      "folder": "production/newsletter-research",
+      "nodeCount": 3,
+      "tests": [
+        "returns the page's text without scripts, styles or navigation",
+        "a page that fails to load comes back marked as failed"
+      ],
+      "story": [
+        {
+          "title": "Called with a URL",
+          "copy": "The page is requested once. A page that errors or times out is an answer, not a crash.",
+          "nodes": [
+            "When called",
+            "fetch_page"
+          ]
+        },
+        {
+          "title": "Text and links come back",
+          "copy": "Scripts, styles and navigation are removed and what is left is returned as plain text, with the links found in the page.",
+          "nodes": [
+            "extract_text"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "When called",
+            "kind": "trigger",
+            "x": 0,
+            "y": 90
+          },
+          {
+            "id": "fetch_page",
+            "kind": "http",
+            "x": 260,
+            "y": 90
+          },
+          {
+            "id": "extract_text",
+            "kind": "code",
+            "x": 520,
+            "y": 90
+          }
+        ],
+        "edges": [
+          {
+            "from": "When called",
+            "to": "fetch_page",
+            "out": 0
+          },
+          {
+            "from": "fetch_page",
+            "to": "extract_text",
+            "out": 0
           }
         ],
         "sections": []

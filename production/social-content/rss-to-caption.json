@@ -1,0 +1,289 @@
+{
+  "name": "Social · RSS to caption",
+  "nodes": [
+    {
+      "id": "885d023b-fe31-4e4e-a9af-31ecc4819225",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -220
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 230,
+        "content": "## Social · RSS to caption\nWatches an RSS feed. Each new article is turned into a summary-style caption by Gemini and sent to the social manager's Telegram, followed by the source link, ready to copy and post.\n\n**Platforms:** RSS, Gemini, Telegram\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `production/social-content`"
+      }
+    },
+    {
+      "id": "675e3bd5-64ab-4b8e-a67b-e2c13b6f4d69",
+      "name": "Section: RSS",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        0
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 330,
+        "color": 4,
+        "content": "## 1. RSS"
+      }
+    },
+    {
+      "id": "9915c47f-f755-4b21-a1ae-bfcced3c33b6",
+      "name": "Section: Generate content",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        410
+      ],
+      "parameters": {
+        "width": 380,
+        "height": 870,
+        "color": 5,
+        "content": "## 2. Generate content"
+      }
+    },
+    {
+      "id": "57c94bfd-373d-4e07-a1e8-2988aa7e2774",
+      "position": [
+        0,
+        200
+      ],
+      "name": "get_recent_news",
+      "type": "n8n-nodes-base.rssFeedReadTrigger",
+      "typeVersion": 1,
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "feedUrl": "https://feeds.acme.example/news.xml"
+      }
+    },
+    {
+      "id": "73fcf8d4-885c-4e89-a1fc-fcdc3927b517",
+      "position": [
+        260,
+        200
+      ],
+      "name": "does_exist",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6f209445-3b1a-4193-a65a-f91ba910aedd",
+              "leftValue": "={{ !!$json.link && !!($json.title || $json.contentSnippet) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "29226c92-5b46-4d52-aed3-df2a5b4e4d7d",
+      "position": [
+        0,
+        610
+      ],
+      "name": "for_each_news",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "b87bdebd-fc17-45b9-a9da-3b2cd4a7c2a0",
+      "position": [
+        0,
+        790
+      ],
+      "name": "generate_caption",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ 'Headline: ' + $('for_each_news').first().json.title + '\\n\\n' + String($('for_each_news').first().json.contentSnippet ?? $('for_each_news').first().json.content ?? '').slice(0, 3000) }}",
+              "role": "user"
+            }
+          ]
+        },
+        "simplify": true,
+        "options": {
+          "systemMessage": "[task:social-caption] You turn a news article into one summary-style social media caption. Under 500 characters, the main fact first, no invented details, no link. Reply with the caption only."
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "__CRED:gemini__",
+          "name": "Gemini"
+        }
+      }
+    },
+    {
+      "id": "0a2c696b-6db3-4d4d-a1b1-089ab27d5811",
+      "position": [
+        0,
+        970
+      ],
+      "name": "send_caption",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ '-1000000000001' }}",
+        "text": "={{ String($json.content?.parts?.[0]?.text ?? '').trim() || $('for_each_news').first().json.title }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "id": "ec619bdd-fab4-43b4-aa52-5e55f9775c82",
+      "position": [
+        0,
+        1150
+      ],
+      "name": "send_source",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ '-1000000000001' }}",
+        "text": "={{ $('for_each_news').first().json.link }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED:telegram__",
+          "name": "Telegram"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "get_recent_news": {
+      "main": [
+        [
+          {
+            "node": "does_exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "does_exist": {
+      "main": [
+        [
+          {
+            "node": "for_each_news",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "for_each_news": {
+      "main": [
+        [],
+        [
+          {
+            "node": "generate_caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate_caption": {
+      "main": [
+        [
+          {
+            "node": "send_caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_caption": {
+      "main": [
+        [
+          {
+            "node": "send_source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_source": {
+      "main": [
+        [
+          {
+            "node": "for_each_news",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

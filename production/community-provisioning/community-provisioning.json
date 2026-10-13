@@ -1,0 +1,1349 @@
+{
+  "name": "Community · Onboarding and provisioning",
+  "nodes": [
+    {
+      "id": "5c8db0fd-1b30-44e8-a02e-c54d17712077",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -220
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 230,
+        "content": "## Community · Onboarding and provisioning\nWhen a Stripe charge succeeds, reads what was bought, creates or updates the buyer in Supabase, stores a secret code that the Discord bot exchanges for the right roles, and sends a Skool invitation for each community tier in the purchase.\n\n**Platforms:** Stripe, Supabase, Skool\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `production/community-provisioning`"
+      }
+    },
+    {
+      "id": "c1adf2d2-45b7-4aec-af0e-5647a8a584f1",
+      "name": "Section: Get checkout details",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        0
+      ],
+      "parameters": {
+        "width": 2200,
+        "height": 510,
+        "color": 4,
+        "content": "## 1. Get checkout details\nThe charge is traced to its checkout and line items, and each line item is sorted into community tiers and bot access."
+      }
+    },
+    {
+      "id": "5aae1bc0-68ba-430d-a2d6-3d5d8492de10",
+      "name": "Section: Data manipulation",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        590
+      ],
+      "parameters": {
+        "width": 1940,
+        "height": 510,
+        "color": 5,
+        "content": "## 2. Data manipulation\nNew or returning buyer, a fresh secret code, and one record of what this purchase grants."
+      }
+    },
+    {
+      "id": "263a9591-9307-43d8-ae4b-9841d2dab2e3",
+      "name": "Section: Database update and invitations",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        1180
+      ],
+      "parameters": {
+        "width": 2200,
+        "height": 510,
+        "color": 6,
+        "content": "## 3. Database update and invitations\nThe user is saved, the Discord bot is given its code, and one Skool invitation goes out per tier."
+      }
+    },
+    {
+      "id": "be2a4ec2-874f-44b3-a612-7073cfde0fc5",
+      "position": [
+        0,
+        290
+      ],
+      "name": "on_charge_succeeded",
+      "type": "n8n-nodes-base.stripeTrigger",
+      "typeVersion": 1,
+      "parameters": {
+        "events": [
+          "charge.succeeded"
+        ]
+      },
+      "webhookId": "fccb3b6a-d8fc-4e89-a416-e5f9fec9fa1d",
+      "credentials": {
+        "stripeApi": {
+          "id": "__CRED:stripe__",
+          "name": "Stripe"
+        }
+      }
+    },
+    {
+      "id": "bd75b240-86c9-4766-a2e8-2ebd1930c49c",
+      "position": [
+        260,
+        290
+      ],
+      "name": "get_checkout_session",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.stripe.com/v1/checkout/sessions' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "payment_intent",
+              "value": "={{ $json.data.object.payment_intent }}"
+            },
+            {
+              "name": "limit",
+              "value": "={{ '1' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "stripeApi": {
+          "id": "__CRED:stripe__",
+          "name": "Stripe"
+        }
+      }
+    },
+    {
+      "id": "58834edf-5f35-404c-aee9-e42133d69a73",
+      "position": [
+        520,
+        290
+      ],
+      "name": "get_line_items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.stripe.com/v1/checkout/sessions/' + $json.data[0].id + '/line_items' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "={{ '100' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "stripeApi": {
+          "id": "__CRED:stripe__",
+          "name": "Stripe"
+        }
+      }
+    },
+    {
+      "id": "9e22f363-9d8a-410d-ae1e-ef314c90ea3b",
+      "position": [
+        780,
+        290
+      ],
+      "name": "split_line_items",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      }
+    },
+    {
+      "id": "28555ad2-ff6a-40af-a760-47796cb19db5",
+      "position": [
+        1040,
+        200
+      ],
+      "name": "filter_community_products",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f6aa8e9c-84a4-4568-a871-b47ca5801dfa",
+              "leftValue": "={{ ['prod_community_standard', 'prod_community_premium'].includes($json.price?.product) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c40442a0-d484-4903-a655-085c988fa608",
+      "position": [
+        1300,
+        200
+      ],
+      "name": "set_community_access",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9580db84-32e2-4b80-a473-073e58f7c172",
+              "name": "kind",
+              "value": "={{ 'community' }}",
+              "type": "string"
+            },
+            {
+              "id": "6864c210-3387-4386-a77b-d1688222c5f7",
+              "name": "product",
+              "value": "={{ $json.price.product }}",
+              "type": "string"
+            },
+            {
+              "id": "fbe5a23e-38e5-49f9-a100-519a01f98a74",
+              "name": "tier",
+              "value": "={{ ({ prod_community_standard: { tier: 'standard', group: 'acme-members' }, prod_community_premium: { tier: 'premium', group: 'acme-inner-circle' } })[$json.price.product].tier }}",
+              "type": "string"
+            },
+            {
+              "id": "8fba5694-f2a9-4ea0-ad0d-9319174c1398",
+              "name": "group",
+              "value": "={{ ({ prod_community_standard: { tier: 'standard', group: 'acme-members' }, prod_community_premium: { tier: 'premium', group: 'acme-inner-circle' } })[$json.price.product].group }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "c140150b-5906-495c-aa16-38c4f17f7a50",
+      "position": [
+        1040,
+        380
+      ],
+      "name": "filter_bot_products",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bad3fbfc-3dde-4f99-adad-fe3537e55ae4",
+              "leftValue": "={{ ['prod_bot_signals', 'prod_bot_pro'].includes($json.price?.product) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f0954f55-773f-4626-a606-1266c8fccd88",
+      "position": [
+        1300,
+        380
+      ],
+      "name": "set_bot_access",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b88a3a01-c8cf-457b-a849-d23b60b9235d",
+              "name": "kind",
+              "value": "={{ 'bot' }}",
+              "type": "string"
+            },
+            {
+              "id": "dbe071d0-fc3e-4cd7-a13b-a87ac26ecaf8",
+              "name": "product",
+              "value": "={{ $json.price.product }}",
+              "type": "string"
+            },
+            {
+              "id": "34bf5c64-e9dc-448c-a397-082560532963",
+              "name": "role",
+              "value": "={{ ({ prod_bot_signals: 'signals', prod_bot_pro: 'pro-trader' })[$json.price.product] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "3a8f6056-6340-471a-a546-f7da02e2ecb0",
+      "position": [
+        1560,
+        290
+      ],
+      "name": "merge_products",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "parameters": {}
+    },
+    {
+      "id": "317fdf84-df26-4e3f-acc4-48be37aeaf76",
+      "position": [
+        1820,
+        290
+      ],
+      "name": "aggregate_products",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "items",
+        "include": "allFields",
+        "options": {}
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "f9f10e20-eb91-408e-a72e-3ac5eb68b825",
+      "position": [
+        0,
+        880
+      ],
+      "name": "set_buyer",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5220f8f2-f64d-4343-ab94-2dc27c5c61d1",
+              "name": "email",
+              "value": "={{ String($('get_checkout_session').first().json.data[0].customer_details?.email ?? $('on_charge_succeeded').first().json.data.object.billing_details?.email ?? '').trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "0455891a-a70f-44ed-a4aa-09d64598eaff",
+              "name": "name",
+              "value": "={{ $('get_checkout_session').first().json.data[0].customer_details?.name ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "82f9424c-d218-4858-acbb-1a0e565b148d",
+              "name": "charge_id",
+              "value": "={{ $('on_charge_succeeded').first().json.data.object.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "a58b81c8-1dcb-4cc6-a5fc-0be881222662",
+      "position": [
+        260,
+        880
+      ],
+      "name": "get_user",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "users",
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.email }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "40567ce3-1305-45ed-a77d-cdc5354eda6e",
+      "position": [
+        520,
+        880
+      ],
+      "name": "if_existing_user",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "69093d54-4d1a-49d8-a67e-1dc9ab48fe61",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "22f52e27-7611-47e5-ad98-755ba1d121c6",
+      "position": [
+        780,
+        790
+      ],
+      "name": "set_existing_user",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "be892877-99f1-4a46-a55c-9515850b5281",
+              "name": "is_new",
+              "value": "={{ false }}",
+              "type": "string"
+            },
+            {
+              "id": "618d432d-0575-4b43-ac21-6470f2102209",
+              "name": "products",
+              "value": "={{ String($json.products ?? '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "2d01d40e-45b1-46f6-a513-80acc465e82f",
+      "position": [
+        780,
+        970
+      ],
+      "name": "set_new_user",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8095d9be-e34a-49dd-a7ed-4c5c4a4ce0e0",
+              "name": "is_new",
+              "value": "={{ true }}",
+              "type": "string"
+            },
+            {
+              "id": "52ff961b-85e0-46cd-a1e5-2c65159e156f",
+              "name": "products",
+              "value": "={{ '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "3755ecfd-6cc2-47b7-a646-4cd608eba32e",
+      "position": [
+        1040,
+        880
+      ],
+      "name": "merge_user",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "parameters": {}
+    },
+    {
+      "id": "d01fe10c-0de8-4397-aee6-cd744445b546",
+      "position": [
+        1300,
+        880
+      ],
+      "name": "generate_secret_code",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "parameters": {
+        "action": "generate",
+        "dataPropertyName": "secret_code",
+        "encodingType": "hex",
+        "stringLength": 32
+      }
+    },
+    {
+      "id": "5cc9f721-5a94-427d-a656-a740facdc0f6",
+      "position": [
+        1560,
+        880
+      ],
+      "name": "prepare_access",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const buyer = $(\"set_buyer\").first().json;\nconst items = $(\"aggregate_products\").first().json.items ?? [];\nconst user = $input.first().json;\nconst roles = [...new Set(items.filter((i) => i.kind === \"bot\").map((i) => i.role))];\nconst invites = items.filter((i) => i.kind === \"community\").map((i) => ({ email: buyer.email, tier: i.tier, group: i.group }));\nconst owned = new Set(String(user.products).split(\",\").filter(Boolean));\nfor (const i of items) owned.add(i.product);\nreturn [{ json: { ...buyer, is_new: String(user.is_new) === \"true\", products: [...owned].sort().join(\",\"), roles: roles.join(\",\"), has_bot: roles.length > 0, invites, has_community: invites.length > 0, secret_code: user.secret_code } }];"
+      }
+    },
+    {
+      "id": "fe8d66a4-df8a-4851-a9df-bf4adf327b47",
+      "position": [
+        0,
+        1470
+      ],
+      "name": "upsert_user",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://acme.supabase.co/rest/v1/users' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "={{ 'resolution=merge-duplicates,return=representation' }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "={{ 'email' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $json.email, name: $json.name, products: $json.products, last_charge_id: $json.charge_id }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "7e467c63-a0f8-486c-ab2e-e000408c5a7e",
+      "position": [
+        260,
+        1380
+      ],
+      "name": "if_bot_access",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "15c21d1c-fc06-4076-a99d-5b2d14c8c7fc",
+              "leftValue": "={{ $('prepare_access').first().json.has_bot }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "242ceea0-c294-480b-a179-f0a257c5f70f",
+      "position": [
+        520,
+        1380
+      ],
+      "name": "store_secret_code",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "discord_access_codes",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "code",
+              "fieldValue": "={{ $('prepare_access').first().json.secret_code }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('prepare_access').first().json.email }}"
+            },
+            {
+              "fieldId": "roles",
+              "fieldValue": "={{ $('prepare_access').first().json.roles }}"
+            },
+            {
+              "fieldId": "charge_id",
+              "fieldValue": "={{ $('prepare_access').first().json.charge_id }}"
+            },
+            {
+              "fieldId": "redeemed",
+              "fieldValue": "={{ false }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "62f54f46-59e4-48f3-a88b-45fa86dc0ed9",
+      "position": [
+        260,
+        1560
+      ],
+      "name": "if_community",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "374147a4-3de6-4187-acc0-0e7c68b0c68c",
+              "leftValue": "={{ $('prepare_access').first().json.has_community }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7afa5ba0-fa95-4929-a3fc-88960ea268c0",
+      "position": [
+        520,
+        1560
+      ],
+      "name": "set_invites",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cf4a8c31-dba6-4a75-a666-396bc1798861",
+              "name": "invites",
+              "value": "={{ $('prepare_access').first().json.invites }}",
+              "type": "array"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "f3e0be38-3cd5-47af-a659-67f4fdc6497e",
+      "position": [
+        780,
+        1470
+      ],
+      "name": "split_invites",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldToSplitOut": "invites",
+        "options": {}
+      }
+    },
+    {
+      "id": "3bb50cf8-f41c-41ad-adaa-bf051722daf6",
+      "position": [
+        1040,
+        1470
+      ],
+      "name": "for_each_invite",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "28f3bbad-fbdb-4e8e-a5f4-66e97f3e36e2",
+      "position": [
+        1300,
+        1380
+      ],
+      "name": "switch_tier",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e4b4a6d4-8fc2-49fe-a7ed-649938616fa0",
+                    "leftValue": "={{ $json.tier === 'standard' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "standard"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "76bf9c70-b4c2-4bd4-a7ef-7f84076da863",
+                    "leftValue": "={{ $json.tier === 'premium' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "premium"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      }
+    },
+    {
+      "id": "4fe01705-96f8-4845-aaeb-6e8f5c4934a6",
+      "position": [
+        1560,
+        1380
+      ],
+      "name": "invite_skool_standard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.skool.com/groups/' + $json.group + '/invites' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $json.email }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED:skool__",
+          "name": "Skool API key"
+        }
+      }
+    },
+    {
+      "id": "9a4ad570-bfe3-47bb-ad61-ab6ebd5a44bc",
+      "position": [
+        1560,
+        1560
+      ],
+      "name": "invite_skool_premium",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.skool.com/groups/' + $json.group + '/invites' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $json.email }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED:skool__",
+          "name": "Skool API key"
+        }
+      }
+    },
+    {
+      "id": "559248c5-0d70-4835-a93e-b3d0b0e99cb7",
+      "position": [
+        1820,
+        1470
+      ],
+      "name": "log_invite",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "community_invites",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('for_each_invite').first().json.email }}"
+            },
+            {
+              "fieldId": "tier",
+              "fieldValue": "={{ $('for_each_invite').first().json.tier }}"
+            },
+            {
+              "fieldId": "group_name",
+              "fieldValue": "={{ $('for_each_invite').first().json.group }}"
+            },
+            {
+              "fieldId": "invited_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "40831a4a-8783-41de-adbc-cc0929aea960",
+      "position": [
+        1300,
+        1560
+      ],
+      "name": "update_user_status",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "users",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $('prepare_access').first().json.email }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "invited_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "on_charge_succeeded": {
+      "main": [
+        [
+          {
+            "node": "get_checkout_session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_checkout_session": {
+      "main": [
+        [
+          {
+            "node": "get_line_items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_line_items": {
+      "main": [
+        [
+          {
+            "node": "split_line_items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_line_items": {
+      "main": [
+        [
+          {
+            "node": "filter_community_products",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "filter_bot_products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_community_products": {
+      "main": [
+        [
+          {
+            "node": "set_community_access",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_community_access": {
+      "main": [
+        [
+          {
+            "node": "merge_products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter_bot_products": {
+      "main": [
+        [
+          {
+            "node": "set_bot_access",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_bot_access": {
+      "main": [
+        [
+          {
+            "node": "merge_products",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "merge_products": {
+      "main": [
+        [
+          {
+            "node": "aggregate_products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "aggregate_products": {
+      "main": [
+        [
+          {
+            "node": "set_buyer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_buyer": {
+      "main": [
+        [
+          {
+            "node": "get_user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_user": {
+      "main": [
+        [
+          {
+            "node": "if_existing_user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_existing_user": {
+      "main": [
+        [
+          {
+            "node": "set_existing_user",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "set_new_user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_existing_user": {
+      "main": [
+        [
+          {
+            "node": "merge_user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_new_user": {
+      "main": [
+        [
+          {
+            "node": "merge_user",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "merge_user": {
+      "main": [
+        [
+          {
+            "node": "generate_secret_code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate_secret_code": {
+      "main": [
+        [
+          {
+            "node": "prepare_access",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "prepare_access": {
+      "main": [
+        [
+          {
+            "node": "upsert_user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "upsert_user": {
+      "main": [
+        [
+          {
+            "node": "if_bot_access",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "if_community",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_bot_access": {
+      "main": [
+        [
+          {
+            "node": "store_secret_code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_community": {
+      "main": [
+        [
+          {
+            "node": "set_invites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_invites": {
+      "main": [
+        [
+          {
+            "node": "split_invites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_invites": {
+      "main": [
+        [
+          {
+            "node": "for_each_invite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "for_each_invite": {
+      "main": [
+        [
+          {
+            "node": "update_user_status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "switch_tier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "switch_tier": {
+      "main": [
+        [
+          {
+            "node": "invite_skool_standard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "invite_skool_premium",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "invite_skool_standard": {
+      "main": [
+        [
+          {
+            "node": "log_invite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "invite_skool_premium": {
+      "main": [
+        [
+          {
+            "node": "log_invite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log_invite": {
+      "main": [
+        [
+          {
+            "node": "for_each_invite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

@@ -7,7 +7,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { root } from "./load.mjs";
 
-const files = ["systems", "workflows", "blocks", "shared"].flatMap((d) => fs.globSync(`${d}/**/*.json`, { cwd: root }));
+const files = ["production", "systems", "workflows", "blocks", "shared"].flatMap((d) => fs.globSync(`${d}/**/*.json`, { cwd: root }));
 const bin = path.join(root, "node_modules/.bin/n8nac");
 const SECRET = /(sk-[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|gh[pousr]_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.)/;
 

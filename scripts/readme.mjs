@@ -15,12 +15,12 @@ export const mark = (id, up = "") => `<img src="${up}assets/platforms/${iconFile
 export const marks = (ids, up = "") => (ids.length ? ids.map((id) => mark(id, up)).join(" &nbsp;·&nbsp; ") : "none, logic only");
 
 const GROUPS = [
-  ["Sales and marketing", ["hubspot", "calendly", "typeform", "mailchimp", "clearbit", "serpapi", "linkedin", "x", "facebook", "wordpress"]],
-  ["Support and community", ["zendesk", "gmail", "discord"]],
-  ["Messaging", ["slack", "sendgrid", "twilio"]],
+  ["Sales and marketing", ["hubspot", "calendly", "typeform", "mailchimp", "clearbit", "serpapi", "linkedin", "x", "facebook", "wordpress", "wix"]],
+  ["Support and community", ["zendesk", "gmail", "discord", "skool"]],
+  ["Messaging", ["slack", "telegram", "sendgrid", "twilio"]],
   ["Commerce and finance", ["shopify", "stripe", "quickbooks"]],
-  ["Operations and data", ["supabase", "googleCalendar", "googleDrive", "googleSheets", "bamboohr", "posthog"]],
-  ["AI", ["anthropic", "openai", "pinecone", "elevenlabs"]],
+  ["Operations and data", ["supabase", "bubble", "googleCalendar", "googleDrive", "googleSheets", "bamboohr", "posthog", "apify", "rss"]],
+  ["AI", ["anthropic", "openai", "gemini", "groq", "pinecone", "elevenlabs"]],
 ];
 
 const title = (s) => s[0].toUpperCase() + s.slice(1);
@@ -31,17 +31,33 @@ export function writeReadme(doc) {
   const tier = (t) => workflows.filter((w) => w.tier === t);
   const ofSystem = (s) => workflows.filter((w) => w.system === s.id);
   const platformsOf = (list) => Object.keys(PLATFORMS).filter((p) => list.some((w) => w.platforms.includes(p)));
+  const real = workflows.filter((w) => w.source === "production");
+  const isReal = (s) => ofSystem(s).some((w) => w.source === "production");
+  const realSystems = systems.filter(isReal);
   const ai = systems.filter((s) => s.id.startsWith("ai-"));
-  const rest = systems.filter((s) => !s.id.startsWith("ai-"));
+  const rest = systems.filter((s) => !s.id.startsWith("ai-") && !isReal(s));
   const used = Object.keys(PLATFORMS).filter((p) => doc.platforms[p].workflows > 0);
   const out = [];
   const p = (...lines) => out.push(...lines, "");
 
   p("# n8n workflows, built to stay up");
   p("[![Test](https://github.com/kimjoshuadr/n8n-workflows/actions/workflows/test.yml/badge.svg)](https://github.com/kimjoshuadr/n8n-workflows/actions/workflows/test.yml)");
-  p(`${workflows.length} n8n workflows on ${used.length} named platforms, written as code and run against a real n8n: ${ai.length} multi-agent AI systems of ${Math.min(...ai.flatMap((s) => ofSystem(s).map((w) => w.nodeCount)))} to ${Math.max(...ai.flatMap((s) => ofSystem(s).map((w) => w.nodeCount)))} nodes each, ${rest.length} more complete systems, ${tier("production").length} single-purpose production workflows and ${tier("block").length} building blocks.`);
+  p(`${workflows.length} n8n workflows on ${used.length} named platforms, written as code and run against a real n8n. ${real.length} of them were built and run in production and are rebuilt here; the rest are reference builds: ${ai.length} multi-agent AI systems of ${Math.min(...ai.flatMap((s) => ofSystem(s).map((w) => w.nodeCount)))} to ${Math.max(...ai.flatMap((s) => ofSystem(s).map((w) => w.nodeCount)))} nodes each, ${rest.length} more complete systems, ${tier("production").filter((w) => w.source !== "production").length} single-purpose workflows and ${tier("block").filter((w) => w.source !== "production").length} building blocks.`);
   p(`Most workflow collections show the path where everything works. These are written for the other days: the webhook that arrives twice, the API that is down, the model that replies with something unreadable, the schedule that silently stops. **${tests} such behaviours are tested**, each by importing the workflow into n8n, sending it input and checking what it actually did.`);
-  p("> **What these are.** Reference builds, written for this library and run on test data. They are not copies of any client's system, and no client data is in this repository.");
+
+  p("## Built in production");
+  p("> **What these are.** Workflows that were built and run in production, rebuilt here for publication and run on test data. Node names, order, branches and loops follow the original canvases. What is inside each node (prompts, field mappings, addresses, product and account names) was written again for this library, and every name that belonged to a business is a placeholder. Where a canvas could not be read node by node, the folder's README says so.");
+  for (const s of realSystems) {
+    const list = ofSystem(s);
+    p(`### [${s.name}](${s.folder})`);
+    p(s.line + " " + s.outcome);
+    p(`- **Size:** ${list.reduce((n, w) => n + w.nodeCount, 0)} nodes, ${list.reduce((n, w) => n + w.tests.length, 0)} tested behaviours`, `- **Platforms:** ${marks(platformsOf(list))}`);
+  }
+  p("**Single workflows**");
+  p(...real.filter((w) => !realSystems.some((s) => s.id === w.system)).map((w) => `- [${w.name.replace(/^[^·]+· /, "")}](${w.folder}): ${w.summary.split(". ")[0]}. ${w.platforms.map((id) => PLATFORMS[id].name).join(", ")}.`));
+
+  p("## Reference builds");
+  p("> **What these are.** Written for this library and run on test data. They are not copies of any client's system, and no client data is in this repository.");
 
   p("## The platforms");
   p("One named platform per job, used the same way in every workflow. Each step that touches a platform is that platform's own n8n node with its own credential, so the canvas shows its logo and the README of every workflow lists exactly what it connects to.");
@@ -50,33 +66,33 @@ export function writeReadme(doc) {
     p(...ids.filter((id) => used.includes(id)).map((id) => `- ${mark(id)}: ${PLATFORMS[id].job}. ${doc.platforms[id].workflows} ${doc.platforms[id].workflows === 1 ? "workflow" : "workflows"}.`));
   }
 
-  p("## AI systems");
+  p("### AI systems");
   p("Each is one canvas: several agents with their own tools, memory and knowledge base, checked by code and by a second model before anything reaches a customer. Claude does the reasoning and writing, OpenAI the classification and embeddings, Pinecone holds the knowledge base and ElevenLabs the voice.");
   for (const s of ai) {
     const list = ofSystem(s);
-    p(`### [${s.name}](${s.folder})`);
+    p(`#### [${s.name}](${s.folder})`);
     p(s.line + " " + s.outcome);
     p(`- **Size:** ${list.reduce((n, w) => n + w.nodeCount, 0)} nodes, ${list.reduce((n, w) => n + w.tests.length, 0)} tested behaviours`, `- **Platforms:** ${marks(platformsOf(list))}`);
   }
 
-  p("## Systems");
+  p("### Systems");
   for (const s of rest) {
     const list = ofSystem(s);
-    p(`### [${s.name}](${s.folder})`);
+    p(`#### [${s.name}](${s.folder})`);
     p(s.line);
     p(`- **Size:** ${list.length} workflows, ${list.reduce((n, w) => n + w.nodeCount, 0)} nodes, ${list.reduce((n, w) => n + w.tests.length, 0)} tested behaviours`, `- **Platforms:** ${marks(platformsOf(list))}`);
   }
   p("Each folder has a README with a diagram of every workflow, how it runs step by step, the platforms it touches and the behaviours it is tested for.");
 
   const listing = (heading, list, strip) => {
-    p(`## ${heading}`);
+    p(`### ${heading}`);
     for (const [folder, group] of Map.groupBy(list, (w) => w.folder)) {
       p(`**[${title(folder.split("/").pop())}](${folder})**`);
       p(...group.map((w) => `- ${w.name.replace(strip, "")}: ${w.platforms.length ? w.platforms.map((id) => PLATFORMS[id].name).join(", ") : "logic only"}`));
     }
   };
-  listing("Production workflows", tier("production"), /^[^·]+· /);
-  listing("Building blocks", tier("block"), /^Block · /);
+  listing("Single-purpose workflows", tier("production").filter((w) => w.source !== "production"), /^[^·]+· /);
+  listing("Building blocks", tier("block").filter((w) => w.source !== "production"), /^Block · /);
 
   p("## What \"built to stay up\" means here");
   p("Every workflow follows the same rules, and the tests hold them to it.");
@@ -101,7 +117,7 @@ export function writeReadme(doc) {
   p("## Run the tests");
   p("You need Docker and Node 22.");
   p("```sh", "npm ci", "npm run stack:up     # a throwaway n8n and a stand-in for every platform", `npm test             # all ${tests} cases`, 'npm test -- refund   # only workflows whose id contains "refund"', "npm run stack:down", "```");
-  p(`Nothing in a workflow is changed for testing. The stack answers on each platform's real hostname, so the Slack node believes it is talking to Slack and the agents believe they are talking to Claude and OpenAI. The runner imports each workflow, sends the case's input, waits for the execution and checks which nodes ran, what each platform received and what Supabase holds afterwards. Model replies are scripted per case, and any platform can be made to fail a set number of times, which is how the retry, fallback and dead-letter paths are exercised.${tested ? ` Last full run: **${tested.passed} passed, ${tested.failed} failed on n8n ${tested.n8n}** ([\`test-results.json\`](test-results.json)).` : ""}`);
+  p(`Nothing in a workflow is changed for testing. The stack answers on each platform's real hostname, so the Slack node believes it is talking to Slack and the agents believe they are talking to Claude and OpenAI. The runner imports each workflow, sends the case's input, waits for the execution and checks which nodes ran, what each platform received and what Supabase holds afterwards. Model replies are scripted per case, a person's tap or reply on Telegram is played by the stack, and any platform can be made to fail a set number of times, which is how the retry, fallback and dead-letter paths are exercised.${tested ? ` Last full run: **${tested.passed} passed, ${tested.failed} failed on n8n ${tested.n8n}** ([\`test-results.json\`](test-results.json)).` : ""}`);
 
   p("## How it is written");
   p("Workflows are defined in [`definitions/`](definitions) with a small vocabulary ([`lib/wf.mjs`](lib/wf.mjs) for logic, [`lib/nodes.mjs`](lib/nodes.mjs) for platforms and agents): name the nodes, then the wiring. The definition also holds the step-by-step explanation and the test cases, so the three cannot drift apart.");
@@ -152,6 +168,9 @@ const ENV = {
   BACKUP_BASE_URL: ["https://YOUR-BACKUP-SERVICE/api", "http://mocks:4010/backup"],
   BACKUP_API_KEY: ["", "test-key"],
   SHOP_API_KEY: ["", "test-key"],
+  EVENTS_BASE_URL: ["https://YOUR-EVENT-PLATFORM", "http://mocks:4010/events"],
+  EVENTS_EMAIL: ["", "automation@example.com"],
+  EVENTS_PASSWORD: ["", "test-password"],
 };
 
 /** The few services that have no node are reached by address; everything else is an n8n credential. */

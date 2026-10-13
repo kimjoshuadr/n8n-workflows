@@ -4,3 +4,4 @@ node_modules/
 *.log
 .DS_Store
 .n8n-test-creds.json
+.n8n-test-packages
