@@ -1184,8 +1184,17 @@ return [{ json: { ...t, reply: ok ? o.reply.trim() : null, confidence: ok ? Numb
         operation: 'getAll',
         tableId: 'refunds',
         returnAll: true,
-        filterType: 'string',
-        filterString: "={{ 'email=eq.' + $json.email }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: '={{ $json.email }}',
+                },
+            ],
+        },
     };
 
     @node({
@@ -1785,8 +1794,22 @@ return $input.all().map((_, i) => { const t = before[i].json; return { json: { c
         operation: 'getAll',
         tableId: 'support_log',
         returnAll: true,
-        filterType: 'string',
-        filterString: "={{ 'answered=eq.true&at=gte.' + $now.minus({ days: 1 }).toISO() }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'answered',
+                    condition: 'eq',
+                    keyValue: "={{ 'true' }}",
+                },
+                {
+                    keyName: 'at',
+                    condition: 'gte',
+                    keyValue: '={{ $now.minus({ days: 1 }).toISO() }}',
+                },
+            ],
+        },
     };
 
     @node({
@@ -1971,8 +1994,22 @@ return [{ json: { audited: graded.length, average, poor, text: graded.length ? "
         operation: 'getAll',
         tableId: 'support_log',
         returnAll: true,
-        filterType: 'string',
-        filterString: "={{ 'answered=eq.false&at=gte.' + $now.minus({ days: 7 }).toISO() }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'answered',
+                    condition: 'eq',
+                    keyValue: "={{ 'false' }}",
+                },
+                {
+                    keyName: 'at',
+                    condition: 'gte',
+                    keyValue: '={{ $now.minus({ days: 7 }).toISO() }}',
+                },
+            ],
+        },
     };
 
     @node({

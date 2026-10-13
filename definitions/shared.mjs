@@ -174,18 +174,18 @@ return $input.all().map((_, i) => ({ json: { ...before[i].json, duplicate: false
     summary: "Every fifteen minutes, sends parked work back to where it came from. Gives up after five attempts and tells Slack.",
     nodes: [
       schedule("Every 15 minutes", { minutes: 15 }),
-      db.find("Fetch pending", "dead_letters", "'status=eq.pending&limit=50'"),
+      db.find("Fetch pending", "dead_letters", { status: "'pending'" }, { limit: 50 }),
       iff("Anything parked?", "!!$json.id"),
       batches("One at a time", 1),
       http("Replay", "=$json.replay_url", { body: "$json.payload", onFail: "branch", retry: false }),
-      db.update("Mark replayed", "dead_letters", "'id=eq.' + $('One at a time').item.json.id", { status: "'replayed'", replayed_at: "$now.toISO()" }),
+      db.update("Mark replayed", "dead_letters", { id: "$('One at a time').item.json.id" }, { status: "'replayed'", replayed_at: "$now.toISO()" }),
       code(
         "Count the attempt",
         `const row = $("One at a time").first().json;
 const attempts = (row.attempts ?? 0) + 1;
 return [{ json: { id: row.id, source: row.source, attempts, status: attempts >= 5 ? "abandoned" : "pending" } }];`,
       ),
-      db.update("Record the attempt", "dead_letters", "'id=eq.' + $json.id", { attempts: "$json.attempts", status: "$json.status" }),
+      db.update("Record the attempt", "dead_letters", { id: "$json.id" }, { attempts: "$json.attempts", status: "$json.status" }),
       iff("Given up?", "$('Count the attempt').item.json.status === 'abandoned'"),
       slack.post("Escalate", ALERTS, "':red_circle: Gave up replaying an item from ' + $('Count the attempt').item.json.source + ' after 5 attempts. It needs a person.'", { onFail: "continue" }),
       noop("Nothing to do"),

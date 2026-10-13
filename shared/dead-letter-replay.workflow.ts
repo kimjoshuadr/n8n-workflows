@@ -106,9 +106,19 @@ Every fifteen minutes, sends parked work back to where it came from. Gives up af
         resource: 'row',
         operation: 'getAll',
         tableId: 'dead_letters',
-        returnAll: true,
-        filterType: 'string',
-        filterString: "={{ 'status=eq.pending&limit=50' }}",
+        returnAll: false,
+        limit: 50,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'pending' }}",
+                },
+            ],
+        },
     };
 
     @node({
@@ -190,8 +200,17 @@ Every fifteen minutes, sends parked work back to where it came from. Gives up af
         resource: 'row',
         operation: 'update',
         tableId: 'dead_letters',
-        filterType: 'string',
-        filterString: "={{ 'id=eq.' + $('One at a time').item.json.id }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('One at a time').item.json.id }}",
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -236,8 +255,17 @@ return [{ json: { id: row.id, source: row.source, attempts, status: attempts >= 
         resource: 'row',
         operation: 'update',
         tableId: 'dead_letters',
-        filterType: 'string',
-        filterString: "={{ 'id=eq.' + $json.id }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.id }}',
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [

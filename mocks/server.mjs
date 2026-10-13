@@ -292,6 +292,17 @@ const handle = (req, res) => {
       if (`${host}${p}` in routes) return send(res, 200, routes[`${host}${p}`]);
       if (p in routes) return send(res, 200, routes[p]);
       if (host === "api.anthropic.com" && p === "/v1/messages") return anthropic(res, body ?? {});
+      // Google Sheets: a spreadsheet has one sheet with a header row; appends are accepted.
+      if (host === "sheets.googleapis.com" && req.method === "GET" && /^\/v4\/spreadsheets\/[^/]+$/.test(p)) {
+        return send(res, 200, { spreadsheetId: p.split("/").pop(), sheets: [{ properties: { sheetId: 0, title: "Pack", index: 0 } }] });
+      }
+      if (host === "sheets.googleapis.com" && req.method === "GET" && p.includes("/values/")) {
+        return send(res, 200, { range: "Pack!A1:Z1", majorDimension: "ROWS", values: [(tables.sheet_header ?? [{ columns: ["month", "account", "amount", "prior", "change"] }])[0].columns] });
+      }
+      if (host === "sheets.googleapis.com" && p.includes(":append")) {
+        (tables.sheet_rows ??= []).push(...(body?.values ?? []).map((row) => ({ row })));
+        return send(res, 200, { spreadsheetId: "x", updates: { updatedRows: (body?.values ?? []).length } });
+      }
       // Gmail: a message has the headers a reply is built from.
       if (p.startsWith("/gmail/v1/") && req.method === "GET" && /\/messages\/[^/]+$/.test(p)) {
         const id = p.split("/").pop();

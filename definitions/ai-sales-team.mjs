@@ -110,14 +110,14 @@ return [{ json: { channel: "#sales", level: "warn", text: "A new lead needs a pe
 
       /* ---- 2. Outreach ---- */
       schedule("Every hour", { hours: 1 }),
-      db.find("Due sequences", "lead_sequences", "'status=eq.active&next_touch_at=lte.' + $now.toISO()"),
+      db.find("Due sequences", "lead_sequences", { status: "'active'", next_touch_at: ["lte", "$now.toISO()"] }),
       code("Cap the run", `// Twenty an hour: enough to be useful, slow enough that a mistake is caught before it is sent to everyone.
 return $input.all().map((i) => i.json).filter((s) => s.email).slice(0, 20).map((json) => ({ json }));`),
       iff("Touches left?", "Number($json.step ?? 0) < 4"),
-      db.update("Close the sequence", "lead_sequences", "'email=eq.' + $json.email", { status: "'finished'", finished_at: "$now.toISO()" }),
+      db.update("Close the sequence", "lead_sequences", { email: "$json.email" }, { status: "'finished'", finished_at: "$now.toISO()" }),
       batches("One lead at a time", 1),
       noop("Outreach done"),
-      db.find("Earlier messages", "outreach_messages", "'email=eq.' + $json.email"),
+      db.find("Earlier messages", "outreach_messages", { email: "$json.email" }),
       code("Brief the writer", `const l = $("One lead at a time").first().json;
 const earlier = $input.all().map((i) => i.json).filter((m) => m.subject).map((m) => ({ step: m.step, subject: m.subject }));
 const goals = ["Open the conversation with one specific observation and one question.", "Share one relevant proof point and ask if it is worth a call.", "Offer a short, concrete next step.", "A polite last note that leaves the door open."];
@@ -159,7 +159,7 @@ return [{ json: { ...d, approved: reviewed && r.approve === true && hard.length 
       iff("Approved?", "$json.approved"),
       sendgrid.text("Send the email", { to: "$json.email", subject: "$json.subject", text: "$json.body", from: "'kim@example.com'", fromName: "'Kim'" }),
       db.insert("Log the message", "outreach_messages", { email: `${lead}.email`, step: `${lead}.step ?? 0`, subject: "$('Send the email').first().json.subject ?? $('Approved?').first().json.subject ?? $('Recheck in code').first().json.subject", sent_at: "$now.toISO()" }),
-      db.update("Advance the sequence", "lead_sequences", `'email=eq.' + ${lead}.email`, { step: `Number(${lead}.step ?? 0) + 1`, next_touch_at: "$now.plus({ days: 3 }).toISO()", last_touch_at: "$now.toISO()" }),
+      db.update("Advance the sequence", "lead_sequences", { email: `${lead}.email` }, { step: `Number(${lead}.step ?? 0) + 1`, next_touch_at: "$now.plus({ days: 3 }).toISO()", last_touch_at: "$now.toISO()" }),
       hubspot.note("Note on the contact", `'Outreach email ' + (Number(${lead}.step ?? 0) + 1) + ' sent by the sales agents.'`, {}, { onFail: "continue" }),
       iff("First attempt?", "$json.attempt < 2 && !$json.draft_failed"),
       agent("Reviser agent", {
@@ -183,7 +183,7 @@ return [{ json: { ...d, attempt: 2, subject: ok ? out.subject.trim() : d.subject
       code("Human review message", `const d = $input.first().json;
 return [{ json: { channel: "#sales", level: "warn", text: "An outreach email to " + d.email + " was held back: " + d.issues.join("; ") + ". The sequence is paused until someone looks." } }];`),
       call("Send to a person", "notify"),
-      db.update("Pause for review", "lead_sequences", `'email=eq.' + ${lead}.email`, { status: "'needs_review'" }),
+      db.update("Pause for review", "lead_sequences", { email: `${lead}.email` }, { status: "'needs_review'" }),
 
       /* ---- 3. Replies ---- */
       triggers.gmail("Reply received"),
@@ -195,7 +195,7 @@ return [{ json: { channel: "#sales", level: "warn", text: "An outreach email to 
   const text = String(m.snippet ?? m.text ?? "").split(/\\nOn .+ wrote:|\\n>|\\n-----Original Message-----/)[0].trim().slice(0, 2000);
   return { json: { email, message_id: String(m.id ?? ""), thread_id: String(m.threadId ?? ""), subject: String(m.Subject ?? m.subject ?? ""), text } };
 }).filter((i) => i.json.email && i.json.text);`),
-      db.find("Find the sequence", "lead_sequences", "'email=eq.' + $json.email"),
+      db.find("Find the sequence", "lead_sequences", { email: "$json.email" }),
       iff("One of ours?", "!!$json.email"),
       noop("Not a lead, leave it"),
       agent("Reply classifier", {
@@ -225,7 +225,7 @@ return [{ json: { ...s, reply: r, intent, confidence: out?.confidence ?? null } 
       shape("Proposed times", "Booking agent", { reply: "The reply offering three times.", slots: ["2026-11-02T10:00:00Z"] }),
       iff("Got three times?", "Array.isArray($json.output?.slots) && $json.output.slots.length === 3 && typeof $json.output.reply === 'string'"),
       gmail.reply("Reply with times", `${read}.message_id`, "$json.output.reply"),
-      db.update("Mark as meeting proposed", "lead_sequences", `'email=eq.' + ${read}.email`, { status: "'meeting_proposed'", replied_at: "$now.toISO()" }),
+      db.update("Mark as meeting proposed", "lead_sequences", { email: `${read}.email` }, { status: "'meeting_proposed'", replied_at: "$now.toISO()" }),
       hubspot.deal("Open a deal", "'appointmentscheduled'", { dealName: `'Intro call: ' + ${reply}.name` }, { onFail: "continue" }),
       code("Interested message", `const s = $("Find the sequence").first().json;
 return [{ json: { channel: "#sales", level: "info", text: s.name + " replied and is interested. Three times were offered and a deal is open in HubSpot." } }];`),
@@ -242,21 +242,21 @@ return [{ json: { channel: "#sales", level: "info", text: s.name + " replied and
       shape("Answer", "Objection agent", { reply: "The answer.", confidence: 0.8 }),
       iff("Confident answer?", "Number($json.output?.confidence) >= 0.75 && typeof $json.output?.reply === 'string'"),
       gmail.reply("Answer the objection", `${read}.message_id`, "$json.output.reply"),
-      db.update("Keep the sequence going", "lead_sequences", `'email=eq.' + ${read}.email`, { last_reply_at: "$now.toISO()", next_touch_at: "$now.plus({ days: 4 }).toISO()" }),
+      db.update("Keep the sequence going", "lead_sequences", { email: `${read}.email` }, { last_reply_at: "$now.toISO()", next_touch_at: "$now.plus({ days: 4 }).toISO()" }),
 
       code("Hand over message", `const s = $("Read the intent").first().json;
 return [{ json: { channel: "#sales", level: "warn", text: s.name + " (" + s.email + ") replied and an agent was not sure how to answer: \\"" + s.reply.text.slice(0, 240) + "\\". The sequence is paused." } }];`),
       call("Hand to a person", "notify"),
-      db.update("Pause: needs a person", "lead_sequences", `'email=eq.' + ${read}.email`, { status: "'needs_review'", replied_at: "$now.toISO()" }),
+      db.update("Pause: needs a person", "lead_sequences", { email: `${read}.email` }, { status: "'needs_review'", replied_at: "$now.toISO()" }),
 
-      db.update("Snooze for 30 days", "lead_sequences", "'email=eq.' + $json.email", { next_touch_at: "$now.plus({ days: 30 }).toISO()", replied_at: "$now.toISO()" }),
-      db.update("Stop the sequence", "lead_sequences", "'email=eq.' + $json.email", { status: "'unsubscribed'", replied_at: "$now.toISO()" }),
+      db.update("Snooze for 30 days", "lead_sequences", { email: "$json.email" }, { next_touch_at: "$now.plus({ days: 30 }).toISO()", replied_at: "$now.toISO()" }),
+      db.update("Stop the sequence", "lead_sequences", { email: "$json.email" }, { status: "'unsubscribed'", replied_at: "$now.toISO()" }),
       hubspot.contact("Mark opted out in HubSpot", `${read}.email`, {}, { onFail: "continue" }),
-      db.update("Push the next touch a week", "lead_sequences", "'email=eq.' + $json.email", { next_touch_at: "$now.plus({ days: 7 }).toISO()" }),
+      db.update("Push the next touch a week", "lead_sequences", { email: "$json.email" }, { next_touch_at: "$now.plus({ days: 7 }).toISO()" }),
 
       /* ---- 4. Weekly report ---- */
       schedule("Monday 08:00", "0 8 * * 1"),
-      db.find("This week's messages", "outreach_messages", "'sent_at=gte.' + $now.minus({ days: 7 }).toISO()"),
+      db.find("This week's messages", "outreach_messages", { sent_at: ["gte", "$now.minus({ days: 7 }).toISO()"] }),
       db.find("All sequences", "lead_sequences", null, { once: true }),
       code("Count the funnel", `const sent = $("This week's messages").all().filter((i) => i.json.sent_at).length;
 const seqs = $input.all().map((i) => i.json).filter((s) => s.email);

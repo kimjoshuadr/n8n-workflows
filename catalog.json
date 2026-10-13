@@ -15,7 +15,7 @@
       "name": "Slack",
       "job": "Team chat and alerts",
       "icon": "slack",
-      "workflows": 8
+      "workflows": 9
     },
     "hubspot": {
       "name": "HubSpot",
@@ -33,13 +33,13 @@
       "name": "Gmail",
       "job": "Shared inbox",
       "icon": "gmail",
-      "workflows": 1
+      "workflows": 2
     },
     "supabase": {
       "name": "Supabase",
       "job": "Records and state",
       "icon": "supabase",
-      "workflows": 8
+      "workflows": 9
     },
     "calendly": {
       "name": "Calendly",
@@ -99,7 +99,7 @@
       "name": "QuickBooks",
       "job": "Accounting",
       "icon": "quickbooks",
-      "workflows": 0
+      "workflows": 1
     },
     "discord": {
       "name": "Discord",
@@ -135,7 +135,7 @@
       "name": "Google Sheets",
       "job": "Sheets",
       "icon": "googlesheets",
-      "workflows": 0
+      "workflows": 1
     },
     "clearbit": {
       "name": "Clearbit",
@@ -165,19 +165,19 @@
       "name": "Claude",
       "job": "AI reasoning and writing",
       "icon": "anthropic",
-      "workflows": 3
+      "workflows": 4
     },
     "openai": {
       "name": "OpenAI",
       "job": "AI classification and embeddings",
       "icon": "openai",
-      "workflows": 3
+      "workflows": 4
     },
     "pinecone": {
       "name": "Pinecone",
       "job": "AI knowledge base",
       "icon": "pinecone",
-      "workflows": 3
+      "workflows": 4
     },
     "elevenlabs": {
       "name": "ElevenLabs",
@@ -227,7 +227,9 @@
       "line": "Invoices, receipts and bank lines, read, matched and questioned.",
       "problem": "Bookkeeping is typing what a document already says, then finding the one line that does not match.",
       "outcome": "Documents are read by a model and checked by arithmetic, bank lines are matched, anomalies are raised, and finance can ask questions in Slack and get answers from the books.",
-      "workflows": []
+      "workflows": [
+        "ai-back-office"
+      ]
     },
     {
       "id": "lead-intake",
@@ -4691,6 +4693,1121 @@
               "Queue the topic",
               "Post next week's topics",
               "Too little data yet"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ai-back-office",
+      "name": "AI back office · Invoices, bank lines and questions",
+      "tier": "flagship",
+      "system": "ai-back-office",
+      "category": "AI agents",
+      "kind": null,
+      "summary": "Agents read supplier invoices from Gmail, code them against the chart of accounts and file them in QuickBooks. Bank lines are matched every morning, the ledger is scanned for anomalies, finance can ask questions in Slack, and the month closes into a Google Sheets pack. Every figure is checked or computed in code.",
+      "source": "reference",
+      "trigger": "gmailTrigger",
+      "integrations": [
+        "Gmail",
+        "OpenAI",
+        "Supabase",
+        "Claude",
+        "Pinecone",
+        "QuickBooks",
+        "Slack",
+        "Google Sheets"
+      ],
+      "platforms": [
+        "gmail",
+        "openai",
+        "supabase",
+        "anthropic",
+        "pinecone",
+        "quickbooks",
+        "slack",
+        "googleSheets"
+      ],
+      "env": [],
+      "calls": [
+        "idempotency-guard",
+        "notify",
+        "error-handler"
+      ],
+      "folder": "systems/ai-back-office",
+      "nodeCount": 72,
+      "tests": [
+        "a clean invoice is read, checked, coded and filed as a QuickBooks bill",
+        "an invoice whose own numbers do not add up never reaches QuickBooks",
+        "a known vendor with a new bank account is stopped and marked critical",
+        "an invoice number this vendor already sent is not filed twice",
+        "an account that is not in the chart is refused",
+        "the same email delivered twice is processed once",
+        "bank lines are matched exactly in code, and an agent's proposal needs equal amounts",
+        "an invoice ten times a vendor's usual amount is flagged by rule and explained",
+        "an ordinary day raises nothing and calls no model",
+        "a finance question is answered from the ledger, with its working",
+        "someone outside finance is refused before any model is called",
+        "an answer with no ledger rows behind it is not given",
+        "month end totals each account against the month before and fills the pack"
+      ],
+      "story": [
+        {
+          "title": "An invoice arrives by email",
+          "copy": "Gmail brings it in. An email with nothing to read, or one already processed, stops here.",
+          "nodes": [
+            "Invoice email arrives",
+            "Read the email",
+            "Something to read?",
+            "Nothing to read",
+            "Seen this email?",
+            "New email?",
+            "Already processed"
+          ]
+        },
+        {
+          "title": "A model copies the fields",
+          "copy": "Vendor, number, dates, lines, totals and the bank account to pay. It is told to copy, never to work a number out.",
+          "nodes": [
+            "Extraction agent",
+            "GPT · extraction",
+            "Invoice fields"
+          ]
+        },
+        {
+          "title": "Code checks the document against itself",
+          "copy": "Do the lines add up to the subtotal? Is subtotal plus tax the total? Is it due after it was issued? A model's reading that fails its own arithmetic goes no further.",
+          "nodes": [
+            "Check the arithmetic"
+          ]
+        },
+        {
+          "title": "And against what is already known",
+          "copy": "The same invoice number twice, a new vendor, three times the usual amount, or a bank account that differs from the one on file. That last one is how invoice fraud works, and it is marked critical.",
+          "nodes": [
+            "Same invoice before?",
+            "What we know of the vendor",
+            "Compare with history"
+          ]
+        },
+        {
+          "title": "A coding agent picks the account",
+          "copy": "It searches the chart of accounts in Pinecone. Code accepts its answer only if the account exists in the chart.",
+          "nodes": [
+            "Coding agent",
+            "Claude · coding",
+            "Chart of accounts",
+            "Embeddings · chart",
+            "Account",
+            "Hold it to the chart",
+            "Clean?"
+          ]
+        },
+        {
+          "title": "Clean invoices become bills",
+          "copy": "The bill is created in QuickBooks, filed in Supabase and the email is labelled.",
+          "nodes": [
+            "Create the bill in QuickBooks",
+            "File the invoice",
+            "Label as filed"
+          ]
+        },
+        {
+          "title": "Anything else goes to a person, with the reason",
+          "copy": "Finance gets every problem found, in one message, so the check takes seconds.",
+          "nodes": [
+            "Explain what is wrong",
+            "Queue for review",
+            "Review message",
+            "Tell finance"
+          ]
+        },
+        {
+          "title": "Each morning, bank lines meet bills",
+          "copy": "The same amount with the invoice number in the memo is matched in code.",
+          "nodes": [
+            "06:30 daily",
+            "Yesterday's bank lines",
+            "Bills awaiting payment",
+            "Match the exact ones",
+            "Anything left over?"
+          ]
+        },
+        {
+          "title": "An agent proposes the awkward ones",
+          "copy": "A vendor name in the memo, a reference that is nearly right. The proposal is accepted only if the amounts are equal and the agent is confident.",
+          "nodes": [
+            "Matching agent",
+            "Claude · matching",
+            "Proposed matches",
+            "Accept only what holds up",
+            "One row per match",
+            "Mark the bill paid",
+            "Post the reconciliation"
+          ]
+        },
+        {
+          "title": "The ledger is scanned for the unusual",
+          "copy": "Three rules in code: far from a vendor's usual amount, the same amount twice in a week, a round sum from a new vendor. The agent orders and explains the flags; it cannot add one.",
+          "nodes": [
+            "07:00 daily",
+            "The last 90 days",
+            "Look for the unusual",
+            "Anything unusual?",
+            "Anomaly agent",
+            "Claude · anomalies",
+            "Record the flags",
+            "Raise the anomalies",
+            "Nothing unusual"
+          ]
+        },
+        {
+          "title": "Finance asks a question in Slack",
+          "copy": "Only named people may ask. The analyst agent can read the ledger and use a calculator. It has no tool that pays, changes or deletes.",
+          "nodes": [
+            "Finance question",
+            "Read the question",
+            "Allowed to ask?",
+            "Not allowed",
+            "Analyst agent",
+            "Claude · analysis",
+            "Conversation memory",
+            "Ledger query",
+            "Calculator",
+            "Plan the answer",
+            "Answer"
+          ]
+        },
+        {
+          "title": "No working, no answer",
+          "copy": "A reply with no ledger rows behind it is replaced by 'I could not answer that'. Every question is logged.",
+          "nodes": [
+            "Only answer with working",
+            "Log the question",
+            "Answer in Slack"
+          ]
+        },
+        {
+          "title": "The first of the month",
+          "copy": "Spend by account against the month before is totalled in code, added to the Google Sheets pack, and an agent writes the note that goes with it.",
+          "nodes": [
+            "1st of the month",
+            "Two months of invoices",
+            "Total by account",
+            "Close agent",
+            "Claude · close",
+            "Close note",
+            "One row per account",
+            "Add to the month-end pack",
+            "Post the close"
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Invoice email arrives",
+            "kind": "trigger",
+            "platform": "gmail",
+            "x": 0,
+            "y": 420
+          },
+          {
+            "id": "Read the email",
+            "kind": "code",
+            "x": 260,
+            "y": 420
+          },
+          {
+            "id": "Something to read?",
+            "kind": "branch",
+            "x": 520,
+            "y": 420
+          },
+          {
+            "id": "Nothing to read",
+            "kind": "end",
+            "x": 780,
+            "y": 330
+          },
+          {
+            "id": "Seen this email?",
+            "kind": "call",
+            "x": 780,
+            "y": 510
+          },
+          {
+            "id": "New email?",
+            "kind": "branch",
+            "x": 1040,
+            "y": 420
+          },
+          {
+            "id": "Already processed",
+            "kind": "end",
+            "x": 1400,
+            "y": 200
+          },
+          {
+            "id": "Extraction agent",
+            "kind": "agent",
+            "x": 1400,
+            "y": 380
+          },
+          {
+            "id": "GPT · extraction",
+            "kind": "part",
+            "platform": "openai",
+            "x": 1300,
+            "y": 600
+          },
+          {
+            "id": "Invoice fields",
+            "kind": "part",
+            "x": 1500,
+            "y": 600
+          },
+          {
+            "id": "Check the arithmetic",
+            "kind": "code",
+            "x": 1760,
+            "y": 420
+          },
+          {
+            "id": "Same invoice before?",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2020,
+            "y": 420
+          },
+          {
+            "id": "What we know of the vendor",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2280,
+            "y": 420
+          },
+          {
+            "id": "Compare with history",
+            "kind": "code",
+            "x": 2540,
+            "y": 420
+          },
+          {
+            "id": "Coding agent",
+            "kind": "agent",
+            "x": 3000,
+            "y": 200
+          },
+          {
+            "id": "Claude · coding",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 2800,
+            "y": 420
+          },
+          {
+            "id": "Chart of accounts",
+            "kind": "part",
+            "platform": "pinecone",
+            "x": 3000,
+            "y": 420
+          },
+          {
+            "id": "Embeddings · chart",
+            "kind": "part",
+            "platform": "openai",
+            "x": 3000,
+            "y": 640
+          },
+          {
+            "id": "Account",
+            "kind": "part",
+            "x": 3200,
+            "y": 420
+          },
+          {
+            "id": "Hold it to the chart",
+            "kind": "code",
+            "x": 3460,
+            "y": 420
+          },
+          {
+            "id": "Clean?",
+            "kind": "branch",
+            "x": 3720,
+            "y": 420
+          },
+          {
+            "id": "Create the bill in QuickBooks",
+            "kind": "http",
+            "platform": "quickbooks",
+            "x": 3980,
+            "y": 420
+          },
+          {
+            "id": "File the invoice",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 4240,
+            "y": 330
+          },
+          {
+            "id": "Label as filed",
+            "kind": "app",
+            "platform": "gmail",
+            "x": 4500,
+            "y": 330
+          },
+          {
+            "id": "Explain what is wrong",
+            "kind": "code",
+            "x": 4240,
+            "y": 510
+          },
+          {
+            "id": "Queue for review",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 4500,
+            "y": 510
+          },
+          {
+            "id": "Review message",
+            "kind": "code",
+            "x": 4760,
+            "y": 420
+          },
+          {
+            "id": "Tell finance",
+            "kind": "call",
+            "x": 5020,
+            "y": 420
+          },
+          {
+            "id": "06:30 daily",
+            "kind": "trigger",
+            "x": 0,
+            "y": 1180
+          },
+          {
+            "id": "Yesterday's bank lines",
+            "kind": "http",
+            "platform": "quickbooks",
+            "x": 260,
+            "y": 1180
+          },
+          {
+            "id": "Bills awaiting payment",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 520,
+            "y": 1180
+          },
+          {
+            "id": "Match the exact ones",
+            "kind": "code",
+            "x": 780,
+            "y": 1180
+          },
+          {
+            "id": "Anything left over?",
+            "kind": "branch",
+            "x": 1040,
+            "y": 1180
+          },
+          {
+            "id": "Matching agent",
+            "kind": "agent",
+            "x": 1400,
+            "y": 1050
+          },
+          {
+            "id": "Claude · matching",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 1300,
+            "y": 1270
+          },
+          {
+            "id": "Proposed matches",
+            "kind": "part",
+            "x": 1500,
+            "y": 1270
+          },
+          {
+            "id": "Accept only what holds up",
+            "kind": "code",
+            "x": 1760,
+            "y": 1180
+          },
+          {
+            "id": "One row per match",
+            "kind": "code",
+            "x": 2020,
+            "y": 1180
+          },
+          {
+            "id": "Mark the bill paid",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2280,
+            "y": 1180
+          },
+          {
+            "id": "Post the reconciliation",
+            "kind": "app",
+            "platform": "slack",
+            "x": 2540,
+            "y": 1180
+          },
+          {
+            "id": "07:00 daily",
+            "kind": "trigger",
+            "x": 0,
+            "y": 1940
+          },
+          {
+            "id": "The last 90 days",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 260,
+            "y": 1940
+          },
+          {
+            "id": "Look for the unusual",
+            "kind": "code",
+            "x": 520,
+            "y": 1940
+          },
+          {
+            "id": "Anything unusual?",
+            "kind": "branch",
+            "x": 780,
+            "y": 1940
+          },
+          {
+            "id": "Anomaly agent",
+            "kind": "agent",
+            "x": 1040,
+            "y": 1720
+          },
+          {
+            "id": "Claude · anomalies",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 1040,
+            "y": 1940
+          },
+          {
+            "id": "Record the flags",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1300,
+            "y": 1940
+          },
+          {
+            "id": "Raise the anomalies",
+            "kind": "app",
+            "platform": "slack",
+            "x": 1560,
+            "y": 1940
+          },
+          {
+            "id": "Nothing unusual",
+            "kind": "end",
+            "x": 1040,
+            "y": 2160
+          },
+          {
+            "id": "Finance question",
+            "kind": "trigger",
+            "x": 0,
+            "y": 2790
+          },
+          {
+            "id": "Read the question",
+            "kind": "code",
+            "x": 260,
+            "y": 2790
+          },
+          {
+            "id": "Allowed to ask?",
+            "kind": "branch",
+            "x": 520,
+            "y": 2790
+          },
+          {
+            "id": "Not allowed",
+            "kind": "respond",
+            "x": 1280,
+            "y": 2570
+          },
+          {
+            "id": "Analyst agent",
+            "kind": "agent",
+            "x": 1280,
+            "y": 2750
+          },
+          {
+            "id": "Claude · analysis",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 780,
+            "y": 2970
+          },
+          {
+            "id": "Conversation memory",
+            "kind": "part",
+            "x": 980,
+            "y": 2970
+          },
+          {
+            "id": "Ledger query",
+            "kind": "part",
+            "platform": "supabase",
+            "x": 1180,
+            "y": 2970
+          },
+          {
+            "id": "Calculator",
+            "kind": "part",
+            "x": 1380,
+            "y": 2970
+          },
+          {
+            "id": "Plan the answer",
+            "kind": "part",
+            "x": 1580,
+            "y": 2970
+          },
+          {
+            "id": "Answer",
+            "kind": "part",
+            "x": 1780,
+            "y": 2970
+          },
+          {
+            "id": "Only answer with working",
+            "kind": "code",
+            "x": 2040,
+            "y": 2790
+          },
+          {
+            "id": "Log the question",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2300,
+            "y": 2790
+          },
+          {
+            "id": "Answer in Slack",
+            "kind": "respond",
+            "x": 2560,
+            "y": 2790
+          },
+          {
+            "id": "1st of the month",
+            "kind": "trigger",
+            "x": 0,
+            "y": 3550
+          },
+          {
+            "id": "Two months of invoices",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 260,
+            "y": 3550
+          },
+          {
+            "id": "Total by account",
+            "kind": "code",
+            "x": 520,
+            "y": 3550
+          },
+          {
+            "id": "Close agent",
+            "kind": "agent",
+            "x": 880,
+            "y": 3420
+          },
+          {
+            "id": "Claude · close",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 780,
+            "y": 3640
+          },
+          {
+            "id": "Close note",
+            "kind": "part",
+            "x": 980,
+            "y": 3640
+          },
+          {
+            "id": "One row per account",
+            "kind": "code",
+            "x": 1240,
+            "y": 3550
+          },
+          {
+            "id": "Add to the month-end pack",
+            "kind": "app",
+            "platform": "googleSheets",
+            "x": 1500,
+            "y": 3550
+          },
+          {
+            "id": "Post the close",
+            "kind": "app",
+            "platform": "slack",
+            "x": 1760,
+            "y": 3550
+          }
+        ],
+        "edges": [
+          {
+            "from": "Invoice email arrives",
+            "to": "Read the email",
+            "out": 0
+          },
+          {
+            "from": "Read the email",
+            "to": "Something to read?",
+            "out": 0
+          },
+          {
+            "from": "Something to read?",
+            "to": "Seen this email?",
+            "out": 0
+          },
+          {
+            "from": "Seen this email?",
+            "to": "New email?",
+            "out": 0
+          },
+          {
+            "from": "New email?",
+            "to": "Extraction agent",
+            "out": 0
+          },
+          {
+            "from": "Extraction agent",
+            "to": "Check the arithmetic",
+            "out": 0
+          },
+          {
+            "from": "Check the arithmetic",
+            "to": "Same invoice before?",
+            "out": 0
+          },
+          {
+            "from": "Same invoice before?",
+            "to": "What we know of the vendor",
+            "out": 0
+          },
+          {
+            "from": "What we know of the vendor",
+            "to": "Compare with history",
+            "out": 0
+          },
+          {
+            "from": "Compare with history",
+            "to": "Coding agent",
+            "out": 0
+          },
+          {
+            "from": "Coding agent",
+            "to": "Hold it to the chart",
+            "out": 0
+          },
+          {
+            "from": "Hold it to the chart",
+            "to": "Clean?",
+            "out": 0
+          },
+          {
+            "from": "Clean?",
+            "to": "Create the bill in QuickBooks",
+            "out": 0
+          },
+          {
+            "from": "Create the bill in QuickBooks",
+            "to": "File the invoice",
+            "out": 0
+          },
+          {
+            "from": "File the invoice",
+            "to": "Label as filed",
+            "out": 0
+          },
+          {
+            "from": "Something to read?",
+            "to": "Nothing to read",
+            "out": 1
+          },
+          {
+            "from": "New email?",
+            "to": "Already processed",
+            "out": 1
+          },
+          {
+            "from": "Clean?",
+            "to": "Explain what is wrong",
+            "out": 1
+          },
+          {
+            "from": "Explain what is wrong",
+            "to": "Queue for review",
+            "out": 0
+          },
+          {
+            "from": "Queue for review",
+            "to": "Review message",
+            "out": 0
+          },
+          {
+            "from": "Review message",
+            "to": "Tell finance",
+            "out": 0
+          },
+          {
+            "from": "Create the bill in QuickBooks",
+            "to": "Explain what is wrong",
+            "out": 1
+          },
+          {
+            "from": "06:30 daily",
+            "to": "Yesterday's bank lines",
+            "out": 0
+          },
+          {
+            "from": "Yesterday's bank lines",
+            "to": "Bills awaiting payment",
+            "out": 0
+          },
+          {
+            "from": "Bills awaiting payment",
+            "to": "Match the exact ones",
+            "out": 0
+          },
+          {
+            "from": "Match the exact ones",
+            "to": "Anything left over?",
+            "out": 0
+          },
+          {
+            "from": "Anything left over?",
+            "to": "Matching agent",
+            "out": 0
+          },
+          {
+            "from": "Matching agent",
+            "to": "Accept only what holds up",
+            "out": 0
+          },
+          {
+            "from": "Accept only what holds up",
+            "to": "One row per match",
+            "out": 0
+          },
+          {
+            "from": "One row per match",
+            "to": "Mark the bill paid",
+            "out": 0
+          },
+          {
+            "from": "Mark the bill paid",
+            "to": "Post the reconciliation",
+            "out": 0
+          },
+          {
+            "from": "Anything left over?",
+            "to": "Accept only what holds up",
+            "out": 1
+          },
+          {
+            "from": "07:00 daily",
+            "to": "The last 90 days",
+            "out": 0
+          },
+          {
+            "from": "The last 90 days",
+            "to": "Look for the unusual",
+            "out": 0
+          },
+          {
+            "from": "Look for the unusual",
+            "to": "Anything unusual?",
+            "out": 0
+          },
+          {
+            "from": "Anything unusual?",
+            "to": "Anomaly agent",
+            "out": 0
+          },
+          {
+            "from": "Anomaly agent",
+            "to": "Record the flags",
+            "out": 0
+          },
+          {
+            "from": "Record the flags",
+            "to": "Raise the anomalies",
+            "out": 0
+          },
+          {
+            "from": "Anything unusual?",
+            "to": "Nothing unusual",
+            "out": 1
+          },
+          {
+            "from": "Finance question",
+            "to": "Read the question",
+            "out": 0
+          },
+          {
+            "from": "Read the question",
+            "to": "Allowed to ask?",
+            "out": 0
+          },
+          {
+            "from": "Allowed to ask?",
+            "to": "Analyst agent",
+            "out": 0
+          },
+          {
+            "from": "Analyst agent",
+            "to": "Only answer with working",
+            "out": 0
+          },
+          {
+            "from": "Only answer with working",
+            "to": "Log the question",
+            "out": 0
+          },
+          {
+            "from": "Log the question",
+            "to": "Answer in Slack",
+            "out": 0
+          },
+          {
+            "from": "Allowed to ask?",
+            "to": "Not allowed",
+            "out": 1
+          },
+          {
+            "from": "1st of the month",
+            "to": "Two months of invoices",
+            "out": 0
+          },
+          {
+            "from": "Two months of invoices",
+            "to": "Total by account",
+            "out": 0
+          },
+          {
+            "from": "Total by account",
+            "to": "Close agent",
+            "out": 0
+          },
+          {
+            "from": "Close agent",
+            "to": "One row per account",
+            "out": 0
+          },
+          {
+            "from": "One row per account",
+            "to": "Add to the month-end pack",
+            "out": 0
+          },
+          {
+            "from": "Add to the month-end pack",
+            "to": "Post the close",
+            "out": 0
+          },
+          {
+            "from": "GPT · extraction",
+            "to": "Extraction agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Invoice fields",
+            "to": "Extraction agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Claude · coding",
+            "to": "Coding agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Chart of accounts",
+            "to": "Coding agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Embeddings · chart",
+            "to": "Chart of accounts",
+            "out": 0,
+            "part": "embedding"
+          },
+          {
+            "from": "Account",
+            "to": "Coding agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Claude · matching",
+            "to": "Matching agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Proposed matches",
+            "to": "Matching agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Claude · anomalies",
+            "to": "Anomaly agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Claude · analysis",
+            "to": "Analyst agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Conversation memory",
+            "to": "Analyst agent",
+            "out": 0,
+            "part": "memory"
+          },
+          {
+            "from": "Ledger query",
+            "to": "Analyst agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Calculator",
+            "to": "Analyst agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Plan the answer",
+            "to": "Analyst agent",
+            "out": 0,
+            "part": "tool"
+          },
+          {
+            "from": "Answer",
+            "to": "Analyst agent",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Claude · close",
+            "to": "Close agent",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Close note",
+            "to": "Close agent",
+            "out": 0,
+            "part": "outputParser"
+          }
+        ],
+        "sections": [
+          {
+            "title": "Invoice intake: read, check, code, file",
+            "nodes": [
+              "Invoice email arrives",
+              "Read the email",
+              "Something to read?",
+              "Nothing to read",
+              "Seen this email?",
+              "New email?",
+              "Already processed",
+              "Extraction agent",
+              "Check the arithmetic",
+              "Same invoice before?",
+              "What we know of the vendor",
+              "Compare with history",
+              "Coding agent",
+              "Hold it to the chart",
+              "Clean?",
+              "Create the bill in QuickBooks",
+              "File the invoice",
+              "Label as filed",
+              "Explain what is wrong",
+              "Queue for review",
+              "Review message",
+              "Tell finance"
+            ]
+          },
+          {
+            "title": "Bank matching",
+            "nodes": [
+              "06:30 daily",
+              "Yesterday's bank lines",
+              "Bills awaiting payment",
+              "Match the exact ones",
+              "Anything left over?",
+              "Matching agent",
+              "Accept only what holds up",
+              "One row per match",
+              "Mark the bill paid",
+              "Post the reconciliation"
+            ]
+          },
+          {
+            "title": "Anomaly watch",
+            "nodes": [
+              "07:00 daily",
+              "The last 90 days",
+              "Look for the unusual",
+              "Anything unusual?",
+              "Anomaly agent",
+              "Record the flags",
+              "Raise the anomalies",
+              "Nothing unusual"
+            ]
+          },
+          {
+            "title": "Questions in Slack",
+            "nodes": [
+              "Finance question",
+              "Read the question",
+              "Allowed to ask?",
+              "Not allowed",
+              "Analyst agent",
+              "Only answer with working",
+              "Log the question",
+              "Answer in Slack"
+            ]
+          },
+          {
+            "title": "Month end",
+            "nodes": [
+              "1st of the month",
+              "Two months of invoices",
+              "Total by account",
+              "Close agent",
+              "One row per account",
+              "Add to the month-end pack",
+              "Post the close"
             ]
           }
         ]

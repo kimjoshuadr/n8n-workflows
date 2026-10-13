@@ -337,9 +337,19 @@ Nothing below this line runs without a yes.`,
         resource: 'row',
         operation: 'getAll',
         tableId: 'content_topics',
-        returnAll: true,
-        filterType: 'string',
-        filterString: "={{ 'status=eq.queued&limit=1' }}",
+        returnAll: false,
+        limit: 1,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'queued' }}",
+                },
+            ],
+        },
     };
 
     @node({
@@ -399,8 +409,22 @@ Nothing below this line runs without a yes.`,
         resource: 'row',
         operation: 'update',
         tableId: 'content_topics',
-        filterType: 'string',
-        filterString: "={{ 'id=eq.' + $json.id + '&status=eq.queued' }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.id }}',
+                },
+                {
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'queued' }}",
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -1268,8 +1292,17 @@ return [{ json: { topic_id: s.topic_id, topic: s.topic, why } }];`,
         resource: 'row',
         operation: 'update',
         tableId: 'content_topics',
-        filterType: 'string',
-        filterString: "={{ 'id=eq.' + $json.topic_id }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.topic_id }}',
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -1404,8 +1437,22 @@ return [{ json: { valid: !!d && !!b.draft_id, decision: d, draft_id: String(b.dr
         resource: 'row',
         operation: 'update',
         tableId: 'content_drafts',
-        filterType: 'string',
-        filterString: "={{ 'id=eq.' + $json.draft_id + '&status=eq.awaiting_approval' }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.draft_id }}',
+                },
+                {
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'awaiting_approval' }}",
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -1575,8 +1622,17 @@ return [{ json: { valid: !!d && !!b.draft_id, decision: d, draft_id: String(b.dr
         resource: 'row',
         operation: 'update',
         tableId: 'content_drafts',
-        filterType: 'string',
-        filterString: "={{ 'id=eq.' + $('Awaiting approval?').first().json.id }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Awaiting approval?').first().json.id }}",
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -1671,8 +1727,17 @@ return [{ json: { script, image_url: $input.first().json.data?.[0]?.url ?? null 
         resource: 'row',
         operation: 'update',
         tableId: 'content_drafts',
-        filterType: 'string',
-        filterString: "={{ 'id=eq.' + $('Awaiting approval?').first().json.id }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Awaiting approval?').first().json.id }}",
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -1846,8 +1911,17 @@ return [{ json: { linkedin: post("linkedin"), x: post("x"), facebook: post("face
         resource: 'row',
         operation: 'update',
         tableId: 'content_drafts',
-        filterType: 'string',
-        filterString: "={{ 'id=eq.' + $('Awaiting approval?').first().json.id }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Awaiting approval?').first().json.id }}",
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -1920,8 +1994,22 @@ return [{ json: { linkedin: post("linkedin"), x: post("x"), facebook: post("face
         operation: 'getAll',
         tableId: 'content_drafts',
         returnAll: true,
-        filterType: 'string',
-        filterString: "={{ 'status=eq.published&published_at=gte.' + $now.minus({ days: 30 }).toISO() }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'published' }}",
+                },
+                {
+                    keyName: 'published_at',
+                    condition: 'gte',
+                    keyValue: '={{ $now.minus({ days: 30 }).toISO() }}',
+                },
+            ],
+        },
     };
 
     @node({

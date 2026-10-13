@@ -1,0 +1,2589 @@
+{
+  "name": "AI back office · Invoices, bank lines and questions",
+  "nodes": [
+    {
+      "id": "de144109-62eb-4b32-a008-ee122f85d46f",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -220
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 230,
+        "content": "## AI back office · Invoices, bank lines and questions\nAgents read supplier invoices from Gmail, code them against the chart of accounts and file them in QuickBooks. Bank lines are matched every morning, the ledger is scanned for anomalies, finance can ask questions in Slack, and the month closes into a Google Sheets pack. Every figure is checked or computed in code.\n\n**Platforms:** Gmail, OpenAI, Supabase, Claude, Pinecone, QuickBooks, Slack, Google Sheets\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/ai-back-office`"
+      }
+    },
+    {
+      "id": "7055d7f9-38ac-4261-aa0c-dd911486443d",
+      "name": "Section: Invoice intake: read, check, code, file",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        0
+      ],
+      "parameters": {
+        "width": 5400,
+        "height": 770,
+        "color": 4,
+        "content": "## 1. Invoice intake: read, check, code, file\nA model copies the fields. Code checks the document's own arithmetic and the vendor's history before anything reaches QuickBooks."
+      }
+    },
+    {
+      "id": "2a95a134-f640-4732-a3f0-113ba432fb4e",
+      "name": "Section: Bank matching",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        850
+      ],
+      "parameters": {
+        "width": 2920,
+        "height": 590,
+        "color": 5,
+        "content": "## 2. Bank matching\nExact matches in code first. An agent proposes the rest; equal amounts and confidence decide."
+      }
+    },
+    {
+      "id": "834f977f-93a1-4391-ad7c-a2feee84c153",
+      "name": "Section: Anomaly watch",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        1520
+      ],
+      "parameters": {
+        "width": 1940,
+        "height": 770,
+        "color": 6,
+        "content": "## 3. Anomaly watch\nFixed rules raise the flags. The agent only orders and explains them."
+      }
+    },
+    {
+      "id": "9c2ee08f-ff2f-4b03-a7ab-92c78bb4682d",
+      "name": "Section: Questions in Slack",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        2370
+      ],
+      "parameters": {
+        "width": 2940,
+        "height": 770,
+        "color": 3,
+        "content": "## 4. Questions in Slack\nRead-only tools, a calculator, and no answer without the rows behind it."
+      }
+    },
+    {
+      "id": "8bd871c9-351e-434d-a616-4cf4ebfb8e13",
+      "name": "Section: Month end",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        3220
+      ],
+      "parameters": {
+        "width": 2140,
+        "height": 590,
+        "color": 7,
+        "content": "## 5. Month end"
+      }
+    },
+    {
+      "id": "aba7b0d9-9fda-4ad7-ad20-916b6d32084c",
+      "position": [
+        0,
+        420
+      ],
+      "name": "Invoice email arrives",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": true,
+        "filters": {
+          "readStatus": "unread"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "__CRED:gmail__",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "id": "f1b5258c-49ef-48e1-a9cf-19366fe695c0",
+      "position": [
+        260,
+        420
+      ],
+      "name": "Read the email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => {\n  const m = item.json;\n  const text = String(m.text ?? m.snippet ?? \"\").slice(0, 12000);\n  return { json: { message_id: String(m.id ?? \"\"), from: String(m.From ?? m.from ?? \"\").toLowerCase(), subject: String(m.Subject ?? m.subject ?? \"\"), text, has_text: text.trim().length > 40, scope: \"invoice-email\", key: String(m.id ?? \"\") } };\n});"
+      }
+    },
+    {
+      "id": "2309beeb-228a-4c69-a121-986794386af0",
+      "position": [
+        520,
+        420
+      ],
+      "name": "Something to read?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7c80065f-2f87-46fe-a813-7f100d305da1",
+              "leftValue": "={{ $json.has_text && !!$json.message_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "25bae8fc-45e5-42d5-ad3e-70d159f321f8",
+      "position": [
+        780,
+        330
+      ],
+      "name": "Nothing to read",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "326b7247-8582-4a1a-ab50-ea1b088399f6",
+      "position": [
+        780,
+        510
+      ],
+      "name": "Seen this email?",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:idempotency-guard__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e3f4cd85-7e3a-4a1d-a295-df422bf85781",
+      "position": [
+        1040,
+        420
+      ],
+      "name": "New email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "998c0d45-9e17-4c1b-a693-f5c6704d29b6",
+              "leftValue": "={{ !$json.duplicate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6337c92c-3e07-47ff-aff5-88239f76f785",
+      "position": [
+        1400,
+        200
+      ],
+      "name": "Already processed",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "a072f5df-7d2f-4c37-a64d-e4c9ceec0353",
+      "position": [
+        1400,
+        380
+      ],
+      "name": "Extraction agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Extraction agent. Copy the fields of this supplier invoice exactly as written: vendor name, invoice number, invoice date and due date as YYYY-MM-DD, currency, each line with its amount, subtotal, tax, total, and the bank account or IBAN to pay if one is printed. Use null for anything not on the document. Never work a number out: copy it.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "22ad0332-2f24-4bdd-ae8c-7523bf77c0ba",
+      "position": [
+        1300,
+        600
+      ],
+      "name": "GPT · extraction",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "a12f6405-300a-4856-a09a-f4c1cdb7b430",
+      "position": [
+        1500,
+        600
+      ],
+      "name": "Invoice fields",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"vendor\": \"Acme Supplies\",\n  \"invoice_number\": \"INV-1042\",\n  \"invoice_date\": \"2026-10-01\",\n  \"due_date\": \"2026-10-31\",\n  \"currency\": \"USD\",\n  \"lines\": [\n    {\n      \"description\": \"Paper\",\n      \"amount\": 100.5\n    }\n  ],\n  \"subtotal\": 100.5,\n  \"tax\": 20.1,\n  \"total\": 120.6,\n  \"bank_account\": \"GB00BANK0000\",\n  \"confidence\": 0.95\n}"
+      }
+    },
+    {
+      "id": "529982cb-9ead-49ea-a022-a14170be0c2b",
+      "position": [
+        1760,
+        420
+      ],
+      "name": "Check the arithmetic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const e = $(\"New email?\").first().json;\nconst f = $input.first().json.output;\nconst problems = [];\nconst num = (v) => (typeof v === \"number\" && Number.isFinite(v) ? v : null);\nif (!f || typeof f !== \"object\") problems.push(\"the invoice could not be read\");\nconst lines = (f?.lines ?? []).filter((l) => l && num(l.amount) !== null);\nconst subtotal = num(f?.subtotal), tax = num(f?.tax) ?? 0, total = num(f?.total);\nconst cents = (n) => Math.round(n * 100);\nif (f) {\n  if (!f.vendor || !f.invoice_number) problems.push(\"vendor or invoice number missing\");\n  if (total === null || total <= 0) problems.push(\"total is missing or not positive\");\n  // The document's own numbers must agree with each other.\n  if (lines.length && subtotal !== null && cents(lines.reduce((s, l) => s + l.amount, 0)) !== cents(subtotal)) problems.push(\"the lines do not add up to the subtotal\");\n  if (subtotal !== null && total !== null && cents(subtotal + tax) !== cents(total)) problems.push(\"subtotal plus tax is not the total\");\n  if (f.due_date && Number.isNaN(Date.parse(f.due_date))) problems.push(\"the due date is not a date\");\n  if (f.invoice_date && f.due_date && Date.parse(f.due_date) < Date.parse(f.invoice_date)) problems.push(\"due before it was issued\");\n  if ((num(f.confidence) ?? 0) < 0.8) problems.push(\"low reading confidence\");\n}\nreturn [{ json: { ...e, vendor: f?.vendor ?? null, invoice_number: f?.invoice_number ?? null, invoice_date: f?.invoice_date ?? null, due_date: f?.due_date ?? null, currency: f?.currency ?? \"USD\", lines, subtotal, tax, total, bank_account: f?.bank_account ?? null, problems } }];"
+      }
+    },
+    {
+      "id": "3ae2de49-d286-4f1e-a2bf-8c617fcd3c13",
+      "position": [
+        2020,
+        420
+      ],
+      "name": "Same invoice before?",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "supplier_invoices",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vendor",
+              "condition": "eq",
+              "keyValue": "={{ ($json.vendor ?? '') }}"
+            },
+            {
+              "keyName": "invoice_number",
+              "condition": "eq",
+              "keyValue": "={{ ($json.invoice_number ?? '') }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "ab3a7206-a882-45f7-aec4-15be4585f1bf",
+      "position": [
+        2280,
+        420
+      ],
+      "name": "What we know of the vendor",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "vendors",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "name",
+              "condition": "eq",
+              "keyValue": "={{ ($('Check the arithmetic').first().json.vendor ?? '') }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "a7ee9286-e3dc-4e4a-a964-b5f8abfa3a98",
+      "position": [
+        2540,
+        420
+      ],
+      "name": "Compare with history",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const i = $(\"Check the arithmetic\").first().json;\nconst dup = $(\"Same invoice before?\").all().some((r) => r.json.invoice_number);\nconst v = $input.first().json;\nconst problems = [...i.problems];\nif (dup) problems.push(\"this vendor has already sent this invoice number\");\nif (!v.name) problems.push(\"a vendor we have not paid before\");\nelse {\n  if (v.typical_amount && i.total > v.typical_amount * 3) problems.push(\"more than three times this vendor's usual amount\");\n  // The classic fraud: a real vendor, a new bank account.\n  if (v.bank_account && i.bank_account && v.bank_account !== i.bank_account) problems.push(\"the bank account differs from the one on file\");\n}\nreturn [{ json: { ...i, vendor_known: !!v.name, default_account: v.default_account ?? null, problems } }];"
+      }
+    },
+    {
+      "id": "60a95692-d09f-486a-ae63-fc1f93b98a6f",
+      "position": [
+        3000,
+        200
+      ],
+      "name": "Coding agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ vendor: $json.vendor, lines: $json.lines, default_account: $json.default_account }) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Coding agent. Choose the expense account for this invoice from the chart of accounts. Search the chart first and answer with an account name exactly as it appears there. If the vendor has a default account and the lines fit it, use it. Give your confidence.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b46c4d62-ed64-4208-a235-1dccf5fff77d",
+      "position": [
+        2800,
+        420
+      ],
+      "name": "Claude · coding",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "6a42606c-9d1b-4e8f-ac11-060857fd2090",
+      "position": [
+        3000,
+        420
+      ],
+      "name": "Chart of accounts",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search the chart of accounts and the notes on what belongs in each account.",
+        "pineconeIndex": {
+          "__rl": true,
+          "mode": "id",
+          "value": "finance-index"
+        },
+        "topK": 4,
+        "options": {}
+      },
+      "credentials": {
+        "pineconeApi": {
+          "id": "__CRED:pinecone__",
+          "name": "Pinecone"
+        }
+      }
+    },
+    {
+      "id": "dbee38a0-2771-4236-a5e7-d66820b11424",
+      "position": [
+        3000,
+        640
+      ],
+      "name": "Embeddings · chart",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "a87084c7-ed35-4677-af63-28ab87c2462c",
+      "position": [
+        3200,
+        420
+      ],
+      "name": "Account",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"account\": \"Office supplies\",\n  \"confidence\": 0.9\n}"
+      }
+    },
+    {
+      "id": "186d2137-cbc8-4528-a5cd-465a0fcee4b8",
+      "position": [
+        3460,
+        420
+      ],
+      "name": "Hold it to the chart",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const i = $(\"Compare with history\").first().json;\nconst o = $input.first().json.output;\nconst CHART = [\"Office supplies\", \"Software\", \"Rent\", \"Utilities\", \"Professional fees\", \"Travel\", \"Marketing\", \"Cost of goods sold\", \"Equipment\"];\nconst problems = [...i.problems];\nconst account = o && CHART.includes(o.account) ? o.account : null;\nif (!account) problems.push(\"no valid account could be chosen\");\nelse if ((Number(o.confidence) || 0) < 0.75) problems.push(\"unsure which account (\" + account + \"?)\");\nreturn [{ json: { ...i, account, problems, clean: problems.length === 0 } }];"
+      }
+    },
+    {
+      "id": "0f0ec78b-8aa3-45d4-ab94-b5c071c9c720",
+      "position": [
+        3720,
+        420
+      ],
+      "name": "Clean?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f9865d9d-1d89-460c-a60d-10222963f4e9",
+              "leftValue": "={{ $json.clean }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3ced29f5-4eec-49a2-ace5-48ff459cf014",
+      "position": [
+        3980,
+        420
+      ],
+      "name": "Create the bill in QuickBooks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://sandbox-quickbooks.api.intuit.com/v3/company/123' + '/bill' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "quickBooksOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ VendorRef: { name: $json.vendor }, DocNumber: $json.invoice_number, TxnDate: $json.invoice_date, DueDate: $json.due_date, CurrencyRef: { value: $json.currency }, Line: [{ Amount: $json.total, DetailType: 'AccountBasedExpenseLineDetail', AccountBasedExpenseLineDetail: { AccountRef: { name: $json.account } } }] }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "quickBooksOAuth2Api": {
+          "id": "__CRED:quickbooks__",
+          "name": "QuickBooks"
+        }
+      }
+    },
+    {
+      "id": "5be9bdbe-4a6f-491e-a776-ef691c7933b4",
+      "position": [
+        4240,
+        330
+      ],
+      "name": "File the invoice",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "supplier_invoices",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "vendor",
+              "fieldValue": "={{ $('Clean?').first().json.vendor }}"
+            },
+            {
+              "fieldId": "invoice_number",
+              "fieldValue": "={{ $('Clean?').first().json.invoice_number }}"
+            },
+            {
+              "fieldId": "total",
+              "fieldValue": "={{ $('Clean?').first().json.total }}"
+            },
+            {
+              "fieldId": "currency",
+              "fieldValue": "={{ $('Clean?').first().json.currency }}"
+            },
+            {
+              "fieldId": "due_date",
+              "fieldValue": "={{ $('Clean?').first().json.due_date }}"
+            },
+            {
+              "fieldId": "account",
+              "fieldValue": "={{ $('Clean?').first().json.account }}"
+            },
+            {
+              "fieldId": "bill_id",
+              "fieldValue": "={{ String($json.Bill?.Id ?? $json.id ?? '') }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ 'awaiting_payment' }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "2ef2bf87-21fb-4291-af78-e6c162e2d951",
+      "position": [
+        4500,
+        330
+      ],
+      "name": "Label as filed",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "parameters": {
+        "resource": "message",
+        "operation": "addLabels",
+        "messageId": "={{ $('Clean?').first().json.message_id }}",
+        "labelIds": [
+          "Label_filed"
+        ]
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "__CRED:gmail__",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "id": "e824c6f3-a096-4bdb-a3ee-e205583bb21c",
+      "position": [
+        4240,
+        510
+      ],
+      "name": "Explain what is wrong",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const i = $(\"Hold it to the chart\").first().json;\nconst why = i.clean ? [\"QuickBooks would not accept the bill\"] : i.problems;\nreturn [{ json: { message_id: i.message_id, vendor: i.vendor, invoice_number: i.invoice_number, total: i.total, why } }];"
+      }
+    },
+    {
+      "id": "d5ccc5e7-579a-498c-ae5c-d04edaad1396",
+      "position": [
+        4500,
+        510
+      ],
+      "name": "Queue for review",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "invoice_review",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "message_id",
+              "fieldValue": "={{ $json.message_id }}"
+            },
+            {
+              "fieldId": "vendor",
+              "fieldValue": "={{ $json.vendor }}"
+            },
+            {
+              "fieldId": "invoice_number",
+              "fieldValue": "={{ $json.invoice_number }}"
+            },
+            {
+              "fieldId": "total",
+              "fieldValue": "={{ $json.total }}"
+            },
+            {
+              "fieldId": "problems",
+              "fieldValue": "={{ $json.why }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ 'open' }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "4a96c767-3f76-40c0-ad12-bbec2376914d",
+      "position": [
+        4760,
+        420
+      ],
+      "name": "Review message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const r = $(\"Explain what is wrong\").first().json;\nconst urgent = r.why.some((w) => /bank account/.test(w));\nreturn [{ json: { channel: \"#finance\", level: urgent ? \"critical\" : \"warn\", text: \"An invoice\" + (r.vendor ? \" from \" + r.vendor : \"\") + (r.total ? \" for \" + r.total : \"\") + \" needs a person: \" + r.why.join(\"; \") + \".\" } }];"
+      }
+    },
+    {
+      "id": "d9e9f90c-09d6-4eb3-a9ee-cc7843109439",
+      "position": [
+        5020,
+        420
+      ],
+      "name": "Tell finance",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__WF:notify__"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1c93e2f0-24fd-46af-a408-5a16b3196626",
+      "position": [
+        0,
+        1180
+      ],
+      "name": "06:30 daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 6 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "41fea1fb-c26f-4330-af94-fc44f6e748b8",
+      "position": [
+        260,
+        1180
+      ],
+      "name": "Yesterday's bank lines",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://sandbox-quickbooks.api.intuit.com/v3/company/123' + '/query' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "quickBooksOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ \"select * from Purchase where TxnDate >= '\" + $now.minus({ days: 3 }).toISODate() + \"'\" }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "quickBooksOAuth2Api": {
+          "id": "__CRED:quickbooks__",
+          "name": "QuickBooks"
+        }
+      }
+    },
+    {
+      "id": "54aa04ec-2467-4c28-ae5d-d1be6dc1f516",
+      "position": [
+        520,
+        1180
+      ],
+      "name": "Bills awaiting payment",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "supplier_invoices",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "={{ 'awaiting_payment' }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "9092e075-f8d9-4a6b-a488-6a1d3455684f",
+      "position": [
+        780,
+        1180
+      ],
+      "name": "Match the exact ones",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const lines = ($(\"Yesterday's bank lines\").first().json.QueryResponse?.Purchase ?? []).map((p) => ({ id: String(p.Id), amount: Number(p.TotalAmt), memo: String(p.PrivateNote ?? p.DocNumber ?? \"\"), date: p.TxnDate }));\nconst bills = $input.all().map((i) => i.json).filter((b) => b.invoice_number);\nconst cents = (n) => Math.round(Number(n) * 100);\nconst used = new Set();\nconst matched = [], unmatched = [];\nfor (const l of lines) {\n  // Exact: the same amount and the invoice number in the memo.\n  const hit = bills.find((b) => !used.has(b.invoice_number) && cents(b.total) === cents(l.amount) && l.memo.toLowerCase().includes(String(b.invoice_number).toLowerCase()));\n  if (hit) { used.add(hit.invoice_number); matched.push({ line: l.id, invoice_number: hit.invoice_number, vendor: hit.vendor, how: \"exact\" }); }\n  else unmatched.push(l);\n}\nreturn [{ json: { matched, unmatched, open: bills.filter((b) => !used.has(b.invoice_number)).map((b) => ({ invoice_number: b.invoice_number, vendor: b.vendor, total: b.total })) } }];"
+      }
+    },
+    {
+      "id": "a792cf19-18d3-45ac-a633-fc3bfb174575",
+      "position": [
+        1040,
+        1180
+      ],
+      "name": "Anything left over?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "58ee1800-cc21-4c90-aa5c-ef5abc01c8e4",
+              "leftValue": "={{ $json.unmatched.length > 0 && $json.open.length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "af6e0267-8bfc-4146-a575-6d2d50435b36",
+      "position": [
+        1400,
+        1050
+      ],
+      "name": "Matching agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ bank_lines: $json.unmatched, open_bills: $json.open }) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Matching agent. Some bank lines did not match a bill exactly. For each bank line, say which open bill it most likely pays, if any, and why: a vendor name in the memo, a reference that is nearly the invoice number. Propose a match only when the amounts are equal. Give a confidence for each.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "fe04f1f5-4ea0-4cc4-a9ea-991c67784611",
+      "position": [
+        1300,
+        1270
+      ],
+      "name": "Claude · matching",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "6b87ca2b-466d-480f-a9e8-8f67b8bea836",
+      "position": [
+        1500,
+        1270
+      ],
+      "name": "Proposed matches",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"matches\": [\n    {\n      \"line\": \"101\",\n      \"invoice_number\": \"INV-1042\",\n      \"why\": \"Vendor name in the memo\",\n      \"confidence\": 0.9\n    }\n  ]\n}"
+      }
+    },
+    {
+      "id": "9ac64b65-915b-4567-ab16-404f6cd6181a",
+      "position": [
+        1760,
+        1180
+      ],
+      "name": "Accept only what holds up",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const m = $(\"Match the exact ones\").first().json;\nconst proposed = $(\"Matching agent\").isExecuted ? ($input.first().json.output?.matches ?? []) : [];\nconst cents = (n) => Math.round(Number(n) * 100);\nconst matched = [...m.matched];\nconst taken = new Set(matched.map((x) => x.invoice_number));\nfor (const p of proposed) {\n  const line = m.unmatched.find((l) => l.id === String(p?.line));\n  const bill = m.open.find((b) => b.invoice_number === p?.invoice_number);\n  // The agent proposes; equal amounts and high confidence decide.\n  if (line && bill && !taken.has(bill.invoice_number) && cents(line.amount) === cents(bill.total) && Number(p.confidence) >= 0.8) { taken.add(bill.invoice_number); matched.push({ line: line.id, invoice_number: bill.invoice_number, vendor: bill.vendor, how: \"agent: \" + String(p.why).slice(0, 120) }); }\n}\nconst lines = new Set(matched.map((x) => x.line));\nreturn [{ json: { matched, exceptions: m.unmatched.filter((l) => !lines.has(l.id)) } }];"
+      }
+    },
+    {
+      "id": "81735fd5-d902-438c-a2a2-03a7db0943ae",
+      "position": [
+        2020,
+        1180
+      ],
+      "name": "One row per match",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.first().json.matched.map((json) => ({ json }));"
+      }
+    },
+    {
+      "id": "961faa14-bf7d-41c4-adde-e78a87bed0e2",
+      "position": [
+        2280,
+        1180
+      ],
+      "name": "Mark the bill paid",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "supplier_invoices",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "invoice_number",
+              "condition": "eq",
+              "keyValue": "={{ ($json.invoice_number) }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ 'paid' }}"
+            },
+            {
+              "fieldId": "bank_line",
+              "fieldValue": "={{ $json.line }}"
+            },
+            {
+              "fieldId": "matched_how",
+              "fieldValue": "={{ $json.how }}"
+            },
+            {
+              "fieldId": "paid_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "a3a736e7-1304-47ae-aba0-eb8a69c5efcc",
+      "position": [
+        2540,
+        1180
+      ],
+      "name": "Post the reconciliation",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#finance' }}"
+        },
+        "text": "={{ ':bank: Matched ' + $('Accept only what holds up').first().json.matched.length + ' bank lines to bills. ' + ($('Accept only what holds up').first().json.exceptions.length ? $('Accept only what holds up').first().json.exceptions.length + ' could not be matched: ' + $('Accept only what holds up').first().json.exceptions.map(e => e.amount + ' \"' + e.memo + '\"').join('; ') : 'Nothing left unmatched.') }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
+    },
+    {
+      "id": "55dc0876-5715-45ed-a72f-1e508d1bd0ef",
+      "position": [
+        0,
+        1940
+      ],
+      "name": "07:00 daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b4b472a3-da07-41a6-a8be-1b97012c5fd2",
+      "position": [
+        260,
+        1940
+      ],
+      "name": "The last 90 days",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "supplier_invoices",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "at",
+              "condition": "gte",
+              "keyValue": "={{ $now.minus({ days: 90 }).toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "89257099-368c-4272-a77a-f5d9a6b9e362",
+      "position": [
+        520,
+        1940
+      ],
+      "name": "Look for the unusual",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const rows = $input.all().map((i) => i.json).filter((r) => r.vendor && Number.isFinite(Number(r.total)));\nconst day = Date.now() - 864e5;\nconst recent = rows.filter((r) => new Date(r.at).getTime() >= day);\nconst flags = [];\nfor (const r of recent) {\n  const past = rows.filter((p) => p.vendor === r.vendor && p !== r).map((p) => Number(p.total));\n  if (past.length >= 3) {\n    const mean = past.reduce((a, b) => a + b, 0) / past.length;\n    const sd = Math.sqrt(past.reduce((a, b) => a + (b - mean) ** 2, 0) / past.length) || mean * 0.1;\n    if (Math.abs(Number(r.total) - mean) > 3 * sd) flags.push({ kind: \"unusual amount\", vendor: r.vendor, invoice_number: r.invoice_number, total: Number(r.total), usual: Math.round(mean) });\n  }\n  const twin = rows.find((p) => p !== r && p.vendor === r.vendor && Number(p.total) === Number(r.total) && Math.abs(new Date(p.at) - new Date(r.at)) < 7 * 864e5);\n  if (twin) flags.push({ kind: \"same amount twice in a week\", vendor: r.vendor, invoice_number: r.invoice_number, total: Number(r.total), other: twin.invoice_number });\n  if (Number(r.total) >= 1000 && Number(r.total) % 500 === 0 && past.length < 2) flags.push({ kind: \"round amount from a new vendor\", vendor: r.vendor, invoice_number: r.invoice_number, total: Number(r.total) });\n}\nreturn [{ json: { checked: recent.length, flags } }];"
+      }
+    },
+    {
+      "id": "b682f6ee-0413-45af-a986-d25d99585014",
+      "position": [
+        780,
+        1940
+      ],
+      "name": "Anything unusual?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0c2708e2-9751-43e3-a92b-0a2859fead84",
+              "leftValue": "={{ $json.flags.length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ceb72d75-e37a-4306-a951-c997dd3b1f3f",
+      "position": [
+        1040,
+        1720
+      ],
+      "name": "Anomaly agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json.flags) }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "You are the Anomaly agent. These invoices were flagged by fixed rules. For a finance manager, put them in order of how much they deserve a look and say in one line each what to check. Do not add flags of your own and do not say anything is fraud.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "fd128e96-fbe5-45a2-ac35-30267bd81b5a",
+      "position": [
+        1040,
+        1940
+      ],
+      "name": "Claude · anomalies",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "e1ece6d2-292a-4b58-a29d-2faa466711b0",
+      "position": [
+        1300,
+        1940
+      ],
+      "name": "Record the flags",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "anomalies",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "flags",
+              "fieldValue": "={{ $('Look for the unusual').first().json.flags }}"
+            },
+            {
+              "fieldId": "note",
+              "fieldValue": "={{ $json.output ?? null }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "245dcb51-e98d-4a95-a0ff-b37b160cf719",
+      "position": [
+        1560,
+        1940
+      ],
+      "name": "Raise the anomalies",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#finance' }}"
+        },
+        "text": "={{ ':warning: ' + $('Look for the unusual').first().json.flags.length + ' invoice(s) look unusual.\\n' + ($('Anomaly agent').first().json.output ?? $('Look for the unusual').first().json.flags.map(f => f.vendor + ' ' + f.invoice_number + ': ' + f.kind).join('\\n')) }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
+    },
+    {
+      "id": "be18afa2-dac5-499d-a9d3-ffebf0e54de5",
+      "position": [
+        1040,
+        2160
+      ],
+      "name": "Nothing unusual",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "11850987-84b2-4ba2-a185-2b78090bb7d0",
+      "position": [
+        0,
+        2790
+      ],
+      "name": "Finance question",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "finance-question",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "b9a174ec-7306-4ed7-a256-e7364b74b7ae"
+    },
+    {
+      "id": "260ac3c3-7fba-46c7-add0-dd0c58f7efa7",
+      "position": [
+        260,
+        2790
+      ],
+      "name": "Read the question",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body ?? {};\nconst ALLOWED = [\"U-FINANCE-1\", \"U-FINANCE-2\", \"U-OWNER\"]; // the Slack users who may ask about the books\nconst user = String(b.user_id ?? \"\");\nconst text = String(b.text ?? \"\").trim().slice(0, 600);\nreturn [{ json: { user, text, allowed: ALLOWED.includes(user) && text.length > 3 } }];"
+      }
+    },
+    {
+      "id": "bc94f087-4c6e-4b2d-ab4b-22ac6644631b",
+      "position": [
+        520,
+        2790
+      ],
+      "name": "Allowed to ask?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "dd62870a-5622-4ab8-a77c-60f6a28aec41",
+              "leftValue": "={{ $json.allowed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3c391774-4fc4-4ebc-a4b7-c51ed54eaca5",
+      "position": [
+        1280,
+        2570
+      ],
+      "name": "Not allowed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ response_type: 'ephemeral', text: 'Sorry, only the finance team can ask about the books.' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "1c76cb04-5705-4336-a480-8af85aeecfcc",
+      "position": [
+        1280,
+        2750
+      ],
+      "name": "Analyst agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Analyst agent for a finance team. Answer questions about supplier invoices from the ledger. Always query the ledger before answering, and add numbers up with the calculator, never in your head. Reply with the answer in one or two sentences, the figures you used, and which rows they came from. If the ledger cannot answer the question, say so. You can read; you cannot pay, change or delete anything.",
+          "maxIterations": 8
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c3e4572b-87e6-486d-a583-2e07b0a46f37",
+      "position": [
+        780,
+        2970
+      ],
+      "name": "Claude · analysis",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "c7dab864-69ec-4aca-aca6-04e56e610c67",
+      "position": [
+        980,
+        2970
+      ],
+      "name": "Conversation memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ 'finance-' + $json.user }}",
+        "contextWindowLength": 8
+      }
+    },
+    {
+      "id": "c1d6f76d-43e6-40f3-abed-3f24249543aa",
+      "position": [
+        1180,
+        2970
+      ],
+      "name": "Ledger query",
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Reads supplier invoices from the ledger. Columns: vendor, invoice_number, total, currency, due_date, account, status (awaiting_payment or paid), at.",
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "supplier_invoices",
+        "returnAll": false,
+        "limit": 200,
+        "filterType": "string",
+        "filterString": "={{ $fromAI('filter', `A PostgREST filter, for example status=eq.awaiting_payment or vendor=eq.Acme Supplies. Leave empty for all rows.`, 'string') }}"
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "872ba507-d118-43fc-ad58-bc3153a13051",
+      "position": [
+        1380,
+        2970
+      ],
+      "name": "Calculator",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "parameters": {
+        "description": "Adds a list of numbers. Pass them separated by commas.",
+        "jsCode": "const n = String(query).split(',').map((x) => Number(x.trim())).filter(Number.isFinite); return String(Math.round(n.reduce((a, b) => a + b, 0) * 100) / 100);"
+      }
+    },
+    {
+      "id": "590660ac-da55-4f0e-afec-710cf6ac06fe",
+      "position": [
+        1580,
+        2970
+      ],
+      "name": "Plan the answer",
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "cdece9b1-125b-4c3b-ae9f-b15f253cd07b",
+      "position": [
+        1780,
+        2970
+      ],
+      "name": "Answer",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"answer\": \"The answer in one or two sentences.\",\n  \"figures\": [\n    \"Acme Supplies: 1280.50\"\n  ],\n  \"rows_used\": 3\n}"
+      }
+    },
+    {
+      "id": "89903c9b-e380-4874-a99b-cbfcb64e878e",
+      "position": [
+        2040,
+        2790
+      ],
+      "name": "Only answer with working",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const q = $(\"Allowed to ask?\").first().json;\nconst o = $input.first().json.output;\n// An answer about the books with no rows behind it is not an answer.\nconst ok = o && typeof o.answer === \"string\" && Number(o.rows_used) > 0 && Array.isArray(o.figures) && o.figures.length > 0;\nconst text = ok ? o.answer + \"\\n_From \" + o.rows_used + \" ledger rows: \" + o.figures.slice(0, 6).join(\"; \") + \"_\" : \"I could not answer that from the ledger. Try naming a vendor, a status or a date range.\";\nreturn [{ json: { user: q.user, question: q.text, answered: !!ok, text } }];"
+      }
+    },
+    {
+      "id": "18995823-db55-42fd-a528-ac132106a937",
+      "position": [
+        2300,
+        2790
+      ],
+      "name": "Log the question",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "finance_questions",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "user",
+              "fieldValue": "={{ $json.user }}"
+            },
+            {
+              "fieldId": "question",
+              "fieldValue": "={{ $json.question }}"
+            },
+            {
+              "fieldId": "answered",
+              "fieldValue": "={{ $json.answered }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "af364449-67e6-487a-adad-5abf8aff6d7c",
+      "position": [
+        2560,
+        2790
+      ],
+      "name": "Answer in Slack",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ response_type: 'in_channel', text: $('Only answer with working').first().json.text }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "8cf27b61-0841-4a27-a20b-9377de979232",
+      "position": [
+        0,
+        3550
+      ],
+      "name": "1st of the month",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 1 * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "20bd5133-40ad-4e25-aa06-5173dda34d60",
+      "position": [
+        260,
+        3550
+      ],
+      "name": "Two months of invoices",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "supplier_invoices",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "at",
+              "condition": "gte",
+              "keyValue": "={{ $now.minus({ months: 2 }).startOf('month').toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "e31d22e6-babe-4b28-a2d3-0f7effb73ea3",
+      "position": [
+        520,
+        3550
+      ],
+      "name": "Total by account",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const rows = $input.all().map((i) => i.json).filter((r) => r.account && r.at);\nconst last = DateTime.now().minus({ months: 1 });\nconst prior = DateTime.now().minus({ months: 2 });\nconst inMonth = (r, m) => DateTime.fromISO(r.at).hasSame(m, \"month\");\nconst sum = (list) => Math.round(list.reduce((s, r) => s + Number(r.total || 0), 0) * 100) / 100;\nconst accounts = [...new Set(rows.map((r) => r.account))].sort();\nconst lines = accounts.map((account) => {\n  const amount = sum(rows.filter((r) => r.account === account && inMonth(r, last)));\n  const before = sum(rows.filter((r) => r.account === account && inMonth(r, prior)));\n  return { month: last.toFormat(\"yyyy-LL\"), account, amount, prior: before, change: before ? Math.round(((amount - before) / before) * 100) : null };\n}).filter((l) => l.amount || l.prior);\nconst unpaid = rows.filter((r) => r.status === \"awaiting_payment\");\nreturn [{ json: { month: last.toFormat(\"yyyy-LL\"), lines, total: sum(lines.map((l) => ({ total: l.amount }))), prior_total: sum(lines.map((l) => ({ total: l.prior }))), unpaid_count: unpaid.length, unpaid_total: sum(unpaid) } }];"
+      }
+    },
+    {
+      "id": "77d63ac4-dd34-496f-a4e0-6e2efec9b039",
+      "position": [
+        880,
+        3420
+      ],
+      "name": "Close agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Close agent. Write the month-end note for the owner: three sentences on what was spent and what changed against the month before, then up to three things worth a question. Use only the figures given, and quote them exactly.",
+          "maxIterations": 6
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "4544eba0-5472-4aef-a194-ab85e2f7c63f",
+      "position": [
+        780,
+        3640
+      ],
+      "name": "Claude · close",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
+    },
+    {
+      "id": "5fce851f-ce89-45b8-a932-78fe6a0ca25e",
+      "position": [
+        980,
+        3640
+      ],
+      "name": "Close note",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"summary\": \"Three sentences.\",\n  \"questions\": [\n    \"Something worth asking about\"\n  ]\n}"
+      }
+    },
+    {
+      "id": "59121e8a-dbed-44a0-aba9-129a3e4e01fa",
+      "position": [
+        1240,
+        3550
+      ],
+      "name": "One row per account",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $(\"Total by account\").first().json.lines.map((json) => ({ json }));"
+      }
+    },
+    {
+      "id": "d3c4fe2c-38b3-4cda-ad7f-9351283792b6",
+      "position": [
+        1500,
+        3550
+      ],
+      "name": "Add to the month-end pack",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "month-end-pack"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Pack"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__CRED:googleSheets__",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "f5064661-d5be-4840-a10f-91aed447e676",
+      "position": [
+        1760,
+        3550
+      ],
+      "name": "Post the close",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#finance' }}"
+        },
+        "text": "={{ ':ledger: *' + $('Total by account').first().json.month + ' closed.* Spend ' + $('Total by account').first().json.total + ' (prior month ' + $('Total by account').first().json.prior_total + '). ' + $('Total by account').first().json.unpaid_count + ' bills unpaid, ' + $('Total by account').first().json.unpaid_total + '.\\n' + ($('Close agent').first().json.output?.summary ?? 'The written note is unavailable; the figures are in the pack.') }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "executeOnce": true,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Invoice email arrives": {
+      "main": [
+        [
+          {
+            "node": "Read the email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the email": {
+      "main": [
+        [
+          {
+            "node": "Something to read?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Something to read?": {
+      "main": [
+        [
+          {
+            "node": "Seen this email?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing to read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seen this email?": {
+      "main": [
+        [
+          {
+            "node": "New email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New email?": {
+      "main": [
+        [
+          {
+            "node": "Extraction agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Already processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraction agent": {
+      "main": [
+        [
+          {
+            "node": "Check the arithmetic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the arithmetic": {
+      "main": [
+        [
+          {
+            "node": "Same invoice before?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Same invoice before?": {
+      "main": [
+        [
+          {
+            "node": "What we know of the vendor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "What we know of the vendor": {
+      "main": [
+        [
+          {
+            "node": "Compare with history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare with history": {
+      "main": [
+        [
+          {
+            "node": "Coding agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Coding agent": {
+      "main": [
+        [
+          {
+            "node": "Hold it to the chart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hold it to the chart": {
+      "main": [
+        [
+          {
+            "node": "Clean?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean?": {
+      "main": [
+        [
+          {
+            "node": "Create the bill in QuickBooks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Explain what is wrong",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create the bill in QuickBooks": {
+      "main": [
+        [
+          {
+            "node": "File the invoice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Explain what is wrong",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File the invoice": {
+      "main": [
+        [
+          {
+            "node": "Label as filed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explain what is wrong": {
+      "main": [
+        [
+          {
+            "node": "Queue for review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue for review": {
+      "main": [
+        [
+          {
+            "node": "Review message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review message": {
+      "main": [
+        [
+          {
+            "node": "Tell finance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06:30 daily": {
+      "main": [
+        [
+          {
+            "node": "Yesterday's bank lines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Yesterday's bank lines": {
+      "main": [
+        [
+          {
+            "node": "Bills awaiting payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bills awaiting payment": {
+      "main": [
+        [
+          {
+            "node": "Match the exact ones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match the exact ones": {
+      "main": [
+        [
+          {
+            "node": "Anything left over?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything left over?": {
+      "main": [
+        [
+          {
+            "node": "Matching agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Accept only what holds up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Matching agent": {
+      "main": [
+        [
+          {
+            "node": "Accept only what holds up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accept only what holds up": {
+      "main": [
+        [
+          {
+            "node": "One row per match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One row per match": {
+      "main": [
+        [
+          {
+            "node": "Mark the bill paid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark the bill paid": {
+      "main": [
+        [
+          {
+            "node": "Post the reconciliation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07:00 daily": {
+      "main": [
+        [
+          {
+            "node": "The last 90 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "The last 90 days": {
+      "main": [
+        [
+          {
+            "node": "Look for the unusual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Look for the unusual": {
+      "main": [
+        [
+          {
+            "node": "Anything unusual?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything unusual?": {
+      "main": [
+        [
+          {
+            "node": "Anomaly agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing unusual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anomaly agent": {
+      "main": [
+        [
+          {
+            "node": "Record the flags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record the flags": {
+      "main": [
+        [
+          {
+            "node": "Raise the anomalies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finance question": {
+      "main": [
+        [
+          {
+            "node": "Read the question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the question": {
+      "main": [
+        [
+          {
+            "node": "Allowed to ask?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allowed to ask?": {
+      "main": [
+        [
+          {
+            "node": "Analyst agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not allowed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyst agent": {
+      "main": [
+        [
+          {
+            "node": "Only answer with working",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only answer with working": {
+      "main": [
+        [
+          {
+            "node": "Log the question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log the question": {
+      "main": [
+        [
+          {
+            "node": "Answer in Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1st of the month": {
+      "main": [
+        [
+          {
+            "node": "Two months of invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Two months of invoices": {
+      "main": [
+        [
+          {
+            "node": "Total by account",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Total by account": {
+      "main": [
+        [
+          {
+            "node": "Close agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Close agent": {
+      "main": [
+        [
+          {
+            "node": "One row per account",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One row per account": {
+      "main": [
+        [
+          {
+            "node": "Add to the month-end pack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to the month-end pack": {
+      "main": [
+        [
+          {
+            "node": "Post the close",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT · extraction": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extraction agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice fields": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extraction agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · coding": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Coding agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chart of accounts": {
+      "ai_tool": [
+        [
+          {
+            "node": "Coding agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings · chart": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Chart of accounts",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Account": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Coding agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · matching": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Matching agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proposed matches": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Matching agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · anomalies": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Anomaly agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · analysis": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyst agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Analyst agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ledger query": {
+      "ai_tool": [
+        [
+          {
+            "node": "Analyst agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculator": {
+      "ai_tool": [
+        [
+          {
+            "node": "Analyst agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan the answer": {
+      "ai_tool": [
+        [
+          {
+            "node": "Analyst agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Analyst agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · close": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Close agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Close note": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Close agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "__WF:error-handler__"
+  }
+}

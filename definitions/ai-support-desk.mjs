@@ -114,7 +114,7 @@ return [{ json: { ...t, reply: ok ? o.reply.trim() : null, confidence: ok ? Numb
 
       /* ---- 3. Refund policy ---- */
       iff("Refund asked for?", "!!$json.refund"),
-      db.find("Past refunds", "refunds", "'email=eq.' + $json.email"),
+      db.find("Past refunds", "refunds", { email: "$json.email" }),
       code("Apply the refund policy", `const a = $("Collect the answer").first().json;
 const past = $input.all().map((i) => i.json).filter((r) => r.email);
 const reasons = [];
@@ -189,7 +189,7 @@ return $input.all().map((_, i) => { const t = before[i].json; return { json: { c
 
       /* ---- 7. Nightly audit ---- */
       schedule("02:00 nightly", "0 2 * * *"),
-      db.find("Yesterday's answers", "support_log", "'answered=eq.true&at=gte.' + $now.minus({ days: 1 }).toISO()"),
+      db.find("Yesterday's answers", "support_log", { answered: "'true'", at: ["gte", "$now.minus({ days: 1 }).toISO()"] }),
       code("Take a sample", `// Every answer that moved money, plus up to eight of the rest.
 const rows = $input.all().map((i) => i.json).filter((r) => r.ticket_id && r.reply);
 const refunded = rows.filter((r) => r.refunded);
@@ -212,7 +212,7 @@ return [{ json: { audited: graded.length, average, poor, text: graded.length ? "
 
       /* ---- 8. Weekly gaps ---- */
       schedule("Monday 08:00", "0 8 * * 1"),
-      db.find("Handed over last week", "support_log", "'answered=eq.false&at=gte.' + $now.minus({ days: 7 }).toISO()"),
+      db.find("Handed over last week", "support_log", { answered: "'false'", at: ["gte", "$now.minus({ days: 7 }).toISO()"] }),
       code("Gather the questions", `const rows = $input.all().map((i) => i.json).filter((r) => r.question);
 return [{ json: { count: rows.length, questions: rows.slice(0, 80).map((r) => "- [" + r.topic + "] " + String(r.question).slice(0, 160) + " (" + (r.reasons ?? []).join(", ") + ")").join("\\n") } }];`),
       iff("Any gaps?", "$json.count > 0"),

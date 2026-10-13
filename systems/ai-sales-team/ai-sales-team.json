@@ -799,8 +799,22 @@
         "operation": "getAll",
         "tableId": "lead_sequences",
         "returnAll": true,
-        "filterType": "string",
-        "filterString": "={{ 'status=eq.active&next_touch_at=lte.' + $now.toISO() }}"
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "={{ 'active' }}"
+            },
+            {
+              "keyName": "next_touch_at",
+              "condition": "lte",
+              "keyValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -873,8 +887,17 @@
         "resource": "row",
         "operation": "update",
         "tableId": "lead_sequences",
-        "filterType": "string",
-        "filterString": "={{ 'email=eq.' + $json.email }}",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.email }}"
+            }
+          ]
+        },
         "dataToSend": "defineBelow",
         "fieldsUi": {
           "fieldValues": [
@@ -939,8 +962,17 @@
         "operation": "getAll",
         "tableId": "outreach_messages",
         "returnAll": true,
-        "filterType": "string",
-        "filterString": "={{ 'email=eq.' + $json.email }}"
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.email }}"
+            }
+          ]
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -1282,8 +1314,17 @@
         "resource": "row",
         "operation": "update",
         "tableId": "lead_sequences",
-        "filterType": "string",
-        "filterString": "={{ 'email=eq.' + $('One lead at a time').first().json.email }}",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $('One lead at a time').first().json.email }}"
+            }
+          ]
+        },
         "dataToSend": "defineBelow",
         "fieldsUi": {
           "fieldValues": [
@@ -1532,8 +1573,17 @@
         "resource": "row",
         "operation": "update",
         "tableId": "lead_sequences",
-        "filterType": "string",
-        "filterString": "={{ 'email=eq.' + $('One lead at a time').first().json.email }}",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $('One lead at a time').first().json.email }}"
+            }
+          ]
+        },
         "dataToSend": "defineBelow",
         "fieldsUi": {
           "fieldValues": [
@@ -1611,8 +1661,17 @@
         "operation": "getAll",
         "tableId": "lead_sequences",
         "returnAll": true,
-        "filterType": "string",
-        "filterString": "={{ 'email=eq.' + $json.email }}"
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.email }}"
+            }
+          ]
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -2051,8 +2110,17 @@
         "resource": "row",
         "operation": "update",
         "tableId": "lead_sequences",
-        "filterType": "string",
-        "filterString": "={{ 'email=eq.' + $('Read the reply').first().json.email }}",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $('Read the reply').first().json.email }}"
+            }
+          ]
+        },
         "dataToSend": "defineBelow",
         "fieldsUi": {
           "fieldValues": [
@@ -2319,8 +2387,17 @@
         "resource": "row",
         "operation": "update",
         "tableId": "lead_sequences",
-        "filterType": "string",
-        "filterString": "={{ 'email=eq.' + $('Read the reply').first().json.email }}",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $('Read the reply').first().json.email }}"
+            }
+          ]
+        },
         "dataToSend": "defineBelow",
         "fieldsUi": {
           "fieldValues": [
@@ -2390,8 +2467,17 @@
         "resource": "row",
         "operation": "update",
         "tableId": "lead_sequences",
-        "filterType": "string",
-        "filterString": "={{ 'email=eq.' + $('Read the reply').first().json.email }}",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $('Read the reply').first().json.email }}"
+            }
+          ]
+        },
         "dataToSend": "defineBelow",
         "fieldsUi": {
           "fieldValues": [
@@ -2430,8 +2516,17 @@
         "resource": "row",
         "operation": "update",
         "tableId": "lead_sequences",
-        "filterType": "string",
-        "filterString": "={{ 'email=eq.' + $json.email }}",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.email }}"
+            }
+          ]
+        },
         "dataToSend": "defineBelow",
         "fieldsUi": {
           "fieldValues": [
@@ -2470,8 +2565,17 @@
         "resource": "row",
         "operation": "update",
         "tableId": "lead_sequences",
-        "filterType": "string",
-        "filterString": "={{ 'email=eq.' + $json.email }}",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.email }}"
+            }
+          ]
+        },
         "dataToSend": "defineBelow",
         "fieldsUi": {
           "fieldValues": [
@@ -2538,8 +2642,17 @@
         "resource": "row",
         "operation": "update",
         "tableId": "lead_sequences",
-        "filterType": "string",
-        "filterString": "={{ 'email=eq.' + $json.email }}",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.email }}"
+            }
+          ]
+        },
         "dataToSend": "defineBelow",
         "fieldsUi": {
           "fieldValues": [
@@ -2595,8 +2708,17 @@
         "operation": "getAll",
         "tableId": "outreach_messages",
         "returnAll": true,
-        "filterType": "string",
-        "filterString": "={{ 'sent_at=gte.' + $now.minus({ days: 7 }).toISO() }}"
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sent_at",
+              "condition": "gte",
+              "keyValue": "={{ $now.minus({ days: 7 }).toISO() }}"
+            }
+          ]
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,

@@ -36,10 +36,10 @@ export default [
     nodes: [
       /* ---- 1. Research and outline ---- */
       schedule("Weekdays 07:00", "0 7 * * 1-5"),
-      db.find("Next topic", "content_topics", "'status=eq.queued&limit=1'"),
+      db.find("Next topic", "content_topics", { status: "'queued'" }, { limit: 1 }),
       iff("Is there a topic?", "!!$json.id"),
       noop("Queue is empty"),
-      db.update("Claim the topic", "content_topics", "'id=eq.' + $json.id + '&status=eq.queued'", { status: "'drafting'", started_at: "$now.toISO()" }),
+      db.update("Claim the topic", "content_topics", { id: "$json.id", status: "'queued'" }, { status: "'drafting'", started_at: "$now.toISO()" }),
       iff("Claimed it?", "!!$json.id"),
       noop("Another run has it"),
       serp.search("Search the topic", `${topic}.topic`, { onFail: "continue", retry: false }),
@@ -140,7 +140,7 @@ const name = candidates.find((n) => $(n).isExecuted);
 const s = $(name).first().json;
 const why = !s.enough && name === "Collect the sources" ? "too few sources were found" : !s.outlined && name === "Check the outline" ? "no usable outline could be made" : (s.unsupported ?? []).length ? "claims the sources do not support: " + s.unsupported.slice(0, 3).join("; ") : "the article could not be written";
 return [{ json: { topic_id: s.topic_id, topic: s.topic, why } }];`),
-      db.update("Return the topic", "content_topics", "'id=eq.' + $json.topic_id", { status: "'needs_brief'", note: "$json.why" }),
+      db.update("Return the topic", "content_topics", { id: "$json.topic_id" }, { status: "'needs_brief'", note: "$json.why" }),
       code("Returned message", `const r = $("Could not finish").first().json;
 return [{ json: { channel: "#content", level: "warn", text: "\\"" + r.topic + "\\" was sent back for a better brief: " + r.why + "." } }];`),
       call("Tell the editor", "notify"),
@@ -152,7 +152,7 @@ const d = b.decision === "approve" ? "approve" : b.decision === "reject" ? "reje
 return [{ json: { valid: !!d && !!b.draft_id, decision: d, draft_id: String(b.draft_id ?? ""), by: String(b.by ?? "unknown"), reason: String(b.reason ?? "").slice(0, 500) } }];`),
       iff("Valid?", "$json.valid"),
       respond("Bad request", "{ ok: false, error: 'Need draft_id and decision: approve | reject' }", { status: 400 }),
-      db.update("Take it if pending", "content_drafts", "'id=eq.' + $json.draft_id + '&status=eq.awaiting_approval'", { status: "$json.decision === 'approve' ? 'publishing' : 'rejected'", decided_by: "$json.by", decided_at: "$now.toISO()", reason: "$json.reason" }),
+      db.update("Take it if pending", "content_drafts", { id: "$json.draft_id", status: "'awaiting_approval'" }, { status: "$json.decision === 'approve' ? 'publishing' : 'rejected'", decided_by: "$json.by", decided_at: "$now.toISO()", reason: "$json.reason" }),
       iff("Awaiting approval?", "!!$json.id"),
       respond("Not pending", "{ ok: false, error: 'That draft is not awaiting approval' }", { status: 409 }),
       iff("Approved?", `${decision}.decision === 'approve'`),
@@ -161,14 +161,14 @@ return [{ json: { valid: !!d && !!b.draft_id, decision: d, draft_id: String(b.dr
 
       /* ---- 4. Publish, illustrate, voice ---- */
       wordpress.publish("Publish to WordPress", { title: `${draft}.title`, content: `${draft}.body` }),
-      db.update("Mark published", "content_drafts", `'id=eq.' + ${draft}.id`, { status: "'published'", post_id: "String($json.id ?? '')", published_at: "$now.toISO()" }),
+      db.update("Mark published", "content_drafts", { id: `${draft}.id` }, { status: "'published'", post_id: "String($json.id ?? '')", published_at: "$now.toISO()" }),
       openaiApi.image("Make a cover image", `'An editorial illustration, flat shapes, two colours, no text, for an article titled: ' + ${draft}.title`, { onFail: "continue", retry: false }),
       code("Script for the voice", `const d = $("Awaiting approval?").first().json;
 // Read aloud: no Markdown marks, no citation numbers, no links.
 const script = String(d.body).replace(/\\[(\\d+)\\]/g, "").replace(/[#*_>\`]/g, "").replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, "$1").replace(/\\n{2,}/g, "\\n\\n").trim().slice(0, 4500);
 return [{ json: { script, image_url: $input.first().json.data?.[0]?.url ?? null } }];`),
       elevenlabs.speak("Record the voice-over", { voice: "'narrator'", text: "$json.script" }, { onFail: "continue", retry: false }),
-      db.update("Record the assets", "content_drafts", `'id=eq.' + ${draft}.id`, { cover_image: "$('Script for the voice').first().json.image_url", has_voice_over: "!$json.error" }),
+      db.update("Record the assets", "content_drafts", { id: `${draft}.id` }, { cover_image: "$('Script for the voice').first().json.image_url", has_voice_over: "!$json.error" }),
 
       /* ---- 5. Share ---- */
       agent("Social agent", {
@@ -189,12 +189,12 @@ return [{ json: { linkedin: post("linkedin"), x: post("x"), facebook: post("face
       social.linkedin("Post to LinkedIn", "$('Cut each post to length').first().json.linkedin", { onFail: "continue" }),
       social.x("Post to X", "$('Cut each post to length').first().json.x", { onFail: "continue" }),
       social.facebook("Post to Facebook", "$('Cut each post to length').first().json.facebook", { onFail: "continue" }),
-      db.update("Mark shared", "content_drafts", `'id=eq.' + ${draft}.id`, { shared_at: "$now.toISO()" }),
+      db.update("Mark shared", "content_drafts", { id: `${draft}.id` }, { shared_at: "$now.toISO()" }),
       slack.post("Say it is live", "'#content'", `':tada: Published and shared: "' + ${draft}.title + '"'`),
 
       /* ---- 6. Learn ---- */
       schedule("Friday 16:00", "0 16 * * 5"),
-      db.find("Published this month", "content_drafts", "'status=eq.published&published_at=gte.' + $now.minus({ days: 30 }).toISO()"),
+      db.find("Published this month", "content_drafts", { status: "'published'", published_at: ["gte", "$now.minus({ days: 30 }).toISO()"] }),
       posthog.pageviews("Count the readers", "'/' + $json.slug", { onFail: "continue", retry: false }),
       code("Rank the articles", `const drafts = $("Published this month").all().map((i) => i.json);
 const rows = $input.all().map((item, i) => ({ title: drafts[i]?.title, slug: drafts[i]?.slug, keywords: drafts[i]?.keywords ?? [], views: Number(item.json?.results?.[0]?.[0] ?? NaN) })).filter((r) => r.title);

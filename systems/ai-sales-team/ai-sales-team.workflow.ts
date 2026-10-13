@@ -984,8 +984,22 @@ return [{ json: { channel: "#sales", level: "warn", text: "A new lead needs a pe
         operation: 'getAll',
         tableId: 'lead_sequences',
         returnAll: true,
-        filterType: 'string',
-        filterString: "={{ 'status=eq.active&next_touch_at=lte.' + $now.toISO() }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'active' }}",
+                },
+                {
+                    keyName: 'next_touch_at',
+                    condition: 'lte',
+                    keyValue: '={{ $now.toISO() }}',
+                },
+            ],
+        },
     };
 
     @node({
@@ -1048,8 +1062,17 @@ return $input.all().map((i) => i.json).filter((s) => s.email).slice(0, 20).map((
         resource: 'row',
         operation: 'update',
         tableId: 'lead_sequences',
-        filterType: 'string',
-        filterString: "={{ 'email=eq.' + $json.email }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: '={{ $json.email }}',
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -1103,8 +1126,17 @@ return $input.all().map((i) => i.json).filter((s) => s.email).slice(0, 20).map((
         operation: 'getAll',
         tableId: 'outreach_messages',
         returnAll: true,
-        filterType: 'string',
-        filterString: "={{ 'email=eq.' + $json.email }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: '={{ $json.email }}',
+                },
+            ],
+        },
     };
 
     @node({
@@ -1412,8 +1444,17 @@ return [{ json: { ...d, approved: reviewed && r.approve === true && hard.length 
         resource: 'row',
         operation: 'update',
         tableId: 'lead_sequences',
-        filterType: 'string',
-        filterString: "={{ 'email=eq.' + $('One lead at a time').first().json.email }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: "={{ $('One lead at a time').first().json.email }}",
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -1642,8 +1683,17 @@ return [{ json: { channel: "#sales", level: "warn", text: "An outreach email to 
         resource: 'row',
         operation: 'update',
         tableId: 'lead_sequences',
-        filterType: 'string',
-        filterString: "={{ 'email=eq.' + $('One lead at a time').first().json.email }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: "={{ $('One lead at a time').first().json.email }}",
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -1712,8 +1762,17 @@ return [{ json: { channel: "#sales", level: "warn", text: "An outreach email to 
         operation: 'getAll',
         tableId: 'lead_sequences',
         returnAll: true,
-        filterType: 'string',
-        filterString: "={{ 'email=eq.' + $json.email }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: '={{ $json.email }}',
+                },
+            ],
+        },
     };
 
     @node({
@@ -2117,8 +2176,17 @@ return [{ json: { ...s, reply: r, intent, confidence: out?.confidence ?? null } 
         resource: 'row',
         operation: 'update',
         tableId: 'lead_sequences',
-        filterType: 'string',
-        filterString: "={{ 'email=eq.' + $('Read the reply').first().json.email }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: "={{ $('Read the reply').first().json.email }}",
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -2340,8 +2408,17 @@ return [{ json: { channel: "#sales", level: "info", text: s.name + " replied and
         resource: 'row',
         operation: 'update',
         tableId: 'lead_sequences',
-        filterType: 'string',
-        filterString: "={{ 'email=eq.' + $('Read the reply').first().json.email }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: "={{ $('Read the reply').first().json.email }}",
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -2401,8 +2478,17 @@ return [{ json: { channel: "#sales", level: "warn", text: s.name + " (" + s.emai
         resource: 'row',
         operation: 'update',
         tableId: 'lead_sequences',
-        filterType: 'string',
-        filterString: "={{ 'email=eq.' + $('Read the reply').first().json.email }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: "={{ $('Read the reply').first().json.email }}",
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -2434,8 +2520,17 @@ return [{ json: { channel: "#sales", level: "warn", text: s.name + " (" + s.emai
         resource: 'row',
         operation: 'update',
         tableId: 'lead_sequences',
-        filterType: 'string',
-        filterString: "={{ 'email=eq.' + $json.email }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: '={{ $json.email }}',
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -2467,8 +2562,17 @@ return [{ json: { channel: "#sales", level: "warn", text: s.name + " (" + s.emai
         resource: 'row',
         operation: 'update',
         tableId: 'lead_sequences',
-        filterType: 'string',
-        filterString: "={{ 'email=eq.' + $json.email }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: '={{ $json.email }}',
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -2521,8 +2625,17 @@ return [{ json: { channel: "#sales", level: "warn", text: s.name + " (" + s.emai
         resource: 'row',
         operation: 'update',
         tableId: 'lead_sequences',
-        filterType: 'string',
-        filterString: "={{ 'email=eq.' + $json.email }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: '={{ $json.email }}',
+                },
+            ],
+        },
         dataToSend: 'defineBelow',
         fieldsUi: {
             fieldValues: [
@@ -2569,8 +2682,17 @@ return [{ json: { channel: "#sales", level: "warn", text: s.name + " (" + s.emai
         operation: 'getAll',
         tableId: 'outreach_messages',
         returnAll: true,
-        filterType: 'string',
-        filterString: "={{ 'sent_at=gte.' + $now.minus({ days: 7 }).toISO() }}",
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
+                {
+                    keyName: 'sent_at',
+                    condition: 'gte',
+                    keyValue: '={{ $now.minus({ days: 7 }).toISO() }}',
+                },
+            ],
+        },
     };
 
     @node({
