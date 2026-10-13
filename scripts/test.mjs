@@ -22,33 +22,38 @@ import { UNIQUE } from "../lib/schema.mjs";
 
 const isWebhook = (def) => def.trigger === "webhook";
 
-/** The same workflow, entered through a webhook that hands over `body.items`. */
-function testCopy(def) {
+const isTrigger = (n) => /trigger$/i.test(n.type.split(".").pop());
+
+/**
+ * The same workflow, entered through a webhook that hands over `body.items`.
+ * `entry` names the trigger to enter by when a workflow has several; the others
+ * are swapped for manual triggers so a schedule cannot fire mid-test.
+ */
+function testCopy(def, entry) {
   const json = structuredClone(def.json);
-  const i = json.nodes.findIndex((n) => /Trigger$|errorTrigger$/i.test(n.type.split(".").pop()) || n.type.endsWith("manualTrigger"));
-  const trigger = json.nodes[i];
-  json.nodes[i] = {
-    id: trigger.id,
-    name: trigger.name,
-    type: "n8n-nodes-base.code",
-    typeVersion: 2,
-    position: trigger.position,
-    parameters: { jsCode: "return ($input.first().json.body.items ?? [{}]).map((json) => ({ json }));" },
-  };
+  const triggers = json.nodes.filter(isTrigger);
+  const chosen = entry ? triggers.find((n) => n.name === entry) : triggers[0];
+  if (!chosen) throw new Error(`${def.id}: no trigger named "${entry}"`);
+  const tag = `${def.id}${entry ? `-${entry.toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : ""}`;
+  json.nodes = json.nodes.map((n) => {
+    if (n === chosen) return { id: n.id, name: n.name, type: "n8n-nodes-base.code", typeVersion: 2, position: n.position, parameters: { jsCode: "return ($input.first().json.body.items ?? [{}]).map((json) => ({ json }));" } };
+    if (isTrigger(n)) return { id: n.id, name: n.name, type: "n8n-nodes-base.manualTrigger", typeVersion: 1, position: n.position, parameters: {} };
+    // Waits are part of the design, not of the test.
+    if (n.type.endsWith(".wait")) return { ...n, parameters: { amount: 1, unit: "seconds" } };
+    return n;
+  });
   json.nodes.push({
-    id: `${trigger.id.slice(0, -4)}0000`,
+    id: `${chosen.id.slice(0, -4)}0000`,
     name: "Test entry",
     type: "n8n-nodes-base.webhook",
     typeVersion: 2,
-    position: [trigger.position[0] - 240, trigger.position[1]],
-    webhookId: `test-${def.id}`,
-    parameters: { httpMethod: "POST", path: `test-${def.id}`, responseMode: "onReceived", options: {} },
+    position: [chosen.position[0] - 260, chosen.position[1]],
+    webhookId: `test-${tag}`,
+    parameters: { httpMethod: "POST", path: `test-${tag}`, responseMode: "onReceived", options: {} },
   });
-  json.connections["Test entry"] = { main: [[{ node: trigger.name, type: "main", index: 0 }]] };
-  json.name = `[test] ${json.name}`;
-  // Waits are part of the design, not of the test.
-  for (const n of json.nodes) if (n.type.endsWith(".wait")) n.parameters = { amount: 1, unit: "seconds" };
-  return json;
+  json.connections["Test entry"] = { main: [[{ node: chosen.name, type: "main", index: 0 }]] };
+  json.name = `[test] ${json.name}${entry ? ` (${entry})` : ""}`;
+  return { json, path: `test-${tag}` };
 }
 
 let CREDS = {};
@@ -96,7 +101,7 @@ async function runCase(def, wf, c) {
   let exec, response;
   for (let n = 0; n < (c.repeat ?? 1); n++) {
     const before = Math.max(0, ...(await n8n("GET", `/executions?workflowId=${wf.id}&limit=1`)).data.map((e) => Number(e.id)));
-    const req = isWebhook(def) ? (c.request ?? {}) : { body: { items: c.input ?? [{}] } };
+    const req = wf.direct ? (c.request ?? {}) : { body: { items: c.input ?? [{}] } };
     const qs = req.query ? `?${new URLSearchParams(req.query)}` : "";
     let res, text;
     // A webhook takes a moment to register after its workflow is published.
@@ -147,6 +152,8 @@ async function runCase(def, wf, c) {
     const got = calls.filter((k) => matches(k, { to, path })).length;
     if (got !== n) problems.push(`${got} calls to ${what}, wanted ${n}`);
   }
+  // DEBUG=1 lists every call a failing case made, which is usually the whole answer.
+  if (process.env.DEBUG && problems.length) problems.push("calls: " + calls.map((k) => `${k.method} ${k.host}${k.path}${k.body?.tools ? ` [tools: ${k.body.tools.map((t) => t.name ?? t.function?.name).join(", ")}]` : ""}`).join(" | "));
   for (const [table, rows] of Object.entries(c.table ?? {})) {
     const got = await mock(`/db/${table}`);
     const real = got.filter((r) => r && typeof r === "object");
@@ -215,21 +222,28 @@ for (const def of defs.filter((d) => !filter || d.id.includes(filter))) {
     failed++;
     continue;
   }
-  let wf;
-  if (isWebhook(def)) {
-    const hook = def.json.nodes.find((n) => n.type.endsWith(".webhook")).parameters;
-    wf = { id: ids[def.id], path: hook.path, method: hook.httpMethod };
-  } else {
-    const made = await n8n("POST", "/workflows", fill(testCopy(def), ids));
-    await n8n("POST", `/workflows/${made.id}/activate`);
-    wf = { id: made.id, path: `test-${def.id}` };
-  }
+  const copies = {};
+  /** The installed workflow a case runs against: the real one, or a test copy per entry point. */
+  const target = async (c) => {
+    if (isWebhook(def) && !c.entry) {
+      const hook = def.json.nodes.find((n) => n.type.endsWith(".webhook")).parameters;
+      return { id: ids[def.id], path: hook.path, method: hook.httpMethod, direct: true };
+    }
+    const key = c.entry ?? "";
+    if (!copies[key]) {
+      const copy = testCopy(def, c.entry);
+      const made = await n8n("POST", "/workflows", fill(copy.json, ids));
+      await n8n("POST", `/workflows/${made.id}/activate`);
+      copies[key] = { id: made.id, path: copy.path };
+    }
+    return copies[key];
+  };
   // Test data is written relative to "now"; a long run must not let it go stale.
   const cases = (await loadAll({ fresh: true })).find((d) => d.id === def.id).tests;
   for (const c of cases) {
     let problems;
     try {
-      problems = await runCase(def, wf, c);
+      problems = await runCase(def, await target(c), c);
     } catch (e) {
       problems = [e.message];
     }

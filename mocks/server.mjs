@@ -107,10 +107,22 @@ function sse(res, events) {
   for (const [event, data] of events) res.write((event ? `event: ${event}\n` : "") + `data: ${typeof data === "string" ? data : JSON.stringify(data)}\n\n`);
   res.end();
 }
+/** `final` is an agent's structured answer: sent through the output tool when the request offers one. */
+function settle(r, tools) {
+  // n8n names a tool after its node, with its own spelling rules. A script may use the node's name as written.
+  if (r.tool) {
+    const norm = (n) => String(n).toLowerCase().replace(/[^a-z0-9]/g, "");
+    const offered = (tools ?? []).map((t) => t.name ?? t.function?.name).find((n) => norm(n) === norm(r.tool.name));
+    return offered ? { ...r, tool: { ...r.tool, name: offered } } : r;
+  }
+  if (r.final === undefined) return r;
+  const viaTool = (tools ?? []).some((t) => (t.name ?? t.function?.name) === "format_final_json_response");
+  return viaTool ? { ...r, tool: { name: "format_final_json_response", input: { output: r.final } } } : { ...r, json: r.final };
+}
 function anthropic(res, body) {
   const system = flat(body.system);
   const last = flat(body.messages?.at(-1)?.content);
-  const r = pick(system, last);
+  const r = settle(pick(system, last), body.tools);
   const id = `msg_mock_${++seq}`;
   const block = r.tool ? { type: "tool_use", id: `toolu_mock_${seq}`, name: r.tool.name, input: r.tool.input ?? {} } : { type: "text", text: r.json ? JSON.stringify(r.json) : (r.text ?? "") };
   const stop = r.tool ? "tool_use" : "end_turn";
@@ -133,7 +145,7 @@ function anthropic(res, body) {
 function openai(res, body) {
   const system = (body.messages ?? []).filter((m) => m.role === "system" || m.role === "developer").map((m) => flat(m.content)).join("\n");
   const last = flat(body.messages?.at(-1)?.content);
-  const r = pick(system, last);
+  const r = settle(pick(system, last), body.tools);
   const id = `chatcmpl-mock-${++seq}`;
   const message = r.tool
     ? { role: "assistant", content: null, tool_calls: [{ id: `call_mock_${seq}`, type: "function", function: { name: r.tool.name, arguments: JSON.stringify(r.tool.input ?? {}) } }] }
@@ -155,7 +167,9 @@ function embeddings(body) {
     data: inputs.map((text, index) => {
       let h = 7;
       for (const c of String(text)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-      return { object: "embedding", index, embedding: Array.from({ length: dims }, (_, i) => (((h >>> (i % 24)) & 255) / 255) * 0.02) };
+      const vector = Array.from({ length: dims }, (_, i) => (((h >>> (i % 24)) & 255) / 255) * 0.02);
+      const embedding = body.encoding_format === "base64" ? Buffer.from(new Float32Array(vector).buffer).toString("base64") : vector;
+      return { object: "embedding", index, embedding };
     }),
     usage: { prompt_tokens: 8, total_tokens: 8 },
   };
@@ -278,6 +292,20 @@ const handle = (req, res) => {
       if (`${host}${p}` in routes) return send(res, 200, routes[`${host}${p}`]);
       if (p in routes) return send(res, 200, routes[p]);
       if (host === "api.anthropic.com" && p === "/v1/messages") return anthropic(res, body ?? {});
+      // Gmail: a message has the headers a reply is built from.
+      if (p.startsWith("/gmail/v1/") && req.method === "GET" && /\/messages\/[^/]+$/.test(p)) {
+        const id = p.split("/").pop();
+        return send(res, 200, { id, threadId: `thread-${id}`, labelIds: ["INBOX", "UNREAD"], snippet: "", payload: { headers: [{ name: "Subject", value: "Re: your email" }, { name: "From", value: "Lead <lead@example.com>" }, { name: "To", value: "kim@example.com" }, { name: "Message-ID", value: `<${id}@mail.example.com>` }, { name: "Reply-To", value: "lead@example.com" }] } });
+      }
+      if (p.startsWith("/gmail/v1/") && p.endsWith("/profile")) return send(res, 200, { emailAddress: "kim@example.com" });
+      // Pinecone: any index exists, and a query returns the seeded `kb` rows, best first.
+      if (host === "api.pinecone.io" && p.startsWith("/indexes/")) {
+        return send(res, 200, { name: p.split("/")[2], dimension: 1536, metric: "cosine", host: "kb-index.svc.pinecone.io", status: { ready: true, state: "Ready" }, spec: { serverless: { cloud: "aws", region: "us-east-1" } } });
+      }
+      if (host.endsWith(".svc.pinecone.io") && p === "/query") {
+        const docs = (tables.kb ?? []).slice(0, body?.topK ?? 4);
+        return send(res, 200, { matches: docs.map((d, i) => ({ id: d.id ?? `kb-${i}`, score: 0.92 - i * 0.05, values: [], metadata: { text: d.text, title: d.title ?? "" } })), namespace: "", usage: { readUnits: 1 } });
+      }
       if (host === "api.openai.com" && p === "/v1/chat/completions") return openai(res, body ?? {});
       if (host === "api.openai.com" && p === "/v1/embeddings") return send(res, 200, embeddings(body ?? {}));
       if (p.startsWith("/llm/")) return send(res, 200, llm(body ?? {}));
