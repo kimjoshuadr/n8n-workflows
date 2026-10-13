@@ -2,18 +2,22 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Brand · Mention monitor
-// Nodes   : 11  |  Connections: 9
+// Nodes   : 15  |  Connections: 11
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Hourly                             scheduleTrigger
-// SearchForMentions                  httpRequest                [retry]
+// SearchForMentions                  httpRequest                [creds] [retry]
 // OneItemPerMention                  code
-// ClaimAsSeen                        httpRequest                [alwaysOutput] [retry]
+// AlreadySeen                        supabase                   [creds] [alwaysOutput] [executeOnce] [retry]
+// KeepTheUnseen                      code
+// RememberIt                         supabase                   [creds] [retry]
 // NewMention                         if
-// ReadTheTone                        httpRequest                [onError→regular] [retry]
+// ReadTheTone                        agent                      [AI] [onError→regular]
+// ReadTheToneGpt                     lmChatOpenAi               [creds] [ai_languageModel]
+// ReadTheToneShape                   outputParserStructured     [ai_outputParser]
 // ReadTheVerdict                     code
 // NeedsAttention                     if
 // WriteTheAlert                      code
@@ -24,13 +28,18 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Hourly
 //    → SearchForMentions
 //      → OneItemPerMention
-//        → ClaimAsSeen
-//          → NewMention
-//            → ReadTheTone
-//              → ReadTheVerdict
-//                → NeedsAttention
-//                  → WriteTheAlert
-//                    → RaiseIt
+//        → AlreadySeen
+//          → KeepTheUnseen
+//            → RememberIt
+//              → NewMention
+//                → ReadTheTone
+//                  → ReadTheVerdict
+//                    → NeedsAttention
+//                      → WriteTheAlert
+//                        → RaiseIt
+//
+// AI CONNECTIONS
+// ReadTheTone.uses({ ai_languageModel: ReadTheToneGpt, ai_outputParser: ReadTheToneShape })
 // </workflow-map>
 
 // =====================================================================
@@ -61,8 +70,7 @@ export class BrandMentionMonitorWorkflow {
         content: `## Brand · Mention monitor
 Checks hourly for new mentions of the brand, and raises the negative ones straight away with the text and the link.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SEARCH_API_KEY, SEARCH_BASE_URL
+**Platforms:** SerpAPI, Supabase, OpenAI
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/content\``,
     };
 
@@ -71,7 +79,7 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
         name: 'Hourly',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 90],
+        position: [0, 220],
     })
     Hourly = {
         rule: {
@@ -89,29 +97,33 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
         name: 'Search for mentions',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [260, 90],
+        position: [260, 220],
+        credentials: { serpApi: { id: '__CRED:serpapi__', name: 'SerpAPI' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SearchForMentions = {
-        method: 'POST',
-        url: '={{ $env.SEARCH_BASE_URL }}/mentions',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
+        method: 'GET',
+        url: "={{ 'https://serpapi.com/search.json' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'serpApi',
+        sendQuery: true,
+        queryParameters: {
             parameters: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.SEARCH_API_KEY }}",
+                    name: 'q',
+                    value: '={{ \'"YourBrand" -site:yourbrand.com\' }}',
+                },
+                {
+                    name: 'num',
+                    value: "={{ '10' }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ query: 'YourBrand', since_hours: 2 }) }}",
+        options: {
+            timeout: 15000,
+        },
     };
 
     @node({
@@ -119,50 +131,76 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
         name: 'One item per mention',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [520, 90],
+        position: [520, 220],
     })
     OneItemPerMention = {
-        jsCode: 'return ($input.first().json.mentions ?? []).filter((m) => m.url && m.text).map((m) => ({ json: { url: m.url, text: String(m.text).slice(0, 1500), author: m.author ?? "unknown" } }));',
+        jsCode: 'return ($input.first().json.organic_results ?? []).filter((m) => m.link && m.snippet).map((m) => ({ json: { url: m.link, text: String(m.snippet).slice(0, 1500), author: m.source ?? "unknown" } }));',
     };
 
     @node({
-        id: '0d4086c4-ba23-454c-a9bf-93759237988d',
-        name: 'Claim as seen',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [780, 90],
+        id: '04434a01-4cdb-45fd-a1f3-f50baec5b005',
+        name: 'Already seen',
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [780, 220],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
+        executeOnce: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
-    ClaimAsSeen = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/seen_mentions',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+    AlreadySeen = {
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'seen_mentions',
+        returnAll: true,
+    };
+
+    @node({
+        id: '10500e04-a418-4c77-a8aa-c4aaad3f744f',
+        name: 'Keep the unseen',
+        type: 'n8n-nodes-base.code',
+        version: 2,
+        position: [1040, 220],
+    })
+    KeepTheUnseen = {
+        jsCode: `const seen = new Set($input.all().map((i) => i.json.url).filter(Boolean));
+return $("One item per mention").all().filter((i) => !seen.has(i.json.url));`,
+    };
+
+    @node({
+        id: '0f96b39f-4736-4171-a25c-778a1b16321f',
+        name: 'Remember it',
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [1300, 220],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
+        retryOnFail: true,
+        maxTries: 3,
+        waitBetweenTries: 1000,
+    })
+    RememberIt = {
+        resource: 'row',
+        operation: 'create',
+        tableId: 'seen_mentions',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'url',
+                    fieldValue: '={{ $json.url }}',
+                },
+                {
+                    fieldId: 'text',
+                    fieldValue: '={{ $json.text }}',
+                },
+                {
+                    fieldId: 'author',
+                    fieldValue: '={{ $json.author }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'on_conflict',
-                    value: "={{ 'url' }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ url: $json.url, text: $json.text, author: $json.author }) }}',
     };
 
     @node({
@@ -170,7 +208,7 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
         name: 'New mention?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1040, 90],
+        position: [1560, 220],
     })
     NewMention = {
         conditions: {
@@ -200,40 +238,55 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
     @node({
         id: '709e6a7c-db85-41d5-a448-3325ef6a0625',
         name: 'Read the tone',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1300, 90],
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
+        position: [1920, 90],
         onError: 'continueRegularOutput',
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
     })
     ReadTheTone = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: '={{ $json.text }}',
+        hasOutputParser: true,
         options: {
-            timeout: 15000,
+            systemMessage:
+                "[task:classify] Classify a public mention of a brand. Reply with JSON: { label: string, urgent: boolean, sentiment: 'negative'|'neutral'|'positive' }.",
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
+    };
+
+    @node({
+        id: '2d449a17-d4b7-403c-ace6-23627f1c2c5f',
+        name: 'Read the tone · GPT',
+        type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+        version: 1.2,
+        position: [1820, 310],
+        credentials: { openAiApi: { id: '__CRED:openai__', name: 'OpenAI' } },
+    })
+    ReadTheToneGpt = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'gpt-4o-mini',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  response_format: { type: "json_object" },
-  messages: [
-    { role: "system", content: "[task:classify] Classify a public mention of a brand. Reply with JSON: { label: string, urgent: boolean, sentiment: 'negative'|'neutral'|'positive' }." },
-    { role: "user", content: $json.text }
-  ]
-}) }}`,
+        options: {
+            temperature: 0,
+        },
+    };
+
+    @node({
+        id: '8a8704b2-79d0-4b8e-a37a-243dcfd4ce06',
+        name: 'Read the tone · shape',
+        type: '@n8n/n8n-nodes-langchain.outputParserStructured',
+        version: 1.3,
+        position: [2020, 310],
+    })
+    ReadTheToneShape = {
+        schemaType: 'fromJson',
+        jsonSchemaExample: `{
+  "label": "billing",
+  "urgent": false,
+  "sentiment": "neutral"
+}`,
     };
 
     @node({
@@ -241,20 +294,15 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
         name: 'Read the verdict',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1560, 90],
+        position: [2280, 220],
     })
     ReadTheVerdict = {
         jsCode: `const before = $("New mention?").all();
 const out = [];
 for (const [i, item] of $input.all().entries()) {
-  let reply = {"sentiment":"unknown"};
-  let parse_error = false;
-  try {
-    reply = JSON.parse(item.json.choices[0].message.content);
-  } catch (e) {
-    parse_error = true;
-  }
-  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });
+  const answer = item.json.output;
+  const ok = answer && typeof answer === "object" && !Array.isArray(answer);
+  out.push({ json: { ...(before[i]?.json ?? {}), ...(ok ? answer : {"sentiment":"unknown"}), parse_error: !ok } });
 }
 return out;`,
     };
@@ -264,7 +312,7 @@ return out;`,
         name: 'Needs attention?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1820, 90],
+        position: [2540, 220],
     })
     NeedsAttention = {
         conditions: {
@@ -296,7 +344,7 @@ return out;`,
         name: 'Write the alert',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2080, 90],
+        position: [2800, 220],
     })
     WriteTheAlert = {
         jsCode: 'return $input.all().map((i) => ({ json: { channel: "#brand", level: "warn", text: (i.json.sentiment === "unknown" ? "Unclassified" : "Negative") + " mention by " + i.json.author + ": \\"" + i.json.text.slice(0, 240) + "\\" " + i.json.url } }));',
@@ -307,7 +355,7 @@ return out;`,
         name: 'Raise it',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2340, 90],
+        position: [3060, 220],
     })
     RaiseIt = {
         workflowId: {
@@ -326,12 +374,19 @@ return out;`,
     defineRouting() {
         this.Hourly.out(0).to(this.SearchForMentions.in(0));
         this.SearchForMentions.out(0).to(this.OneItemPerMention.in(0));
-        this.OneItemPerMention.out(0).to(this.ClaimAsSeen.in(0));
-        this.ClaimAsSeen.out(0).to(this.NewMention.in(0));
+        this.OneItemPerMention.out(0).to(this.AlreadySeen.in(0));
+        this.AlreadySeen.out(0).to(this.KeepTheUnseen.in(0));
+        this.KeepTheUnseen.out(0).to(this.RememberIt.in(0));
+        this.RememberIt.out(0).to(this.NewMention.in(0));
         this.NewMention.out(0).to(this.ReadTheTone.in(0));
         this.ReadTheTone.out(0).to(this.ReadTheVerdict.in(0));
         this.ReadTheVerdict.out(0).to(this.NeedsAttention.in(0));
         this.NeedsAttention.out(0).to(this.WriteTheAlert.in(0));
         this.WriteTheAlert.out(0).to(this.RaiseIt.in(0));
+
+        this.ReadTheTone.uses({
+            ai_languageModel: this.ReadTheToneGpt.output,
+            ai_outputParser: this.ReadTheToneShape.output,
+        });
     }
 }

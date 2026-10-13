@@ -2,8 +2,8 @@
  * Building blocks: one idea each. Most are meant to be called from another
  * workflow, or copied into one.
  */
-import { webhook, schedule, manual, called, http, llm, code, iff, route, set, respond, batches, wait, noop, call, define } from "../lib/wf.mjs";
-import { db, slack, sendgrid, ask } from "../lib/nodes.mjs";
+import { webhook, schedule, manual, called, http, code, iff, route, set, respond, batches, wait, noop, call, define } from "../lib/wf.mjs";
+import { db, slack, sendgrid, twilio, drive, api, ask } from "../lib/nodes.mjs";
 
 const b = (kind) => ({ folder: `blocks/${kind}`, tier: "block", category: "Building blocks", kind });
 
@@ -12,13 +12,12 @@ export default [
   define({
     ...b("intake"), id: "block-webhook-to-table", name: "Block · Webhook to a table",
     summary: "The smallest useful workflow: receive a form post, keep the fields you named, store a row, answer the sender.",
-    integrations: ["Webhook", "Datastore"],
     nodes: [
       webhook("Form posted", "block-form"),
       code("Keep known fields", `const body = $input.first().json.body ?? {};
 const row = Object.fromEntries(["name", "email", "message"].map((k) => [k, typeof body[k] === "string" ? body[k].trim().slice(0, 2000) : null]));
 return [{ json: { ...row, received_at: new Date().toISOString() } }];`),
-      http("Store the row", "DB:/form_submissions", { body: "$json" }),
+      db.insert("Store the row", "form_submissions", { name: "$json.name", email: "$json.email", message: "$json.message", received_at: "$json.received_at" }),
       respond("Thanks", "{ ok: true, id: $json.id }"),
     ],
     flow: [["Form posted", "Keep known fields", "Store the row", "Thanks"]],
@@ -27,7 +26,6 @@ return [{ json: { ...row, received_at: new Date().toISOString() } }];`),
   define({
     ...b("intake"), id: "block-webhook-secret", name: "Block · Webhook with a shared secret",
     summary: "Refuses any request that does not carry the secret header, before doing anything else.",
-    integrations: ["Webhook"],
     nodes: [
       webhook("Incoming", "block-secret"),
       iff("Has the secret?", "$json.headers['x-webhook-secret'] === $env.SHOP_API_KEY"),
@@ -43,7 +41,6 @@ return [{ json: { ...row, received_at: new Date().toISOString() } }];`),
   define({
     ...b("intake"), id: "block-validate-respond", name: "Block · Validate and answer with field errors",
     summary: "Checks a payload against simple rules and answers with exactly which fields were wrong, so the form can show it.",
-    integrations: ["Webhook"],
     nodes: [
       webhook("Submitted", "block-validate"),
       code("Check the fields", `const v = $input.first().json.body ?? {};
@@ -67,7 +64,6 @@ return [{ json: { valid: Object.keys(errors).length === 0, errors } }];`),
   define({
     ...b("notify"), id: "block-webhook-to-chat", name: "Block · Event to a chat message",
     summary: "Turns any event into one readable chat message.",
-    integrations: ["Webhook", "Chat"],
     nodes: [
       webhook("Event", "block-to-chat", { respond: "immediately" }),
       slack.post("Post it", "$json.body.channel ?? '#general'", "($json.body.title ? '*' + $json.body.title + '*\\n' : '') + String($json.body.text ?? '').slice(0, 3000)"),
@@ -78,25 +74,23 @@ return [{ json: { valid: Object.keys(errors).length === 0, errors } }];`),
   define({
     ...b("notify"), id: "block-fan-out", name: "Block · One event, three channels",
     summary: "Sends the same message by chat, email and SMS, where each channel failing leaves the other two untouched.",
-    integrations: ["Chat", "Email", "SMS"],
     nodes: [
       called(),
       slack.post("Chat", "'#general'", "$json.text", { onFail: "continue" }),
       sendgrid.text("Email", { to: "$('When called').item.json.email", subject: "'Notice'", text: "$('When called').item.json.text" }, { onFail: "continue" }),
-      http("SMS", "SMS:/Messages", { body: "{ To: $('When called').item.json.phone, Body: $('When called').item.json.text.slice(0, 160) }", onFail: "continue" }),
+      twilio.sms("SMS", "$('When called').item.json.phone", "$('When called').item.json.text.slice(0, 160)", { onFail: "continue" }),
       code("Report", `const sent = (name) => { const j = $(name).first().json; return !!j && !j.error; };
 return [{ json: { chat: sent("Chat"), email: sent("Email"), sms: sent("SMS") } }];`),
     ],
     flow: [["When called", "Chat", "Email", "SMS", "Report"]],
     tests: [
       { name: "sends all three", input: [{ text: "Hi", email: "a@b.co", phone: "+15550100" }], output: { node: "Report", json: { chat: true, email: true, sms: true } } },
-      { name: "an email outage does not stop chat or SMS", fail: [{ path: "/v3/mail/send", times: 3 }], input: [{ text: "Hi", email: "a@b.co", phone: "+15550100" }], output: { node: "Report", json: { chat: true, email: false, sms: true } }, calls: [{ path: "/sms/Messages" }] },
+      { name: "an email outage does not stop chat or SMS", fail: [{ path: "/v3/mail/send", times: 3 }], input: [{ text: "Hi", email: "a@b.co", phone: "+15550100" }], output: { node: "Report", json: { chat: true, email: false, sms: true } }, calls: [{ to: "twilio" }] },
     ],
   }),
   define({
     ...b("notify"), id: "block-template-email", name: "Block · Templated email",
     summary: "One place to send an email from: fills a template, refuses to send with a placeholder left unfilled.",
-    integrations: ["Email"],
     nodes: [
       called(),
       code("Fill the template", `return $input.all().map((item) => {
@@ -113,7 +107,7 @@ return [{ json: { chat: sent("Chat"), email: sent("Email"), sms: sent("SMS") } }
     ],
     flow: [["When called", "Fill the template", "Ready to send?", "Send", "Sent"], ["Ready to send?:1", "Held back"]],
     tests: [
-      { name: "fills and sends", input: [{ to: "a@b.co", subject: "Hi {{name}}", body: "Order {{id}} shipped", data: { name: "Ana", id: 7 } }], calls: [{ to: "sendgrid", path: "/v3/mail/send", body: { subject: "Hi Ana", text: "Order 7 shipped" } }] },
+      { name: "fills and sends", input: [{ to: "a@b.co", subject: "Hi {{name}}", body: "Order {{id}} shipped", data: { name: "Ana", id: 7 } }], calls: [{ to: "sendgrid", path: "/v3/mail/send", body: { personalizations: [{ subject: "Hi Ana" }], content: [{ value: "Order 7 shipped" }] } }] },
       { name: "holds back an email with a blank placeholder", input: [{ to: "a@b.co", subject: "Hi {{name}}", body: "x", data: {} }], ran: ["Held back"], noCalls: ["sendgrid"] },
     ],
   }),
@@ -122,7 +116,6 @@ return [{ json: { chat: sent("Chat"), email: sent("Email"), sms: sent("SMS") } }
   define({
     ...b("schedule"), id: "block-scheduled-report", name: "Block · Scheduled count to chat",
     summary: "Every morning, counts yesterday's rows in a table and posts the number.",
-    integrations: ["Schedule", "Datastore", "Chat"],
     nodes: [
       schedule("08:00 daily", "0 8 * * *"),
       db.find("Yesterday's rows", "form_submissions", { received_at: ["gte", "$now.minus({ days: 1 }).startOf('day').toISO()"] }),
@@ -137,11 +130,10 @@ return [{ json: { chat: sent("Chat"), email: sent("Email"), sms: sent("SMS") } }
   }),
   define({
     ...b("schedule"), id: "block-heartbeat", name: "Block · Check in with the heartbeat monitor",
-    summary: "The two nodes a scheduled workflow adds so the heartbeat monitor can tell when it stops running.",
-    integrations: ["Datastore"],
+    summary: "What a scheduled workflow calls when it finishes, so the heartbeat monitor can tell when it stops running.",
     nodes: [
       called(),
-      http("Check in", "DB:/heartbeats", { query: { on_conflict: "'name'" }, headers: { Prefer: "resolution=merge-duplicates" }, body: "{ name: $json.name, last_seen: $now.toISO(), max_gap_minutes: $json.max_gap_minutes ?? 90 }" }),
+      db.upsert("Check in", "heartbeats", "name", "{ name: $json.name, last_seen: $now.toISO(), max_gap_minutes: $json.max_gap_minutes ?? 90 }"),
     ],
     flow: [["When called", "Check in"]],
     tests: [{ name: "writes a heartbeat row", input: [{ name: "nightly-sync", max_gap_minutes: 1500 }], table: { heartbeats: [{ name: "nightly-sync", max_gap_minutes: 1500 }] } }],
@@ -149,7 +141,6 @@ return [{ json: { chat: sent("Chat"), email: sent("Email"), sms: sent("SMS") } }
   define({
     ...b("schedule"), id: "block-working-hours", name: "Block · Working hours gate",
     summary: "Tells a caller whether now is inside working hours in a given time zone, so messages to people wait for the morning.",
-    integrations: [],
     nodes: [
       called(),
       code("Is it working hours?", `return $input.all().map((item) => {
@@ -173,7 +164,6 @@ return [{ json: { chat: sent("Chat"), email: sent("Email"), sms: sent("SMS") } }
   define({
     ...b("lists"), id: "block-dedupe", name: "Block · Remove duplicates by key",
     summary: "Keeps the first of each item sharing a key, after normalising it, so 'A@B.co ' and 'a@b.co' count as one.",
-    integrations: [],
     nodes: [
       called(),
       code("Dedupe", `const seen = new Set();
@@ -192,30 +182,28 @@ return out;`),
   define({
     ...b("lists"), id: "block-paginate", name: "Block · Read every page of an API",
     summary: "Follows a cursor until the API says there is no more, with a hard stop so a broken API cannot loop forever.",
-    integrations: ["CRM"],
     nodes: [
       manual(),
       set("Start", { cursor: "''", page: "0" }),
-      http("Fetch a page", "CRM:/contacts", { method: "GET", query: { after: "$json.cursor", limit: "'100'" } }),
+      api("hubspot", "hubspotAppToken", "Fetch a page", "GET", "'https://api.hubapi.com/crm/v3/objects/contacts'", { query: { after: "$json.cursor", limit: "'100'" } }),
       code("Keep going?", `const res = $input.first().json;
 const page = Number($("Start").first().json.page) + $runIndex + 1;
-return [{ json: { items: res.results ?? [], cursor: res.next ?? "", page, more: !!res.next && page < 50 } }];`),
+return [{ json: { items: res.results ?? [], cursor: res.paging?.next?.after ?? "", page, more: !!res.paging?.next?.after && page < 50 } }];`),
       iff("More pages?", "$json.more"),
       code("All pages", `const all = [];
 for (let i = 0; ; i++) { try { all.push(...$("Keep going?").first(0, i).json.items); } catch (e) { break; } }
 return [{ json: { total: all.length, items: all } }];`),
     ],
     flow: [["Run manually", "Start", "Fetch a page", "Keep going?", "More pages?", "Fetch a page"], ["More pages?:1", "All pages"]],
-    tests: [{ name: "stops when there is no next cursor", routes: [{ path: "/crm/contacts", response: { results: [{ id: 1 }, { id: 2 }] } }], input: [{}], output: { node: "All pages", json: { total: 2 } }, callCount: { "/crm/contacts": 1 } }],
+    tests: [{ name: "stops when there is no next cursor", routes: [{ path: "api.hubapi.com/crm/v3/objects/contacts", response: { results: [{ id: "1" }, { id: "2" }] } }], input: [{}], output: { node: "All pages", json: { total: 2 } }, callCount: { "hubspot /crm/v3/objects/contacts": 1 } }],
   }),
   define({
     ...b("lists"), id: "block-rate-limited-loop", name: "Block · Loop that respects a rate limit",
     summary: "Sends items in small batches with a pause between them, for APIs that reject bursts.",
-    integrations: ["Email"],
     nodes: [
       called(),
       batches("Five at a time", 5),
-      http("Send", "EMAIL:/emails", { body: "{ to: $json.email, template: 'bulk' }", onFail: "continue" }),
+      sendgrid.send("Send", { to: "$json.email", template: "'d-bulk'" }, { onFail: "continue" }),
       wait("Pause", 2),
       noop("Finished"),
     ],
@@ -225,14 +213,13 @@ return [{ json: { total: all.length, items: all } }];`),
   define({
     ...b("lists"), id: "block-batch-upsert", name: "Block · Upsert in chunks",
     summary: "Groups a long list into chunks of 100 and upserts each chunk in one request.",
-    integrations: ["Datastore"],
     nodes: [
       called(),
       code("Chunk", `const rows = $input.all().map((i) => i.json);
 const out = [];
 for (let i = 0; i < rows.length; i += 100) out.push({ json: { rows: rows.slice(i, i + 100) } });
 return out;`),
-      http("Upsert the chunk", "DB:/records", { query: { on_conflict: "'key'" }, headers: { Prefer: "resolution=merge-duplicates" }, body: "$json.rows" }),
+      db.upsert("Upsert the chunk", "records", "key", "$json.rows"),
     ],
     flow: [["When called", "Chunk", "Upsert the chunk"]],
     tests: [{ name: "250 rows become three requests and update on repeat", repeat: 2, input: Array.from({ length: 250 }, (_, i) => ({ key: `k${i}`, v: i })), callCount: { "supabase /rest/v1/records": 6 }, table: { records: [{ key: "k249", v: 249 }] } }],
@@ -242,7 +229,6 @@ return out;`),
   define({
     ...b("reliability"), id: "block-retry-backoff", name: "Block · Retry with growing waits",
     summary: "Calls an address up to four times, waiting longer each time, and reports clearly whether it finally worked.",
-    integrations: [],
     nodes: [
       called(),
       set("Begin", { url: "$json.url", payload: "JSON.stringify($json.payload ?? {})", attempt: "1" }),
@@ -268,24 +254,22 @@ return [{ json: { url: prev.url, payload: prev.payload, attempt, give_up: attemp
   define({
     ...b("reliability"), id: "block-error-to-dead-letter", name: "Block · Failed call to dead letter",
     summary: "The pattern for any write that must not be lost: try, and if it still fails after retries, park the payload.",
-    integrations: ["CRM"],
     nodes: [
       called(),
-      http("Write", "CRM:/records", { body: "$json", onFail: "branch" }),
+      api("hubspot", "hubspotAppToken", "Write", "POST", "'https://api.hubapi.com/crm/v3/objects/contacts'", { body: "{ properties: $json }", onFail: "branch" }),
       set("Written", { written: "true" }),
-      code("Wrap", `return [{ json: { source: "block-error-to-dead-letter", reason: "CRM write failed after retries", payload: $("When called").first().json } }];`),
+      code("Wrap", `return [{ json: { source: "block-error-to-dead-letter", reason: "HubSpot write failed after retries", payload: $("When called").first().json } }];`),
       call("Park it", "dead-letter"),
     ],
     flow: [["When called", "Write", "Written"], ["Write:1", "Wrap", "Park it"]],
     tests: [
       { name: "writes when the service is up", input: [{ a: 1 }], ran: ["Written"], notRan: ["Park it"] },
-      { name: "parks the payload when it stays down", fail: [{ path: "/crm", times: 3 }], input: [{ a: 1 }], calls: [{ to: "supabase", path: "/rest/v1/dead_letters", body: { payload: { a: 1 } } }] },
+      { name: "parks the payload when it stays down", fail: [{ path: "/crm/v3/objects/contacts", times: 3 }], input: [{ a: 1 }], calls: [{ to: "supabase", path: "/rest/v1/dead_letters", body: { payload: { a: 1 } } }] },
     ],
   }),
   define({
     ...b("reliability"), id: "block-throttle", name: "Block · Limit actions per key per hour",
     summary: "Answers whether a key (a user, an IP, a customer) is still under its hourly limit, and counts the attempt.",
-    integrations: ["Datastore"],
     nodes: [
       called(),
       code("This hour's bucket", `return $input.all().map((i) => ({ json: { ...i.json, limit: i.json.limit ?? 5, bucket: i.json.key + ":" + new Date().toISOString().slice(0, 13) } }));`),
@@ -293,7 +277,7 @@ return [{ json: { url: prev.url, payload: prev.payload, attempt, give_up: attemp
       code("Decide", `const req = $("This hour's bucket").first().json;
 const count = Number($input.first().json.count ?? 0);
 return [{ json: { ...req, count: count + 1, allowed: count < req.limit } }];`),
-      http("Count the attempt", "DB:/throttle", { query: { on_conflict: "'bucket'" }, headers: { Prefer: "resolution=merge-duplicates" }, body: "{ bucket: $json.bucket, count: $json.count }" }),
+      db.upsert("Count the attempt", "throttle", "bucket", "{ bucket: $json.bucket, count: $json.count }"),
       set("Answer", { allowed: "$('Decide').first().json.allowed", count: "$('Decide').first().json.count" }),
     ],
     flow: [["When called", "This hour's bucket", "Read the count", "Decide", "Count the attempt", "Answer"]],
@@ -302,7 +286,6 @@ return [{ json: { ...req, count: count + 1, allowed: count < req.limit } }];`),
   define({
     ...b("reliability"), id: "block-approval-gate", name: "Block · Wait for a person's yes",
     summary: "Records a pending decision and gives back approve and reject links. Nothing proceeds until one is pressed, and each link works once.",
-    integrations: ["Webhook", "Datastore"],
     nodes: [
       webhook("Decision link", "block-approval", { method: "GET" }),
       code("Read the link", `const q = $input.first().json.query ?? {};
@@ -323,7 +306,6 @@ return [{ json: { token: String(q.token ?? ""), decision: q.decision === "approv
   define({
     ...b("data"), id: "block-csv-to-rows", name: "Block · CSV text to rows",
     summary: "Parses CSV text properly, including quoted commas and blank lines, into one item per row.",
-    integrations: [],
     nodes: [
       called(),
       code("Parse", `const text = String($input.first().json.csv ?? "").replace(/^\\uFEFF/, "");
@@ -348,7 +330,6 @@ return body.map((r) => ({ json: Object.fromEntries(header.map((h, i) => [h.trim(
   define({
     ...b("data"), id: "block-change-detect", name: "Block · Has this changed since last time?",
     summary: "Compares a record with the copy stored last run and reports which fields changed, so downstream work only happens on a real change.",
-    integrations: ["Datastore"],
     nodes: [
       called(),
       db.find("Last copy", "snapshots", { key: "$json.key" }),
@@ -357,7 +338,7 @@ const before = $input.first().json.data ?? null;
 const fields = Object.keys({ ...(before ?? {}), ...now.data });
 const changed = before === null ? fields : fields.filter((f) => JSON.stringify(before[f]) !== JSON.stringify(now.data[f]));
 return [{ json: { key: now.key, data: now.data, first_seen: before === null, changed, has_changes: changed.length > 0 } }];`),
-      http("Store this copy", "DB:/snapshots", { query: { on_conflict: "'key'" }, headers: { Prefer: "resolution=merge-duplicates" }, body: "{ key: $json.key, data: $json.data }" }),
+      db.upsert("Store this copy", "snapshots", "key", "{ key: $json.key, data: $json.data }"),
       set("Answer", { has_changes: "$('Compare').first().json.has_changes", changed: "$('Compare').first().json.changed.join(',')" }),
     ],
     flow: [["When called", "Last copy", "Compare", "Store this copy", "Answer"]],
@@ -369,25 +350,23 @@ return [{ json: { key: now.key, data: now.data, first_seen: before === null, cha
   define({
     ...b("data"), id: "block-currency-convert", name: "Block · Convert a currency amount",
     summary: "Converts an amount with today's rate, rounds like money, and says so when the rate could not be fetched instead of returning a wrong number.",
-    integrations: ["Rates"],
     nodes: [
       called(),
-      http("Today's rate", "RATES:/latest", { method: "GET", query: { from: "$json.from", to: "$json.to" }, auth: false, onFail: "continue" }),
+      api("stripe", "stripeApi", "Today's rate", "GET", "'https://api.stripe.com/v1/exchange_rates/' + String($json.from).toLowerCase()", { onFail: "continue" }),
       code("Convert", `const req = $("When called").first().json;
-const rate = $input.first().json.rates?.[req.to];
+const rate = $input.first().json.rates?.[String(req.to).toLowerCase()];
 if (typeof rate !== "number") return [{ json: { ...req, converted: null, ok: false, reason: "No rate available for " + req.from + " to " + req.to } }];
 return [{ json: { ...req, rate, converted: Math.round(req.amount * rate * 100) / 100, ok: true } }];`),
     ],
     flow: [["When called", "Today's rate", "Convert"]],
     tests: [
-      { name: "converts and rounds to cents", routes: [{ path: "/rates/latest", response: { rates: { PHP: 58.1234 } } }], input: [{ amount: 19.99, from: "USD", to: "PHP" }], output: { node: "Convert", json: { converted: 1161.89, ok: true } } },
-      { name: "admits when there is no rate", fail: [{ path: "/rates", times: 3 }], input: [{ amount: 10, from: "USD", to: "PHP" }], output: { node: "Convert", json: { converted: null, ok: false } } },
+      { name: "converts and rounds to cents", routes: [{ path: "api.stripe.com/v1/exchange_rates/usd", response: { id: "usd", rates: { php: 58.1234 } } }], input: [{ amount: 19.99, from: "USD", to: "PHP" }], output: { node: "Convert", json: { converted: 1161.89, ok: true } } },
+      { name: "admits when there is no rate", fail: [{ path: "/v1/exchange_rates/usd", times: 3 }], input: [{ amount: 10, from: "USD", to: "PHP" }], output: { node: "Convert", json: { converted: null, ok: false } } },
     ],
   }),
   define({
     ...b("data"), id: "block-slugify", name: "Block · Clean text into a URL slug",
     summary: "Turns any title into a safe, readable URL slug, including accented and non-Latin titles.",
-    integrations: [],
     nodes: [
       called(),
       code("Slugify", `return $input.all().map((item) => {
@@ -401,7 +380,6 @@ return [{ json: { ...req, rate, converted: Math.round(req.amount * rate * 100) /
   define({
     ...b("data"), id: "block-date-window", name: "Block · Yesterday, in the business's time zone",
     summary: "Works out the start and end of 'yesterday' or 'last week' in a named time zone, which is where most reporting bugs come from.",
-    integrations: [],
     nodes: [
       called(),
       code("Window", `return $input.all().map((item) => {
@@ -418,53 +396,47 @@ return [{ json: { ...req, rate, converted: Math.round(req.amount * rate * 100) /
   define({
     ...b("data"), id: "block-cursor-sync", name: "Block · Incremental sync with a bookmark",
     summary: "The skeleton of every reliable sync: read the bookmark, fetch what is newer, write it, and only then move the bookmark.",
-    integrations: ["Datastore", "CRM"],
     nodes: [
       manual(),
       db.find("Read bookmark", "sync_cursors", { name: "'block-sync'" }),
-      http("Fetch newer", "CRM:/changes", { method: "GET", query: { since: "$json.value ?? '0'" } }),
+      api("hubspot", "hubspotAppToken", "Fetch newer", "GET", "'https://api.hubapi.com/crm/v3/objects/contacts'", { query: { after: "$json.value ?? '0'", limit: "'100'" } }),
       code("Newest id", `const rows = $input.first().json.results ?? [];
 return [{ json: { rows, count: rows.length, newest: rows.length ? String(Math.max(...rows.map((r) => Number(r.id)))) : null } }];`),
       iff("Anything new?", "$json.count > 0"),
-      http("Write rows", "DB:/synced", { body: "$json.rows" }),
-      http("Move bookmark", "DB:/sync_cursors", { query: { on_conflict: "'name'" }, headers: { Prefer: "resolution=merge-duplicates" }, body: "{ name: 'block-sync', value: $('Newest id').first().json.newest }" }),
+      db.upsert("Write rows", "synced", "id", "$json.rows.map((r) => ({ id: String(r.id), email: r.properties?.email ?? null }))"),
+      db.upsert("Move bookmark", "sync_cursors", "name", "{ name: 'block-sync', value: $('Newest id').first().json.newest }"),
       noop("Up to date"),
     ],
     flow: [["Run manually", "Read bookmark", "Fetch newer", "Newest id", "Anything new?", "Write rows", "Move bookmark"], ["Anything new?:1", "Up to date"]],
     tests: [
-      { name: "moves the bookmark to the newest id", seed: { sync_cursors: [{ name: "block-sync", value: "10" }] }, routes: [{ path: "/crm/changes", response: { results: [{ id: 11 }, { id: 14 }] } }], input: [{}], calls: [{ path: "/crm/changes", query: { since: "10" } }], table: { sync_cursors: [{ name: "block-sync", value: "14" }] } },
-      { name: "leaves the bookmark when nothing is new", seed: { sync_cursors: [{ name: "block-sync", value: "10" }] }, routes: [{ path: "/crm/changes", response: { results: [] } }], input: [{}], ran: ["Up to date"], table: { sync_cursors: [{ name: "block-sync", value: "10" }] } },
+      { name: "moves the bookmark to the newest id", seed: { sync_cursors: [{ name: "block-sync", value: "10" }] }, routes: [{ path: "api.hubapi.com/crm/v3/objects/contacts", response: { results: [{ id: "11" }, { id: "14" }] } }], input: [{}], calls: [{ to: "hubspot", path: "/crm/v3/objects/contacts", query: { after: "10" } }], table: { sync_cursors: [{ name: "block-sync", value: "14" }] } },
+      { name: "leaves the bookmark when nothing is new", seed: { sync_cursors: [{ name: "block-sync", value: "10" }] }, routes: [{ path: "api.hubapi.com/crm/v3/objects/contacts", response: { results: [] } }], input: [{}], ran: ["Up to date"], table: { sync_cursors: [{ name: "block-sync", value: "10" }] } },
     ],
   }),
   define({
-    ...b("data"), id: "block-file-to-storage", name: "Block · Save a remote file to storage",
-    summary: "Records a file under a name derived from its own address, so the same file fetched twice is stored once.",
-    integrations: ["Storage", "Datastore"],
+    ...b("data"), id: "block-file-to-storage", name: "Block · Archive a Drive file once",
+    summary: "Copies a Google Drive file into the archive folder under a dated name, and records it so the same file sent twice is archived once.",
     nodes: [
       called(),
       code("Name it", `return $input.all().map((item) => {
-  const url = String(item.json.url ?? "");
-  let h = 0; for (const c of url) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  const ext = (/\\.([a-z0-9]{2,5})(?:\\?|$)/i.exec(url)?.[1] ?? "bin").toLowerCase();
-  return { json: { url, key: "files/" + h.toString(16).padStart(8, "0") + "." + ext } };
+  const name = String(item.json.name ?? "file").replace(/[\\\\/:*?"<>|]+/g, "-").trim();
+  return { json: { file_id: String(item.json.file_id ?? ""), key: "drive/" + item.json.file_id, archive_name: new Date().toISOString().slice(0, 10) + " " + name } };
 });`),
-      http("Claim the name", "DB:/stored_files", { query: { on_conflict: "'key'" }, body: "{ key: $json.key, source: $json.url }", alwaysOutput: true }),
-      iff("New file?", "!!$json.key"),
-      http("Copy to storage", "STORAGE:/copy", { body: "{ source_url: $json.source, key: $json.key }" }),
-      noop("Already stored"),
+      db.insert("Claim the file", "stored_files", { key: "$json.key", source: "$json.file_id" }, { onFail: "branch" }),
+      drive.copy("Copy to the archive", { file: "$('Name it').item.json.file_id", folder: "archive-folder-id", as: "$('Name it').item.json.archive_name" }),
+      noop("Already archived"),
     ],
-    flow: [["When called", "Name it", "Claim the name", "New file?", "Copy to storage"], ["New file?:1", "Already stored"]],
-    tests: [{ name: "the same address is copied once", repeat: 2, input: [{ url: "https://cdn.example/a/report.PDF?x=1" }], callCount: { "/storage/copy": 1 }, output: { node: "Name it", json: { key: "files/" + (() => { let h = 0; for (const c of "https://cdn.example/a/report.PDF?x=1") h = (h * 31 + c.charCodeAt(0)) >>> 0; return h.toString(16).padStart(8, "0"); })() + ".pdf" } } }],
+    flow: [["When called", "Name it", "Claim the file", "Copy to the archive"], ["Claim the file:1", "Already archived"]],
+    tests: [{ name: "the same file is archived once", repeat: 2, input: [{ file_id: "f-123", name: "Q3/report.pdf" }], callCount: { "googleDrive /drive/v3/files/f-123/copy": 1 }, ran: ["Already archived"], output: { node: "Name it", json: { key: "drive/f-123" } } }],
   }),
 
   /* ---- AI ---- */
   define({
     ...b("ai"), id: "block-llm-json-guard", name: "Block · A model reply you can rely on",
     summary: "Asks a model for JSON, checks the reply has the fields you need, asks once more if it does not, and then gives up honestly.",
-    integrations: ["LLM"],
     nodes: [
       called(),
-      llm("Ask", { task: "guarded", system: "Reply with JSON only.", user: "$json.prompt", onFail: "continue" }),
+      ...ask("Ask", { task: "guarded", system: "Reply with JSON only.", prompt: "$json.prompt", writer: false }),
       code("Check the reply", `const req = $("When called").first().json;
 const required = req.required ?? [];
 let data = null;
@@ -478,14 +450,13 @@ return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $r
     ],
     flow: [["When called", "Ask", "Check the reply", "Good?", "Usable"], ["Good?:1", "Try once more?", "Ask"], ["Try once more?:1", "Not usable"]],
     tests: [
-      { name: "accepts a complete reply first time", llm: [{ final: JSON.parse("{\"city\":\"Cebu\",\"country\":\"PH\"}") }], input: [{ prompt: "Where?", required: ["city", "country"] }], ran: ["Usable"], callCount: { "/llm/chat/completions": 1 } },
-      { name: "asks once more, then gives up", llm: [{ final: JSON.parse("{\"city\":\"Cebu\"}") }], input: [{ prompt: "Where?", required: ["city", "country"] }], ran: ["Not usable"], callCount: { "/llm/chat/completions": 2 } },
+      { name: "accepts a complete reply first time", llm: [{ text: '{"city":"Cebu","country":"PH"}' }], input: [{ prompt: "Where?", required: ["city", "country"] }], ran: ["Usable"], callCount: { "openai /v1/chat/completions": 1 } },
+      { name: "asks once more, then gives up", llm: [{ text: '{"city":"Cebu"}', times: 2 }], input: [{ prompt: "Where?", required: ["city", "country"] }], ran: ["Not usable"], callCount: { "openai /v1/chat/completions": 2 } },
     ],
   }),
   define({
     ...b("ai"), id: "block-pii-redact", name: "Block · Mask personal data before a model sees it",
     summary: "Replaces emails, phone numbers and card numbers with placeholders, and hands back the map to restore them afterwards.",
-    integrations: [],
     nodes: [
       called(),
       code("Redact", `return $input.all().map((item) => {
@@ -505,7 +476,6 @@ return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $r
   define({
     ...b("ai"), id: "block-chunk-text", name: "Block · Split a document into overlapping chunks",
     summary: "Cuts long text into chunks that end on sentence boundaries and overlap by whole sentences, ready for embedding or a model's context window.",
-    integrations: [],
     nodes: [
       called(),
       code("Chunk", `const { text = "", size = 800, overlap = 100, id = "doc" } = $input.first().json;
@@ -532,12 +502,11 @@ return chunks.map((c, i) => ({ json: { id: id + "#" + i, index: i, of: chunks.le
   define({
     ...b("ai"), id: "block-classify-route", name: "Block · Classify, then route",
     summary: "Has a model put a message into one of a fixed set of labels and routes on it, with a default route for anything unexpected.",
-    integrations: ["LLM"],
     nodes: [
       called(),
       ...ask("Classify", { task: "classify", system: "Classify the message. Reply with JSON: { label: 'billing'|'technical'|'general' }.", prompt: "$json.text", example: { label: "billing", urgent: false, sentiment: "neutral" } }),
       code("Read the label", `let label = "general";
-try { const l = JSON.parse($input.first().json.output).label; if (["billing", "technical", "general"].includes(l)) label = l; } catch (e) {}
+try { const out = $input.first().json.output; const l = (typeof out === "string" ? JSON.parse(out) : out).label; if (["billing", "technical", "general"].includes(l)) label = l; } catch (e) {}
 return [{ json: { ...$("When called").first().json, label } }];`),
       route("By label", { billing: "$json.label === 'billing'", technical: "$json.label === 'technical'" }),
       set("Billing", { queue: "'billing'" }),

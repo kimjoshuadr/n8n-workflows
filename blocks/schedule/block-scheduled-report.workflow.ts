@@ -9,9 +9,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // _0800Daily                         scheduleTrigger
-// YesterdaySRows                     httpRequest                [alwaysOutput] [retry]
+// YesterdaySRows                     supabase                   [creds] [alwaysOutput] [retry]
 // Count                              code
-// Post                               httpRequest                [retry]
+// Post                               slack                      [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -49,8 +49,7 @@ export class BlockScheduledCountToChatWorkflow {
         content: `## Block · Scheduled count to chat
 Every morning, counts yesterday's rows in a table and posts the number.
 
-**Platforms:** none, this is logic only
-**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase, Slack
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/schedule\``,
     };
 
@@ -75,35 +74,28 @@ Every morning, counts yesterday's rows in a table and posts the number.
     @node({
         id: '1997818f-2761-44bf-aea2-849b68947fa4',
         name: "Yesterday's rows",
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     YesterdaySRows = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/form_submissions',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'form_submissions',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'received_at',
-                    value: "={{ 'gte.' + $now.minus({ days: 1 }).startOf('day').toISO() }}",
+                    keyName: 'received_at',
+                    condition: 'gte',
+                    keyValue: "={{ $now.minus({ days: 1 }).startOf('day').toISO() }}",
                 },
             ],
         },
@@ -123,32 +115,27 @@ Every morning, counts yesterday's rows in a table and posts the number.
     @node({
         id: 'c876f823-9f4f-4f9e-a210-9199b3f869c5',
         name: 'Post',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
         position: [780, 90],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     Post = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '#general' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: "={{ $json.count + ' form submissions since yesterday morning.' }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ channel: '#general', text: $json.count + ' form submissions since yesterday morning.' }) }}",
     };
 
     // =====================================================================

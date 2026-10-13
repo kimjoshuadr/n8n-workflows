@@ -2,7 +2,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : CRM · Meeting notes and next steps
-// Nodes   : 16  |  Connections: 14
+// Nodes   : 18  |  Connections: 14
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
@@ -11,13 +11,15 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // TranscriptReady                    webhook
 // ReadTheTranscript                  code
 // EnoughToSummarise                  if
-// Extract                            httpRequest                [retry]
+// Extract                            agent                      [AI] [onError→regular]
+// ExtractGpt                         lmChatOpenAi               [creds] [ai_languageModel]
+// ExtractShape                       outputParserStructured     [ai_outputParser]
 // ReadTheNotes                       code
 // Readable                           if
-// AddTheCrmNote                      httpRequest                [retry]
+// AddTheCrmNote                      hubspot                    [creds] [retry]
 // OneItemPerAction                   code
 // HasAnOwner                         if
-// CreateTheTask                      httpRequest                [retry]
+// CreateTheTask                      hubspot                    [creds] [retry]
 // UnownedMessage                     code
 // AskWhoOwnsThem                     executeWorkflow
 // UnreadableMessage                  code
@@ -41,6 +43,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //             .out(1) → UnreadableMessage
 //                → FlagForAManualRead
 //       .out(1) → TooShortToSummarise
+//
+// AI CONNECTIONS
+// Extract.uses({ ai_languageModel: ExtractGpt, ai_outputParser: ExtractShape })
 // </workflow-map>
 
 // =====================================================================
@@ -71,8 +76,7 @@ export class CrmMeetingNotesAndNextStepsWorkflow {
         content: `## CRM · Meeting notes and next steps
 Turns a call transcript into a CRM note and dated follow-up tasks, and asks a person when it cannot tell who owns a task.
 
-**Platforms:** none, this is logic only
-**Settings:** CRM_API_KEY, CRM_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** OpenAI, HubSpot
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/sales\``,
     };
 
@@ -82,7 +86,7 @@ Turns a call transcript into a CRM note and dated follow-up tasks, and asks a pe
         name: 'Transcript ready',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 180],
+        position: [0, 310],
     })
     TranscriptReady = {
         httpMethod: 'POST',
@@ -96,7 +100,7 @@ Turns a call transcript into a CRM note and dated follow-up tasks, and asks a pe
         name: 'Read the transcript',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [260, 180],
+        position: [260, 310],
     })
     ReadTheTranscript = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -109,7 +113,7 @@ return [{ json: { deal_id: String(b.deal_id ?? ""), title: b.title ?? "Call", tr
         name: 'Enough to summarise?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [520, 180],
+        position: [520, 310],
     })
     EnoughToSummarise = {
         conditions: {
@@ -139,39 +143,63 @@ return [{ json: { deal_id: String(b.deal_id ?? ""), title: b.title ?? "Call", tr
     @node({
         id: 'b7667011-3f07-4670-a9b3-91645c7912fa',
         name: 'Extract',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [780, 90],
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
+        position: [880, 90],
+        onError: 'continueRegularOutput',
     })
     Extract = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: '={{ $json.transcript }}',
+        hasOutputParser: true,
         options: {
-            timeout: 15000,
+            systemMessage:
+                "[task:meeting-notes] From this call transcript reply with JSON: { summary: string (max 120 words), decisions: string[], actions: [{ task: string, owner: string, due: 'YYYY-MM-DD' }] }. Use an empty string for an owner or a date nobody stated. Only include what was actually said.",
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
+    };
+
+    @node({
+        id: '73cd5fe2-50ee-4445-a191-6aab300b8cb8',
+        name: 'Extract · GPT',
+        type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+        version: 1.2,
+        position: [780, 310],
+        credentials: { openAiApi: { id: '__CRED:openai__', name: 'OpenAI' } },
+    })
+    ExtractGpt = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'gpt-4o-mini',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  response_format: { type: "json_object" },
-  messages: [
-    { role: "system", content: "[task:meeting-notes] From this call transcript reply with JSON: { summary: string (max 120 words), decisions: string[], actions: [{ task: string, owner: string|null, due: 'YYYY-MM-DD'|null }] }. Only include what was actually said." },
-    { role: "user", content: $json.transcript }
+        options: {
+            temperature: 0,
+        },
+    };
+
+    @node({
+        id: '4eb68d22-fc12-4985-a54e-48cd5231e577',
+        name: 'Extract · shape',
+        type: '@n8n/n8n-nodes-langchain.outputParserStructured',
+        version: 1.3,
+        position: [980, 310],
+    })
+    ExtractShape = {
+        schemaType: 'fromJson',
+        jsonSchemaExample: `{
+  "summary": "What was agreed.",
+  "decisions": [
+    "A decision"
+  ],
+  "actions": [
+    {
+      "task": "A task",
+      "owner": "kim",
+      "due": "2026-11-01"
+    }
   ]
-}) }}`,
+}`,
     };
 
     @node({
@@ -179,20 +207,15 @@ return [{ json: { deal_id: String(b.deal_id ?? ""), title: b.title ?? "Call", tr
         name: 'Read the notes',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1040, 180],
+        position: [1240, 310],
     })
     ReadTheNotes = {
         jsCode: `const before = $("Read the transcript").all();
 const out = [];
 for (const [i, item] of $input.all().entries()) {
-  let reply = {"summary":"","decisions":[],"actions":[]};
-  let parse_error = false;
-  try {
-    reply = JSON.parse(item.json.choices[0].message.content);
-  } catch (e) {
-    parse_error = true;
-  }
-  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });
+  const answer = item.json.output;
+  const ok = answer && typeof answer === "object" && !Array.isArray(answer);
+  out.push({ json: { ...(before[i]?.json ?? {}), ...(ok ? answer : {"summary":"","decisions":[],"actions":[]}), parse_error: !ok } });
 }
 return out;`,
     };
@@ -202,7 +225,7 @@ return out;`,
         name: 'Readable?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1300, 180],
+        position: [1500, 310],
     })
     Readable = {
         conditions: {
@@ -232,32 +255,30 @@ return out;`,
     @node({
         id: 'd39c264b-f7d0-43a8-a2e1-01ab7848ca1c',
         name: 'Add the CRM note',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1560, 90],
+        type: 'n8n-nodes-base.hubspot',
+        version: 2.1,
+        position: [1760, 220],
+        credentials: { hubspotAppToken: { id: '__CRED:hubspot__', name: 'HubSpot' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     AddTheCrmNote = {
-        method: 'POST',
-        url: '={{ $env.CRM_BASE_URL }}/crm/v3/objects/notes',
-        options: {
-            timeout: 15000,
+        authentication: 'appToken',
+        resource: 'engagement',
+        operation: 'create',
+        type: 'task',
+        metadata: {
+            subject:
+                "={{ $json.summary + '\\n\\nDecisions:\\n' + ($json.decisions ?? []).map(d => '- ' + d).join('\\n') }}",
+            body: "={{ $json.summary + '\\n\\nDecisions:\\n' + ($json.decisions ?? []).map(d => '- ' + d).join('\\n') }}",
+            status: 'COMPLETED',
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CRM_API_KEY }}",
-                },
-            ],
+        additionalFields: {
+            associations: {
+                dealIds: '={{ $json.deal_id }}',
+            },
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ deal_id: $json.deal_id, body: $json.summary + '\\n\\nDecisions:\\n' + ($json.decisions ?? []).map(d => '- ' + d).join('\\n') }) }}",
     };
 
     @node({
@@ -265,7 +286,7 @@ return out;`,
         name: 'One item per action',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1820, 90],
+        position: [2020, 220],
     })
     OneItemPerAction = {
         jsCode: `const n = $("Readable?").first().json;
@@ -277,7 +298,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Has an owner?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [2080, 180],
+        position: [2280, 310],
     })
     HasAnOwner = {
         conditions: {
@@ -307,32 +328,29 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
     @node({
         id: '755e768e-965a-4deb-a5ff-f00904cf9125',
         name: 'Create the task',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2340, 90],
+        type: 'n8n-nodes-base.hubspot',
+        version: 2.1,
+        position: [2540, 220],
+        credentials: { hubspotAppToken: { id: '__CRED:hubspot__', name: 'HubSpot' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     CreateTheTask = {
-        method: 'POST',
-        url: '={{ $env.CRM_BASE_URL }}/crm/v3/objects/tasks',
-        options: {
-            timeout: 15000,
+        authentication: 'appToken',
+        resource: 'engagement',
+        operation: 'create',
+        type: 'task',
+        metadata: {
+            subject: '={{ $json.task }}',
+            body: "={{ 'Owner: ' + $json.owner + ($json.due ? ', due ' + $json.due : '') }}",
+            status: 'NOT_STARTED',
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CRM_API_KEY }}",
-                },
-            ],
+        additionalFields: {
+            associations: {
+                dealIds: '={{ $json.deal_id }}',
+            },
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            '={{ JSON.stringify({ deal_id: $json.deal_id, subject: $json.task, owner: $json.owner, due: $json.due }) }}',
     };
 
     @node({
@@ -340,7 +358,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Unowned message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2340, 270],
+        position: [2540, 400],
     })
     UnownedMessage = {
         jsCode: 'return [{ json: { level: "warn", text: $input.all().length + " action(s) from the call have no clear owner: " + $input.all().map((i) => i.json.task).join("; ") } }];',
@@ -351,7 +369,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Ask who owns them',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2600, 180],
+        position: [2800, 310],
     })
     AskWhoOwnsThem = {
         workflowId: {
@@ -367,7 +385,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Unreadable message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1560, 270],
+        position: [1760, 400],
     })
     UnreadableMessage = {
         jsCode: 'return [{ json: { level: "warn", text: "Notes could not be extracted from \\"" + $("Read the transcript").first().json.title + "\\". The transcript is attached to the deal for a manual read." } }];',
@@ -378,7 +396,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Flag for a manual read',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1820, 270],
+        position: [2020, 400],
     })
     FlagForAManualRead = {
         workflowId: {
@@ -394,7 +412,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Too short to summarise',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [780, 270],
+        position: [880, 530],
     })
     TooShortToSummarise = {};
 
@@ -418,5 +436,10 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         this.HasAnOwner.out(1).to(this.UnownedMessage.in(0));
         this.UnreadableMessage.out(0).to(this.FlagForAManualRead.in(0));
         this.UnownedMessage.out(0).to(this.AskWhoOwnsThem.in(0));
+
+        this.Extract.uses({
+            ai_languageModel: this.ExtractGpt.output,
+            ai_outputParser: this.ExtractShape.output,
+        });
     }
 }

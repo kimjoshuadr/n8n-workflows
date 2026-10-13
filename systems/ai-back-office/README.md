@@ -6,19 +6,17 @@
 
 **What this does about it.** Documents are read by a model and checked by arithmetic, bank lines are matched, anomalies are raised, and finance can ask questions in Slack and get answers from the books.
 
-1 workflows, 13 tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.
+One canvas of 72 nodes, 13 tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.
 
 ## AI back office · Invoices, bank lines and questions
 
 Agents read supplier invoices from Gmail, code them against the chart of accounts and file them in QuickBooks. Bank lines are matched every morning, the ledger is scanned for anomalies, finance can ask questions in Slack, and the month closes into a Google Sheets pack. Every figure is checked or computed in code.
 
-| | |
-|---|---|
-| Starts from | undefined |
-| Platforms | Gmail, OpenAI, Supabase, Claude, Pinecone, QuickBooks, Slack, Google Sheets |
-| Nodes | 72 |
-| Calls | `idempotency-guard`, `notify`, `error-handler` |
-| Files | [`ai-back-office.json`](ai-back-office.json) · [`ai-back-office.workflow.ts`](ai-back-office.workflow.ts) |
+- **Starts from:** Gmail event, Schedule, Webhook
+- **Platforms:** <img src="../../assets/platforms/gmail.svg" width="16" height="16" alt=""> Gmail &nbsp;·&nbsp; <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI &nbsp;·&nbsp; <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/anthropic.svg" width="16" height="16" alt=""> Claude &nbsp;·&nbsp; <img src="../../assets/platforms/pinecone.svg" width="16" height="16" alt=""> Pinecone &nbsp;·&nbsp; <img src="../../assets/platforms/quickbooks.svg" width="16" height="16" alt=""> QuickBooks &nbsp;·&nbsp; <img src="../../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack &nbsp;·&nbsp; <img src="../../assets/platforms/googleSheets.svg" width="16" height="16" alt=""> Google Sheets
+- **Nodes:** 72
+- **Calls:** `idempotency-guard`, `notify`, `error-handler`
+- **Files:** [`ai-back-office.json`](ai-back-office.json) · [`ai-back-office.workflow.ts`](ai-back-office.workflow.ts)
 
 ```mermaid
 flowchart LR

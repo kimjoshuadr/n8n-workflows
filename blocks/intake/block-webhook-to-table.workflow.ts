@@ -10,7 +10,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // FormPosted                         webhook
 // KeepKnownFields                    code
-// StoreTheRow                        httpRequest                [retry]
+// StoreTheRow                        supabase                   [creds] [retry]
 // Thanks                             respondToWebhook
 //
 // ROUTING MAP
@@ -49,8 +49,7 @@ export class BlockWebhookToATableWorkflow {
         content: `## Block · Webhook to a table
 The smallest useful workflow: receive a form post, keep the fields you named, store a row, answer the sender.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/intake\``,
     };
 
@@ -85,31 +84,39 @@ return [{ json: { ...row, received_at: new Date().toISOString() } }];`,
     @node({
         id: 'b347c1b3-65ab-4277-ad35-d0982b273dc1',
         name: 'Store the row',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [520, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     StoreTheRow = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/form_submissions',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'form_submissions',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'name',
+                    fieldValue: '={{ $json.name }}',
+                },
+                {
+                    fieldId: 'email',
+                    fieldValue: '={{ $json.email }}',
+                },
+                {
+                    fieldId: 'message',
+                    fieldValue: '={{ $json.message }}',
+                },
+                {
+                    fieldId: 'received_at',
+                    fieldValue: '={{ $json.received_at }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify($json) }}',
     };
 
     @node({

@@ -12,13 +12,11 @@
 
 Catches a failure in any workflow, logs it to Supabase, and alerts Slack once per distinct error per hour so a broken loop cannot flood the channel.
 
-| | |
-|---|---|
-| Starts from | A failure in any workflow |
-| Platforms | Supabase, Slack |
-| Nodes | 7 |
-| Calls | nothing |
-| Files | [`error-handler.json`](error-handler.json) · [`error-handler.workflow.ts`](error-handler.workflow.ts) |
+- **Starts from:** A failure in any workflow
+- **Platforms:** <img src="../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack
+- **Nodes:** 7
+- **Calls:** nothing
+- **Files:** [`error-handler.json`](error-handler.json) · [`error-handler.workflow.ts`](error-handler.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -53,13 +51,11 @@ flowchart LR
 
 Answers one question for a caller: has this event been handled before? Webhooks are delivered more than once; a unique key in Supabase is what makes that safe.
 
-| | |
-|---|---|
-| Starts from | Called by another workflow |
-| Platforms | Supabase |
-| Nodes | 7 |
-| Calls | `error-handler` |
-| Files | [`idempotency-guard.json`](idempotency-guard.json) · [`idempotency-guard.workflow.ts`](idempotency-guard.workflow.ts) |
+- **Starts from:** Called by another workflow
+- **Platforms:** <img src="../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase
+- **Nodes:** 7
+- **Calls:** `error-handler`
+- **Files:** [`idempotency-guard.json`](idempotency-guard.json) · [`idempotency-guard.workflow.ts`](idempotency-guard.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -94,13 +90,11 @@ flowchart LR
 
 The one place alerts leave from. Posts to Slack, and falls back to a SendGrid email when Slack is down, so an outage cannot hide its own alert.
 
-| | |
-|---|---|
-| Starts from | Called by another workflow |
-| Platforms | Slack, SendGrid |
-| Nodes | 6 |
-| Calls | `error-handler` |
-| Files | [`notify.json`](notify.json) · [`notify.workflow.ts`](notify.workflow.ts) |
+- **Starts from:** Called by another workflow
+- **Platforms:** <img src="../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack &nbsp;·&nbsp; <img src="../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 6
+- **Calls:** `error-handler`
+- **Files:** [`notify.json`](notify.json) · [`notify.workflow.ts`](notify.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -133,13 +127,11 @@ flowchart LR
 
 Keeps the payload of work that could not be finished in Supabase, with the reason, so nothing is lost when a platform is down.
 
-| | |
-|---|---|
-| Starts from | Called by another workflow |
-| Platforms | Supabase, Slack |
-| Nodes | 4 |
-| Calls | `error-handler` |
-| Files | [`dead-letter.json`](dead-letter.json) · [`dead-letter.workflow.ts`](dead-letter.workflow.ts) |
+- **Starts from:** Called by another workflow
+- **Platforms:** <img src="../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack
+- **Nodes:** 4
+- **Calls:** `error-handler`
+- **Files:** [`dead-letter.json`](dead-letter.json) · [`dead-letter.workflow.ts`](dead-letter.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -167,13 +159,11 @@ flowchart LR
 
 Every fifteen minutes, sends parked work back to where it came from. Gives up after five attempts and tells Slack.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Supabase, Slack |
-| Nodes | 12 |
-| Calls | `error-handler` |
-| Files | [`dead-letter-replay.json`](dead-letter-replay.json) · [`dead-letter-replay.workflow.ts`](dead-letter-replay.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack
+- **Nodes:** 12
+- **Calls:** `error-handler`
+- **Files:** [`dead-letter-replay.json`](dead-letter-replay.json) · [`dead-letter-replay.workflow.ts`](dead-letter-replay.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -221,13 +211,11 @@ flowchart LR
 
 Notices the failure nobody reports: a scheduled workflow that silently stopped running. Each one checks in to Supabase, and this alerts Slack when a check-in is overdue.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Supabase, Slack |
-| Nodes | 4 |
-| Calls | `error-handler` |
-| Files | [`heartbeat-monitor.json`](heartbeat-monitor.json) · [`heartbeat-monitor.workflow.ts`](heartbeat-monitor.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack
+- **Nodes:** 4
+- **Calls:** `error-handler`
+- **Files:** [`heartbeat-monitor.json`](heartbeat-monitor.json) · [`heartbeat-monitor.workflow.ts`](heartbeat-monitor.workflow.ts)
 
 ```mermaid
 flowchart LR

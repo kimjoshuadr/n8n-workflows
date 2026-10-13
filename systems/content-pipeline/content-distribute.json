@@ -13,14 +13,14 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Content pipeline · Share what was published\nEvery hour, writes a post per network for anything newly published and schedules it. One network failing does not stop the others.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SOCIAL_API_KEY, SOCIAL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/content-pipeline`"
+        "content": "## Content pipeline · Share what was published\nEvery hour, writes a post per network for anything newly published and schedules it. One network failing does not stop the others.\n\n**Platforms:** Supabase, OpenAI, LinkedIn, X, Facebook\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/content-pipeline`"
       }
     },
     {
       "id": "036d7389-17dd-4ba5-a054-9e611fda1d69",
       "position": [
         0,
-        180
+        310
       ],
       "name": "Hourly",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -40,36 +40,29 @@
       "id": "d817ebe2-d13c-4dc0-ab13-f027000f2d9a",
       "position": [
         260,
-        180
+        310
       ],
       "name": "Published, not shared",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/content_drafts",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "content_drafts",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "status",
-              "value": "={{ 'eq.published' }}"
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "={{ 'published' }}"
             },
             {
-              "name": "shared",
-              "value": "={{ 'eq.false' }}"
+              "keyName": "shared",
+              "condition": "eq",
+              "keyValue": "={{ 'false' }}"
             }
           ]
         }
@@ -77,13 +70,19 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "b1be9994-856d-42cc-ab3a-c475e1fa85d7",
       "position": [
         520,
-        180
+        310
       ],
       "name": "Anything new?",
       "type": "n8n-nodes-base.if",
@@ -117,7 +116,7 @@
       "id": "4592c543-8ffe-466b-ae2b-8a73509434b2",
       "position": [
         780,
-        90
+        220
       ],
       "name": "Each article",
       "type": "n8n-nodes-base.splitInBatches",
@@ -130,128 +129,220 @@
     {
       "id": "c1c10a8f-f873-4cba-a408-0c73981fe02a",
       "position": [
-        1040,
+        1140,
         90
       ],
       "name": "Write the posts",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "promptType": "define",
+        "text": "={{ $json.title + '\\n\\n' + String($json.body).slice(0, 1500) }}",
+        "hasOutputParser": true,
         "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: \"[task:social] Write one post per network for this article. Reply with JSON: { x: string (max 260 chars), linkedin: string, facebook: string }. No hashtags stuffing, no invented claims.\" },\n    { role: \"user\", content: $json.title + '\\n\\n' + String($json.body).slice(0, 1500) }\n  ]\n}) }}"
+          "systemMessage": "[task:social] Write one post per network for this article. Reply with JSON: { x: string (max 260 chars), linkedin: string, facebook: string }. No hashtags stuffing, no invented claims.",
+          "maxIterations": 2
+        }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000,
       "onError": "continueRegularOutput"
     },
     {
-      "id": "59b33689-10df-428f-a8c2-a1774b912f31",
+      "id": "bdba154d-59fb-4b23-a3f8-4184b7c6c49c",
       "position": [
-        1300,
-        180
+        1040,
+        310
       ],
-      "name": "One item per network",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "Write the posts · GPT",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
       "parameters": {
-        "jsCode": "const a = $(\"Each article\").first().json;\nlet posts = {};\ntry { posts = JSON.parse($input.first().json.choices[0].message.content); } catch (e) {}\nconst fallback = \"New on the blog: \" + a.title;\nreturn [\"x\", \"linkedin\", \"facebook\"].map((network) => ({ json: { draft_id: a.id, network, text: String(posts[network] || fallback).slice(0, network === \"x\" ? 260 : 2000) } }));"
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
       }
     },
     {
-      "id": "2306ed84-5499-4b7e-a44b-7b5532034fa9",
+      "id": "1768495c-e8b2-47f6-a7ec-4eda11bf7ac8",
       "position": [
-        1560,
-        180
+        1240,
+        310
       ],
-      "name": "Schedule the post",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "Write the posts · shape",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.SOCIAL_BASE_URL }}/updates/create",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.SOCIAL_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ network: $json.network, text: $json.text }) }}"
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"x\": \"The X post\",\n  \"linkedin\": \"The LinkedIn post\",\n  \"facebook\": \"The Facebook post\"\n}"
+      }
+    },
+    {
+      "id": "f5de6dc0-bf3c-4b6c-a458-d84c59afa8de",
+      "position": [
+        1500,
+        310
+      ],
+      "name": "Cut each post to length",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const a = $(\"Each article\").first().json;\nconst o = $input.first().json.output ?? {};\nconst fallback = \"New on the blog: \" + a.title;\nconst post = (network, max) => String(typeof o[network] === \"string\" && o[network].trim() ? o[network] : fallback).slice(0, max);\nreturn [{ json: { draft_id: a.id, x: post(\"x\", 260), linkedin: post(\"linkedin\", 2000), facebook: post(\"facebook\", 2000) } }];"
+      }
+    },
+    {
+      "id": "6de2d4b3-6c68-4be0-a5f0-17060508ec2b",
+      "position": [
+        1760,
+        310
+      ],
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "post",
+        "operation": "create",
+        "postAs": "organization",
+        "organization": "1234567",
+        "text": "={{ $('Cut each post to length').first().json.linkedin }}",
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "__CRED:linkedin__",
+          "name": "LinkedIn"
+        }
+      }
+    },
+    {
+      "id": "f5402db7-d4be-4551-a0ac-a0012d3e519c",
+      "position": [
+        2020,
+        310
+      ],
+      "name": "Post to X",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "parameters": {
+        "resource": "tweet",
+        "operation": "create",
+        "text": "={{ $('Cut each post to length').first().json.x }}",
+        "additionalFields": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "__CRED:x__",
+          "name": "X"
+        }
+      }
+    },
+    {
+      "id": "72a54932-d0a8-4e87-a1c7-f2c8e03e71e5",
+      "position": [
+        2280,
+        310
+      ],
+      "name": "Post to Facebook",
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "parameters": {
+        "hostUrl": "graph.facebook.com",
+        "httpRequestMethod": "POST",
+        "graphApiVersion": "v23.0",
+        "node": "acme-page",
+        "edge": "feed",
+        "options": {
+          "queryParameters": {
+            "parameter": [
+              {
+                "name": "message",
+                "value": "={{ $('Cut each post to length').first().json.facebook }}"
+              }
+            ]
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "__CRED:facebook__",
+          "name": "Facebook"
+        }
+      }
     },
     {
       "id": "f6063fae-3d9d-465a-a446-c1d7489e7cea",
       "position": [
-        1820,
-        180
+        2540,
+        310
       ],
       "name": "Mark shared",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/content_drafts",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "content_drafts",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Each article').first().json.id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "id",
-              "value": "={{ 'eq.' + $('Each article').first().json.id }}"
+              "fieldId": "shared",
+              "fieldValue": "={{ true }}"
+            },
+            {
+              "fieldId": "shared_at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ shared: true, shared_at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "c218a248-0804-4ebb-aa86-f712bd24fd60",
       "position": [
         780,
-        270
+        400
       ],
       "name": "Nothing new",
       "type": "n8n-nodes-base.noOp",
@@ -261,8 +352,8 @@
     {
       "id": "978b2aea-298a-45ad-ad79-9933b7b48ea6",
       "position": [
-        1040,
-        270
+        1140,
+        530
       ],
       "name": "Done",
       "type": "n8n-nodes-base.noOp",
@@ -333,25 +424,47 @@
       "main": [
         [
           {
-            "node": "One item per network",
+            "node": "Cut each post to length",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "One item per network": {
+    "Cut each post to length": {
       "main": [
         [
           {
-            "node": "Schedule the post",
+            "node": "Post to LinkedIn",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Schedule the post": {
+    "Post to LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Post to X",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to X": {
+      "main": [
+        [
+          {
+            "node": "Post to Facebook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Facebook": {
       "main": [
         [
           {
@@ -368,6 +481,28 @@
           {
             "node": "Each article",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the posts · GPT": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write the posts",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the posts · shape": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Write the posts",
+            "type": "ai_outputParser",
             "index": 0
           }
         ]

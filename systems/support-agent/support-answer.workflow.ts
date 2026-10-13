@@ -2,7 +2,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Support agent · Answer or hand over
-// Nodes   : 17  |  Connections: 16
+// Nodes   : 19  |  Connections: 16
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
@@ -12,17 +12,19 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // ReadTheMessage                     code
 // SeenBefore                         executeWorkflow
 // NewMessage                         if
-// SearchTheHelpCentre                httpRequest                [onError→regular] [retry]
+// SearchTheHelpCentre                httpRequest                [onError→regular] [creds] [retry]
 // BuildTheContext                    code
-// DraftAnAnswer                      httpRequest                [onError→regular] [retry]
+// DraftAnAnswer                      agent                      [AI] [onError→regular]
+// DraftAnAnswerGpt                   lmChatOpenAi               [creds] [ai_languageModel]
+// DraftAnAnswerShape                 outputParserStructured     [ai_outputParser]
 // ReadTheDraft                       code
 // Confident                          if
-// SendTheReply                       httpRequest                [retry]
-// HandToAPerson                      httpRequest                [retry]
-// LeaveAPrivateNote                  httpRequest                [retry]
+// SendTheReply                       zendesk                    [creds] [retry]
+// HandToAPerson                      zendesk                    [creds] [retry]
+// LeaveAPrivateNote                  zendesk                    [creds] [retry]
 // Answered                           code
 // HandedOver                         code
-// LogTheOutcome                      httpRequest                [retry]
+// LogTheOutcome                      supabase                   [creds] [retry]
 // IgnoreTheRepeat                    noOp
 //
 // ROUTING MAP
@@ -44,6 +46,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //                        → HandedOver
 //                          → LogTheOutcome (↩ loop)
 //         .out(1) → IgnoreTheRepeat
+//
+// AI CONNECTIONS
+// DraftAnAnswer.uses({ ai_languageModel: DraftAnAnswerGpt, ai_outputParser: DraftAnAnswerShape })
 // </workflow-map>
 
 // =====================================================================
@@ -74,8 +79,7 @@ export class SupportAgentAnswerOrHandOverWorkflow {
         content: `## Support agent · Answer or hand over
 Answers a customer's message from the help centre when it is confident, and hands the conversation to a person with a summary when it is not.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** Zendesk, OpenAI, Supabase
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/support-agent\``,
     };
 
@@ -85,7 +89,7 @@ Answers a customer's message from the help centre when it is confident, and hand
         name: 'Message received',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 180],
+        position: [0, 220],
     })
     MessageReceived = {
         httpMethod: 'POST',
@@ -99,7 +103,7 @@ Answers a customer's message from the help centre when it is confident, and hand
         name: 'Read the message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [260, 180],
+        position: [260, 220],
     })
     ReadTheMessage = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -120,7 +124,7 @@ return [{ json: {
         name: 'Seen before?',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [520, 180],
+        position: [520, 220],
     })
     SeenBefore = {
         workflowId: {
@@ -136,7 +140,7 @@ return [{ json: {
         name: 'New message?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [780, 180],
+        position: [780, 220],
     })
     NewMessage = {
         conditions: {
@@ -168,7 +172,8 @@ return [{ json: {
         name: 'Search the help centre',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1040, 90],
+        position: [1040, 130],
+        credentials: { zendeskApi: { id: '__CRED:zendesk__', name: 'Zendesk' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -176,19 +181,9 @@ return [{ json: {
     })
     SearchTheHelpCentre = {
         method: 'GET',
-        url: '={{ $env.HELPDESK_BASE_URL }}/help_center/search',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}",
-                },
-            ],
-        },
+        url: "={{ 'https://acme.zendesk.com/api/v2/help_center/articles/search.json' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'zendeskApi',
         sendQuery: true,
         queryParameters: {
             parameters: [
@@ -198,6 +193,9 @@ return [{ json: {
                 },
             ],
         },
+        options: {
+            timeout: 15000,
+        },
     };
 
     @node({
@@ -205,11 +203,11 @@ return [{ json: {
         name: 'Build the context',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1300, 180],
+        position: [1300, 220],
     })
     BuildTheContext = {
         jsCode: `const m = $("New message?").first().json;
-const articles = ($input.first().json.articles ?? []).slice(0, 4);
+const articles = ($input.first().json.results ?? []).slice(0, 4);
 const context = articles.map((a) => "[" + a.id + "] " + a.title + "\\n" + String(a.body ?? "").slice(0, 800)).join("\\n\\n");
 return [{ json: { ...m, context, article_count: articles.length } }];`,
     };
@@ -217,40 +215,58 @@ return [{ json: { ...m, context, article_count: articles.length } }];`,
     @node({
         id: '3bdcdff0-8678-4faf-a927-6d613b3b7d07',
         name: 'Draft an answer',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1560, 180],
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
+        position: [1660, 90],
         onError: 'continueRegularOutput',
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
     })
     DraftAnAnswer = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: "={{ 'Articles:\\n' + ($json.context || '(none found)') + '\\n\\nCustomer: ' + $json.text }}",
+        hasOutputParser: true,
         options: {
-            timeout: 15000,
+            systemMessage:
+                '[task:support-answer] You are a support agent. Answer ONLY from the articles given. Reply with JSON: { answer: string, confidence: 0-1, sources: string[], handover: boolean }. Set handover true if the articles do not cover it, or the customer is upset, asks for a person, or mentions a refund dispute or legal action.',
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
+    };
+
+    @node({
+        id: '9698fe4b-2c62-4d7e-a1e8-73ae38fdad99',
+        name: 'Draft an answer · GPT',
+        type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+        version: 1.2,
+        position: [1560, 310],
+        credentials: { openAiApi: { id: '__CRED:openai__', name: 'OpenAI' } },
+    })
+    DraftAnAnswerGpt = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'gpt-4o-mini',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  response_format: { type: "json_object" },
-  messages: [
-    { role: "system", content: "[task:support-answer] You are a support agent. Answer ONLY from the articles given. Reply with JSON: { answer: string, confidence: 0-1, sources: string[], handover: boolean }. Set handover true if the articles do not cover it, or the customer is upset, asks for a person, or mentions a refund dispute or legal action." },
-    { role: "user", content: 'Articles:\\n' + ($json.context || '(none found)') + '\\n\\nCustomer: ' + $json.text }
-  ]
-}) }}`,
+        options: {
+            temperature: 0,
+        },
+    };
+
+    @node({
+        id: '78e25e75-6be2-4598-a76f-3587e7be77be',
+        name: 'Draft an answer · shape',
+        type: '@n8n/n8n-nodes-langchain.outputParserStructured',
+        version: 1.3,
+        position: [1760, 310],
+    })
+    DraftAnAnswerShape = {
+        schemaType: 'fromJson',
+        jsonSchemaExample: `{
+  "answer": "The answer.",
+  "confidence": 0.9,
+  "sources": [
+    "kb-12"
+  ],
+  "handover": false
+}`,
     };
 
     @node({
@@ -258,20 +274,15 @@ return [{ json: { ...m, context, article_count: articles.length } }];`,
         name: 'Read the draft',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1820, 180],
+        position: [2020, 220],
     })
     ReadTheDraft = {
         jsCode: `const before = $("Build the context").all();
 const out = [];
 for (const [i, item] of $input.all().entries()) {
-  let reply = {"answer":"","confidence":0,"sources":[],"handover":true};
-  let parse_error = false;
-  try {
-    reply = JSON.parse(item.json.choices[0].message.content);
-  } catch (e) {
-    parse_error = true;
-  }
-  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });
+  const answer = item.json.output;
+  const ok = answer && typeof answer === "object" && !Array.isArray(answer);
+  out.push({ json: { ...(before[i]?.json ?? {}), ...(ok ? answer : {"answer":"","confidence":0,"sources":[],"handover":true}), parse_error: !ok } });
 }
 return out;`,
     };
@@ -281,7 +292,7 @@ return out;`,
         name: 'Confident?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [2080, 180],
+        position: [2280, 220],
     })
     Confident = {
         conditions: {
@@ -312,93 +323,65 @@ return out;`,
     @node({
         id: '9ccdc297-a8dd-48e6-a5d2-c60dd0989f3d',
         name: 'Send the reply',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2340, 90],
+        type: 'n8n-nodes-base.zendesk',
+        version: 1,
+        position: [2540, 130],
+        credentials: { zendeskApi: { id: '__CRED:zendesk__', name: 'Zendesk' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SendTheReply = {
-        method: 'POST',
-        url: '={{ $env.HELPDESK_BASE_URL }}/conversations/reply',
-        options: {
-            timeout: 15000,
+        resource: 'ticket',
+        operation: 'update',
+        id: '={{ $json.conversation_id }}',
+        updateFields: {
+            status: "={{ 'pending' }}",
+            publicReply: '={{ $json.answer }}',
+            tags: ['ai-answered'],
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ conversation_id: $json.conversation_id, content: $json.answer, message_type: 'outgoing' }) }}",
     };
 
     @node({
         id: '918faca5-5af7-4ad9-a2a8-4c255f277d58',
         name: 'Hand to a person',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2340, 270],
+        type: 'n8n-nodes-base.zendesk',
+        version: 1,
+        position: [2540, 310],
+        credentials: { zendeskApi: { id: '__CRED:zendesk__', name: 'Zendesk' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     HandToAPerson = {
-        method: 'POST',
-        url: '={{ $env.HELPDESK_BASE_URL }}/conversations/assign',
-        options: {
-            timeout: 15000,
+        resource: 'ticket',
+        operation: 'update',
+        id: '={{ $json.conversation_id }}',
+        updateFields: {
+            status: "={{ 'open' }}",
+            tags: ['needs-human'],
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ conversation_id: $json.conversation_id, team: 'support', status: 'open' }) }}",
     };
 
     @node({
         id: '7c9e8b18-90b2-4eac-ad7d-f98e55fcc001',
         name: 'Leave a private note',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2600, 90],
+        type: 'n8n-nodes-base.zendesk',
+        version: 1,
+        position: [2800, 130],
+        credentials: { zendeskApi: { id: '__CRED:zendesk__', name: 'Zendesk' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     LeaveAPrivateNote = {
-        method: 'POST',
-        url: '={{ $env.HELPDESK_BASE_URL }}/conversations/note',
-        options: {
-            timeout: 15000,
+        resource: 'ticket',
+        operation: 'update',
+        id: "={{ $('Confident?').first().json.conversation_id }}",
+        updateFields: {
+            internalNote:
+                "={{ 'Handed over by the agent. Customer asked: ' + $('Confident?').first().json.text.slice(0, 300) + ' | Confidence: ' + $('Confident?').first().json.confidence + ' | Articles found: ' + $('Confident?').first().json.article_count }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ conversation_id: $('Confident?').first().json.conversation_id, private: true, content: 'Handed over by the agent. Customer asked: ' + $('Confident?').first().json.text.slice(0, 300) + ' | Confidence: ' + $('Confident?').first().json.confidence + ' | Articles found: ' + $('Confident?').first().json.article_count }) }}",
     };
 
     @node({
@@ -406,7 +389,7 @@ return out;`,
         name: 'Answered',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2600, 270],
+        position: [2800, 310],
     })
     Answered = {
         jsCode: 'return [{ json: { ...$("Confident?").first().json, answered: true } }];',
@@ -417,7 +400,7 @@ return out;`,
         name: 'Handed over',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2860, 180],
+        position: [3060, 220],
     })
     HandedOver = {
         jsCode: 'return [{ json: { ...$("Confident?").first().json, answered: false } }];',
@@ -426,32 +409,47 @@ return out;`,
     @node({
         id: '9f550e86-6788-4672-a59a-ec64d075bf8a',
         name: 'Log the outcome',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [3120, 180],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [3320, 220],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     LogTheOutcome = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/support_log',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'support_log',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'conversation_id',
+                    fieldValue: '={{ $json.conversation_id }}',
+                },
+                {
+                    fieldId: 'question',
+                    fieldValue: '={{ $json.text }}',
+                },
+                {
+                    fieldId: 'answered',
+                    fieldValue: '={{ $json.answered }}',
+                },
+                {
+                    fieldId: 'confidence',
+                    fieldValue: '={{ $json.confidence }}',
+                },
+                {
+                    fieldId: 'sources',
+                    fieldValue: '={{ $json.sources }}',
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            '={{ JSON.stringify({ conversation_id: $json.conversation_id, question: $json.text, answered: $json.answered, confidence: $json.confidence, sources: $json.sources, at: $now.toISO() }) }}',
     };
 
     @node({
@@ -459,7 +457,7 @@ return out;`,
         name: 'Ignore the repeat',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1040, 270],
+        position: [1040, 310],
     })
     IgnoreTheRepeat = {};
 
@@ -485,5 +483,10 @@ return out;`,
         this.HandToAPerson.out(0).to(this.LeaveAPrivateNote.in(0));
         this.LeaveAPrivateNote.out(0).to(this.HandedOver.in(0));
         this.HandedOver.out(0).to(this.LogTheOutcome.in(0));
+
+        this.DraftAnAnswer.uses({
+            ai_languageModel: this.DraftAnAnswerGpt.output,
+            ai_outputParser: this.DraftAnAnswerShape.output,
+        });
     }
 }

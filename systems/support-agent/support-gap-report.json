@@ -13,14 +13,14 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Support agent · Weekly gap report\nEvery Monday, reads what the agent could not answer last week and tells the team which help articles are missing.\n\n**Platforms:** none, this is logic only\n**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/support-agent`"
+        "content": "## Support agent · Weekly gap report\nEvery Monday, reads what the agent could not answer last week and tells the team which help articles are missing.\n\n**Platforms:** Supabase, Claude, Slack\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/support-agent`"
       }
     },
     {
       "id": "53f670c1-891f-4239-a05a-8d68c1337288",
       "position": [
         0,
-        180
+        310
       ],
       "name": "Monday 08:00",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -40,36 +40,29 @@
       "id": "670118fd-c33c-425b-a4ce-bf135d4af0a5",
       "position": [
         260,
-        180
+        310
       ],
       "name": "Unanswered last week",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/support_log",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "support_log",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "answered",
-              "value": "={{ 'eq.false' }}"
+              "keyName": "answered",
+              "condition": "eq",
+              "keyValue": "={{ 'false' }}"
             },
             {
-              "name": "at",
-              "value": "={{ 'gte.' + $now.minus({ days: 7 }).toISO() }}"
+              "keyName": "at",
+              "condition": "gte",
+              "keyValue": "={{ $now.minus({ days: 7 }).toISO() }}"
             }
           ]
         }
@@ -77,13 +70,19 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "a8eb664c-7df9-407a-ae73-efefc86805a7",
       "position": [
         520,
-        180
+        310
       ],
       "name": "Gather the questions",
       "type": "n8n-nodes-base.code",
@@ -96,7 +95,7 @@
       "id": "7ead2bda-48fb-41ac-aa14-09eb047577d8",
       "position": [
         780,
-        180
+        310
       ],
       "name": "Any gaps?",
       "type": "n8n-nodes-base.if",
@@ -133,94 +132,110 @@
         90
       ],
       "name": "Group into topics",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "promptType": "define",
+        "text": "={{ $json.questions }}",
+        "hasOutputParser": false,
         "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  messages: [\n    { role: \"system\", content: \"[task:summarise] Group these unanswered support questions into at most five topics. For each, give the topic, how many questions, and the help article that would have answered them. Plain text.\" },\n    { role: \"user\", content: $json.questions }\n  ]\n}) }}"
+          "systemMessage": "[task:summarise] Group these unanswered support questions into at most five topics. For each, give the topic, how many questions, and the help article that would have answered them. Plain text.",
+          "maxIterations": 2
+        }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "62ab8cb1-3a3f-4dca-a950-8bc48868cdbc",
+      "position": [
+        1040,
+        310
+      ],
+      "name": "Group into topics · Claude",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
     },
     {
       "id": "8b53cf61-0843-4d92-aa2f-b44070a00f4f",
       "position": [
         1300,
-        180
+        310
       ],
       "name": "Post the report",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
-        "options": {
-          "timeout": 15000
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#support' }}"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: '#support', text: ':books: ' + $('Gather the questions').first().json.count + ' questions went to a person last week.\\n' + $json.choices[0].message.content }) }}"
+        "text": "={{ ':books: ' + $('Gather the questions').first().json.count + ' questions went to a person last week.\\n' + $json.output }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
     },
     {
       "id": "73384992-fd9b-42be-aa60-427db5c956b3",
       "position": [
         1040,
-        270
+        530
       ],
       "name": "Post all clear",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
-        "options": {
-          "timeout": 15000
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#support' }}"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: '#support', text: ':white_check_mark: The agent answered everything it was asked last week.' }) }}"
+        "text": "={{ ':white_check_mark: The agent answered everything it was asked last week.' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
     }
   ],
   "connections": {
@@ -281,6 +296,17 @@
           {
             "node": "Post the report",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Group into topics · Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Group into topics",
+            "type": "ai_languageModel",
             "index": 0
           }
         ]

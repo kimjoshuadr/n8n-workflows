@@ -9,13 +9,13 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // EveryMorning                       scheduleTrigger
-// UnbookedLeads                      httpRequest                [alwaysOutput] [retry]
+// UnbookedLeads                      supabase                   [creds] [alwaysOutput] [retry]
 // WhoIsDue                           code
 // NudgesLeft                         if
-// SendTheNudge                       httpRequest                [retry]
-// RecordTheNudge                     httpRequest                [retry]
-// MarkCold                           httpRequest                [retry]
-// CheckIn                            httpRequest                [onError→regular] [retry]
+// SendTheNudge                       sendGrid                   [creds] [retry]
+// RecordTheNudge                     supabase                   [creds] [retry]
+// MarkCold                           supabase                   [creds] [retry]
+// CheckIn                            supabase                   [onError→regular] [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -57,8 +57,7 @@ export class LeadIntakeFollowUpTheUnbookedWorkflow {
         content: `## Lead intake · Follow up the unbooked
 Each morning, writes to qualified leads who have not booked. Three nudges, two days apart, then the lead is marked cold and left alone.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** Supabase, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/lead-intake\``,
     };
 
@@ -83,39 +82,33 @@ Each morning, writes to qualified leads who have not booked. Three nudges, two d
     @node({
         id: '6a9921e9-7fa6-45c6-ac0b-cfb0ec3a0779',
         name: 'Unbooked leads',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     UnbookedLeads = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/leads',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'leads',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'status',
-                    value: "={{ 'eq.qualified' }}",
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'qualified' }}",
                 },
                 {
-                    name: 'booked',
-                    value: "={{ 'eq.false' }}",
+                    keyName: 'booked',
+                    condition: 'eq',
+                    keyValue: "={{ 'false' }}",
                 },
             ],
         },
@@ -171,151 +164,147 @@ return $input.all().map((i) => i.json).filter((l) => l.email)
     @node({
         id: '7db1d3b9-5dba-4640-ab26-33f25dbc4bd2',
         name: 'Send the nudge',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
         position: [1040, 90],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SendTheNudge = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: '={{ $json.email }}',
+        dynamicTemplate: true,
+        templateId: "={{ 'd-follow-up-' + $json.next }}",
+        dynamicTemplateFields: {
+            fields: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
+                    key: 'name',
+                    value: '={{ $json.name }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $json.email, subject: ['Still thinking it over?', 'A quick question', 'Closing the loop'][$json.next - 1], template: 'follow-up-' + $json.next, data: { name: $json.name } }) }}",
+        additionalFields: {},
     };
 
     @node({
         id: '28ef7e12-6f90-4c26-aee4-f1a41f98ec10',
         name: 'Record the nudge',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1300, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     RecordTheNudge = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/leads',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'leads',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: "={{ $('Nudges left?').item.json.email }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'email',
-                    value: "={{ 'eq.' + $('Nudges left?').item.json.email }}",
+                    fieldId: 'follow_ups',
+                    fieldValue: "={{ $('Nudges left?').item.json.next }}",
+                },
+                {
+                    fieldId: 'last_contact_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ follow_ups: $('Nudges left?').item.json.next, last_contact_at: $now.toISO() }) }}",
     };
 
     @node({
         id: 'ecd9d818-37af-490c-ae0f-f099acb906af',
         name: 'Mark cold',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1040, 270],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkCold = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/leads',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'leads',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: '={{ $json.email }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'email',
-                    value: "={{ 'eq.' + $json.email }}",
+                    fieldId: 'status',
+                    fieldValue: "={{ 'cold' }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ status: 'cold' }) }}",
     };
 
     @node({
         id: 'a9dbff5c-ca38-4410-a3e2-7e657defbe85',
         name: 'Check in',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 270],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     CheckIn = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/heartbeats',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'heartbeats',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'name',
+                    condition: 'eq',
+                    keyValue: "={{ 'lead-follow-up' }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'name',
-                    value: "={{ 'eq.lead-follow-up' }}",
+                    fieldId: 'last_seen',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ last_seen: $now.toISO() }) }}',
     };
 
     // =====================================================================

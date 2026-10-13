@@ -2,7 +2,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Inventory · Supplier stock sync
-// Nodes   : 11  |  Connections: 9
+// Nodes   : 14  |  Connections: 12
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
@@ -10,12 +10,15 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // Every2Hours                        scheduleTrigger
 // SupplierFeed                       httpRequest                [retry]
-// LastKnownStock                     httpRequest                [alwaysOutput] [executeOnce] [retry]
+// LastKnownStock                     supabase                   [creds] [alwaysOutput] [executeOnce] [retry]
 // WhatChanged                        code
 // FeedLooksSane                      if
 // OneItemPerChange                   code
-// UpdateTheStore                     httpRequest                [onError→regular] [retry]
-// UpdateTheSnapshot                  httpRequest                [retry]
+// UpdateTheStore                     httpRequest                [onError→regular] [creds] [retry]
+// UpdateTheSnapshot                  supabase                   [creds] [alwaysOutput] [retry]
+// KnownProduct                       if
+// AddToTheSnapshot                   supabase                   [creds] [retry]
+// SnapshotUpdated                    noOp
 // RefusedMessage                     code
 // Alert                              executeWorkflow
 //
@@ -29,6 +32,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //            → OneItemPerChange
 //              → UpdateTheStore
 //                → UpdateTheSnapshot
+//                  → KnownProduct
+//                    → SnapshotUpdated
+//                   .out(1) → AddToTheSnapshot
 //           .out(1) → RefusedMessage
 //              → Alert
 // </workflow-map>
@@ -61,8 +67,8 @@ export class InventorySupplierStockSyncWorkflow {
         content: `## Inventory · Supplier stock sync
 Pulls the supplier's stock feed every two hours and updates the store only for products whose quantity changed, refusing a feed that looks wrong.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL, SUPPLIER_API_KEY, SUPPLIER_BASE_URL
+**Platforms:** Supabase, Shopify
+**Settings:** SUPPLIER_API_KEY, SUPPLIER_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/commerce\``,
     };
 
@@ -114,9 +120,10 @@ Pulls the supplier's stock feed every two hours and updates the store only for p
     @node({
         id: '9720d664-fa72-4670-ae31-77520b4f6081',
         name: 'Last known stock',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [520, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         executeOnce: true,
         retryOnFail: true,
@@ -124,20 +131,10 @@ Pulls the supplier's stock feed every two hours and updates the store only for p
         waitBetweenTries: 1000,
     })
     LastKnownStock = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/stock_snapshot',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'stock_snapshot',
+        returnAll: true,
     };
 
     @node({
@@ -206,6 +203,7 @@ return [{ json: { feed_size: feed.length, changes, suspicious, zeroed } }];`,
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [1560, 90],
+        credentials: { shopifyAccessTokenApi: { id: '__CRED:shopify__', name: 'Shopify' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -213,67 +211,133 @@ return [{ json: { feed_size: feed.length, changes, suspicious, zeroed } }];`,
     })
     UpdateTheStore = {
         method: 'POST',
-        url: '={{ $env.SHOP_BASE_URL }}/inventory_levels/set',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.SHOP_API_KEY }}",
-                },
-            ],
-        },
+        url: "={{ 'https://acme-store.myshopify.com/admin/api/2025-01' + '/inventory_levels/set.json' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'shopifyAccessTokenApi',
         sendBody: true,
         specifyBody: 'json',
         jsonBody: '={{ JSON.stringify({ sku: $json.sku, available: $json.quantity }) }}',
+        options: {
+            timeout: 15000,
+        },
     };
 
     @node({
         id: '652c313e-7013-4265-acb5-944180336c23',
         name: 'Update the snapshot',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1820, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
+        alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     UpdateTheSnapshot = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/stock_snapshot',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'stock_snapshot',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-                {
-                    name: 'Prefer',
-                    value: 'resolution=merge-duplicates',
+                    keyName: 'sku',
+                    condition: 'eq',
+                    keyValue: "={{ $('One item per change').item.json.sku }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'on_conflict',
-                    value: "={{ 'sku' }}",
+                    fieldId: 'quantity',
+                    fieldValue: "={{ $('One item per change').item.json.quantity }}",
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ sku: $('One item per change').item.json.sku, quantity: $('One item per change').item.json.quantity, at: $now.toISO() }) }}",
     };
+
+    @node({
+        id: 'bcf9d72a-4126-4b3c-a0fc-e733c78becd5',
+        name: 'Known product?',
+        type: 'n8n-nodes-base.if',
+        version: 2.2,
+        position: [2080, 180],
+    })
+    KnownProduct = {
+        conditions: {
+            options: {
+                caseSensitive: true,
+                leftValue: '',
+                typeValidation: 'loose',
+                version: 2,
+            },
+            conditions: [
+                {
+                    id: '1f2ca40c-8a12-46a0-a9e6-cc665b09acd8',
+                    leftValue: '={{ !!$json.sku }}',
+                    rightValue: '',
+                    operator: {
+                        type: 'boolean',
+                        operation: 'true',
+                        singleValue: true,
+                    },
+                },
+            ],
+            combinator: 'and',
+        },
+        options: {},
+    };
+
+    @node({
+        id: '9d90f585-e7f8-4b1e-a0ad-49b89af7b4a8',
+        name: 'Add to the snapshot',
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [2340, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
+        retryOnFail: true,
+        maxTries: 3,
+        waitBetweenTries: 1000,
+    })
+    AddToTheSnapshot = {
+        resource: 'row',
+        operation: 'create',
+        tableId: 'stock_snapshot',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
+                {
+                    fieldId: 'sku',
+                    fieldValue: "={{ $('One item per change').item.json.sku }}",
+                },
+                {
+                    fieldId: 'quantity',
+                    fieldValue: "={{ $('One item per change').item.json.quantity }}",
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $now.toISO() }}',
+                },
+            ],
+        },
+    };
+
+    @node({
+        id: '5a651431-6965-434a-a5be-860f5e7d2798',
+        name: 'Snapshot updated',
+        type: 'n8n-nodes-base.noOp',
+        version: 1,
+        position: [2340, 270],
+    })
+    SnapshotUpdated = {};
 
     @node({
         id: 'e8a82eec-5026-487f-aa42-b3d9e3f8fb35',
@@ -317,6 +381,9 @@ return [{ json: { level: "critical", text: "Supplier stock feed refused: " + (r.
         this.FeedLooksSane.out(1).to(this.RefusedMessage.in(0));
         this.OneItemPerChange.out(0).to(this.UpdateTheStore.in(0));
         this.UpdateTheStore.out(0).to(this.UpdateTheSnapshot.in(0));
+        this.UpdateTheSnapshot.out(0).to(this.KnownProduct.in(0));
+        this.KnownProduct.out(0).to(this.SnapshotUpdated.in(0));
+        this.KnownProduct.out(1).to(this.AddToTheSnapshot.in(0));
         this.RefusedMessage.out(0).to(this.Alert.in(0));
     }
 }

@@ -10,7 +10,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
 // Chunk                              code
-// UpsertTheChunk                     httpRequest                [retry]
+// UpsertTheChunk                     httpRequest                [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -47,8 +47,7 @@ export class BlockUpsertInChunksWorkflow {
         content: `## Block · Upsert in chunks
 Groups a long list into chunks of 100 and upserts each chunk in one request.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/lists\``,
     };
 
@@ -83,26 +82,22 @@ return out;`,
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [520, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     UpsertTheChunk = {
         method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/records',
-        options: {
-            timeout: 15000,
-        },
+        url: "={{ 'https://acme.supabase.co/rest/v1/records' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'supabaseApi',
         sendHeaders: true,
         headerParameters: {
             parameters: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-                {
                     name: 'Prefer',
-                    value: 'resolution=merge-duplicates',
+                    value: "={{ 'resolution=merge-duplicates,return=representation' }}",
                 },
             ],
         },
@@ -118,6 +113,9 @@ return out;`,
         sendBody: true,
         specifyBody: 'json',
         jsonBody: '={{ JSON.stringify($json.rows) }}',
+        options: {
+            timeout: 15000,
+        },
     };
 
     // =====================================================================

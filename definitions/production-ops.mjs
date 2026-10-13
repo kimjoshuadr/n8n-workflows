@@ -1,9 +1,11 @@
 /** Production workflows for operations, people and monitoring. */
 import { webhook, schedule, http, code, iff, noop, call, define } from "../lib/wf.mjs";
-import { db, slack, sendgrid } from "../lib/nodes.mjs";
+import { db, slack, sendgrid, calendar, api, bamboohr } from "../lib/nodes.mjs";
 
 const ops = { folder: "workflows/operations", tier: "production", category: "Operations and people" };
 const mon = { folder: "workflows/monitoring", tier: "production", category: "Reporting and monitoring" };
+
+const GCAL = "www.googleapis.com/calendar/v3/calendars/kim%40example.com/events";
 
 export default [
   define({
@@ -11,12 +13,12 @@ export default [
     id: "employee-onboarding",
     name: "People · New hire onboarding",
     summary: "When someone is hired, creates their checklist, books their first-week meetings, tells the people who need to act, and sends the welcome email on the right morning.",
-    integrations: ["Webhook", "Datastore", "Calendar", "Email", "Chat"],
     nodes: [
       webhook("Hire confirmed", "hire-confirmed", { respond: "immediately" }),
-      code("Read the hire", `const h = $input.first().json.body ?? {};
-if (!h.email || !h.start_date) throw new Error("A hire needs an email and a start date");
-return [{ json: { employee_id: String(h.id ?? h.email), email: String(h.email).toLowerCase(), name: h.name ?? "New hire", role: h.role ?? "", manager: h.manager_email ?? null, start_date: h.start_date, remote: h.remote === true, scope: "hire", key: String(h.id ?? h.email) } }];`),
+      bamboohr.employee("Fetch the employee", "$json.body.id"),
+      code("Read the hire", `const h = $input.first().json ?? {};
+if (!h.workEmail || !h.hireDate) throw new Error("A hire needs a work email and a hire date in BambooHR");
+return [{ json: { employee_id: String(h.id), email: String(h.workEmail).toLowerCase(), name: [h.firstName, h.lastName].filter(Boolean).join(" ") || "New hire", role: h.jobTitle ?? "", manager: h.supervisorEmail ?? null, start_date: h.hireDate, remote: /remote/i.test(h.location ?? ""), scope: "hire", key: String(h.id) } }];`),
       call("Seen before?", "idempotency-guard"),
       iff("New hire?", "!$json.duplicate"),
       code("Build the checklist", `const h = $input.first().json;
@@ -30,27 +32,27 @@ const tasks = [
   { owner: "hr", task: "Day 30 check-in", due: day(30) },
 ];
 return tasks.map((t) => ({ json: { ...t, employee_id: h.employee_id, employee: h.name, status: "open" } }));`),
-      http("Save the task", "DB:/onboarding_tasks", { body: "$json" }),
-      http("Book first-day welcome", "CALENDAR:/bookings", { body: "{ title: 'Welcome, ' + $('New hire?').first().json.name, start: $('New hire?').first().json.start_date + 'T09:30:00', attendees: [$('New hire?').first().json.email, $('New hire?').first().json.manager].filter(Boolean) }", once: true, onFail: "continue" }),
-      http("Schedule the welcome email", "EMAIL:/emails", { body: "{ to: $('New hire?').first().json.email, subject: 'Welcome aboard, ' + $('New hire?').first().json.name, template: 'welcome-new-hire', send_at: $('New hire?').first().json.start_date + 'T08:00:00', data: { role: $('New hire?').first().json.role } }" , once: true }),
+      db.insert("Save the task", "onboarding_tasks", { owner: "$json.owner", task: "$json.task", due: "$json.due", employee_id: "$json.employee_id", employee: "$json.employee", status: "$json.status" }),
+      calendar.book("Book first-day welcome", { title: "'Welcome, ' + $('New hire?').first().json.name", start: "$('New hire?').first().json.start_date + 'T09:30:00'", end: "$('New hire?').first().json.start_date + 'T10:00:00'", attendees: "[$('New hire?').first().json.email, $('New hire?').first().json.manager].filter(Boolean).join(',')" }, { once: true, onFail: "continue" }),
+      sendgrid.send("Schedule the welcome email", { to: "$('New hire?').first().json.email", template: "'d-welcome-new-hire'", data: { name: "$('New hire?').first().json.name", role: "$('New hire?').first().json.role" }, sendAt: "$('New hire?').first().json.start_date + 'T08:00:00'" }, { once: true }),
       code("Team message", `const h = $("New hire?").first().json;
 return [{ json: { channel: "#people", level: "info", text: h.name + " (" + h.role + ") starts on " + h.start_date + ". Six onboarding tasks are assigned to IT, HR and their manager." } }];`),
       call("Tell the team", "notify"),
       noop("Already set up"),
     ],
     flow: [
-      ["Hire confirmed", "Read the hire", "Seen before?", "New hire?", "Build the checklist", "Save the task", "Book first-day welcome", "Schedule the welcome email", "Team message", "Tell the team"],
+      ["Hire confirmed", "Fetch the employee", "Read the hire", "Seen before?", "New hire?", "Build the checklist", "Save the task", "Book first-day welcome", "Schedule the welcome email", "Team message", "Tell the team"],
       ["New hire?:1", "Already set up"],
     ],
     story: [
-      { title: "A hire is confirmed", copy: "HR systems send the same event on every edit, so the hire is set up once.", nodes: ["Hire confirmed", "Read the hire", "Seen before?", "New hire?", "Already set up"] },
+      { title: "A hire is confirmed", copy: "BambooHR announces the hire and the record is read from it. It sends the same event on every edit, so the hire is set up once.", nodes: ["Hire confirmed", "Fetch the employee", "Read the hire", "Seen before?", "New hire?", "Already set up"] },
       { title: "A dated checklist", copy: "Six tasks counted back from the start date, each with an owner. Remote hires get a shipped laptop, not a desk.", nodes: ["Build the checklist", "Save the task"] },
       { title: "The first morning is arranged", copy: "A welcome meeting on the calendar and an email timed for 8am on day one.", nodes: ["Book first-day welcome", "Schedule the welcome email"] },
       { title: "The people who must act are told", copy: "One message, with the date.", nodes: ["Team message", "Tell the team"] },
     ],
     tests: [
-      { name: "creates six tasks, a meeting and a timed welcome", repeat: 2, request: { body: { id: 42, email: "New@Co.com", name: "Sam", role: "Estimator", manager_email: "boss@co.com", start_date: "2026-12-01", remote: true } }, callCount: { "supabase /rest/v1/onboarding_tasks": 6, "/calendar/bookings": 1, "sendgrid /v3/mail/send": 1 }, calls: [{ to: "supabase", path: "/rest/v1/onboarding_tasks", body: { task: "Ship the laptop", due: "2026-11-28" } }, { to: "sendgrid", path: "/v3/mail/send", body: { send_at: "2026-12-01T08:00:00" } }] },
-      { name: "a hire without a start date fails loudly", request: { body: { email: "a@b.co" } }, status: "error", noCalls: ["/rest/v1/onboarding_tasks"] },
+      { name: "creates six tasks, a meeting and a timed welcome", repeat: 2, routes: [{ path: "api.bamboohr.com/api/gateway.php/acme/v1/employees/42", response: { id: "42", workEmail: "New@Co.com", firstName: "Sam", lastName: "Lee", jobTitle: "Estimator", supervisorEmail: "boss@co.com", hireDate: "2026-12-01", location: "Remote" } }], request: { body: { id: 42 } }, callCount: { "supabase /rest/v1/onboarding_tasks": 1, "googleCalendar": 1, "sendgrid /v3/mail/send": 1 }, calls: [{ to: "supabase", path: "/rest/v1/onboarding_tasks", body: { task: "Ship the laptop", due: "2026-11-28" } }, { to: "sendgrid", path: "/v3/mail/send", body: { template_id: "d-welcome-new-hire" } }] },
+      { name: "a hire without a start date fails loudly", routes: [{ path: "api.bamboohr.com/api/gateway.php/acme/v1/employees/7", response: { id: "7", workEmail: "a@b.co" } }], request: { body: { id: 7 } }, status: "error", noCalls: ["/rest/v1/onboarding_tasks"] },
     ],
   }),
 
@@ -59,11 +61,12 @@ return [{ json: { channel: "#people", level: "info", text: h.name + " (" + h.rol
     id: "daily-agenda",
     name: "Calendar · Morning agenda",
     summary: "Posts today's meetings each weekday morning, with gaps and clashes pointed out, and stays silent on an empty day.",
-    integrations: ["Schedule", "Calendar", "Chat"],
     nodes: [
       schedule("Weekdays 07:30", "30 7 * * 1-5"),
-      http("Today's events", "CALENDAR:/events", { method: "GET", query: { from: "$now.startOf('day').toISO()", to: "$now.endOf('day').toISO()" } }),
-      code("Lay out the day", `const events = ($input.first().json.events ?? []).filter((e) => e.start && e.end && !e.declined).sort((a, b) => new Date(a.start) - new Date(b.start));
+      calendar.today("Today's events"),
+      code("Lay out the day", `const events = $input.all().map((i) => i.json)
+  .map((e) => ({ title: e.summary ?? "(no title)", start: e.start?.dateTime, end: e.end?.dateTime, declined: (e.attendees ?? []).some((a) => a.self && a.responseStatus === "declined") }))
+  .filter((e) => e.start && e.end && !e.declined).sort((a, b) => new Date(a.start) - new Date(b.start));
 const hm = (iso) => new Date(iso).toISOString().slice(11, 16);
 const clashes = [];
 for (let i = 1; i < events.length; i++) if (new Date(events[i].start) < new Date(events[i - 1].end)) clashes.push(events[i - 1].title + " / " + events[i].title);
@@ -84,8 +87,8 @@ return [{ json: { count: events.length, clashes, hours: Math.round(minutes / 6) 
       { title: "One message, or none", copy: "An empty day gets no message at all.", nodes: ["Post the agenda", "Clear day"] },
     ],
     tests: [
-      { name: "lists the day and flags a clash", routes: [{ path: "/calendar/events", response: { events: [{ title: "Standup", start: "2026-10-12T09:00:00Z", end: "2026-10-12T09:30:00Z" }, { title: "Client call", start: "2026-10-12T09:15:00Z", end: "2026-10-12T10:15:00Z" }, { title: "Skipped", start: "2026-10-12T11:00:00Z", end: "2026-10-12T12:00:00Z", declined: true }] } }], input: [{}], output: { node: "Lay out the day", json: { count: 2, hours: 1.5, clashes: ["Standup / Client call"] } }, calls: [{ to: "slack", path: "/api/chat.postMessage" }] },
-      { name: "stays silent on an empty day", routes: [{ path: "/calendar/events", response: { events: [] } }], input: [{}], ran: ["Clear day"], noCalls: ["slack"] },
+      { name: "lists the day and flags a clash", routes: [{ path: GCAL, response: { items: [{ summary: "Standup", start: { dateTime: "2026-10-12T09:00:00Z" }, end: { dateTime: "2026-10-12T09:30:00Z" } }, { summary: "Client call", start: { dateTime: "2026-10-12T09:15:00Z" }, end: { dateTime: "2026-10-12T10:15:00Z" } }, { summary: "Skipped", start: { dateTime: "2026-10-12T11:00:00Z" }, end: { dateTime: "2026-10-12T12:00:00Z" }, attendees: [{ self: true, responseStatus: "declined" }] }] } }], input: [{}], output: { node: "Lay out the day", json: { count: 2, hours: 1.5, clashes: ["Standup / Client call"] } }, calls: [{ to: "slack", path: "/api/chat.postMessage" }] },
+      { name: "stays silent on an empty day", routes: [{ path: GCAL, response: { items: [] } }], input: [{}], ran: ["Clear day"], noCalls: ["slack"] },
     ],
   }),
 
@@ -94,30 +97,34 @@ return [{ json: { count: events.length, clashes, hours: Math.round(minutes / 6) 
     id: "contact-sync",
     name: "Data · CRM to email list sync",
     summary: "Copies contacts changed since the last run from the CRM to the email platform, page by page, and only moves its bookmark forward when a run finishes.",
-    integrations: ["Schedule", "Datastore", "CRM", "Email"],
     nodes: [
       schedule("Every 15 minutes", { minutes: 15 }),
       db.find("Read the bookmark", "sync_cursors", { name: "'crm-to-email'" }),
       code("Start from", `return [{ json: { since: $input.first().json.value ?? "1970-01-01T00:00:00Z", started_at: new Date().toISOString() } }];`),
-      http("Changed contacts", "CRM:/crm/v3/objects/contacts/search", { body: "{ modified_since: $json.since, limit: 200 }" }),
-      code("Shape for the list", `const rows = ($input.first().json.results ?? []).filter((c) => c.email);
-return [{ json: { count: rows.length, contacts: rows.map((c) => ({ email: String(c.email).toLowerCase(), first_name: c.firstname ?? "", tags: [c.lifecyclestage].filter(Boolean), unsubscribed: c.unsubscribed === true })) } }];`),
+      api("hubspot", "hubspotAppToken", "Changed contacts", "POST", "'https://api.hubapi.com/crm/v3/objects/contacts/search'", { body: "{ filterGroups: [{ filters: [{ propertyName: 'lastmodifieddate', operator: 'GTE', value: $json.since }] }], properties: ['email', 'firstname', 'lifecyclestage', 'hs_email_optout'], limit: 100 }" }),
+      code("Shape for the list", `const rows = ($input.first().json.results ?? []).map((c) => c.properties ?? {}).filter((c) => c.email);
+// An opt-out in HubSpot travels with the contact, so Mailchimp never mails someone the CRM says not to.
+return [{ json: { count: rows.length, members: rows.map((c) => ({ email_address: String(c.email).toLowerCase(), status: String(c.hs_email_optout) === "true" ? "unsubscribed" : "subscribed", merge_fields: { FNAME: c.firstname ?? "" }, tags: [c.lifecyclestage].filter(Boolean) })) } }];`),
       iff("Anything changed?", "$json.count > 0"),
-      http("Upsert to the list", "EMAIL:/audiences/contacts/batch", { body: "{ contacts: $json.contacts }" }),
-      http("Move the bookmark", "DB:/sync_cursors", { query: { on_conflict: "'name'" }, headers: { Prefer: "resolution=merge-duplicates" }, body: "{ name: 'crm-to-email', value: $('Start from').first().json.started_at }" }),
+      api("mailchimp", "mailchimpApi", "Upsert to the list", "POST", "'https://us1.api.mailchimp.com/3.0/lists/main-list'", { body: "{ members: $json.members, update_existing: true }" }),
+      db.update("Move the bookmark", "sync_cursors", { name: "'crm-to-email'" }, { value: "$('Start from').first().json.started_at" }),
+      iff("Had a bookmark?", "!!$json.name"),
+      db.insert("Start the bookmark", "sync_cursors", { name: "'crm-to-email'", value: "$('Start from').first().json.started_at" }),
+      noop("Bookmark moved"),
     ],
     flow: [
-      ["Every 15 minutes", "Read the bookmark", "Start from", "Changed contacts", "Shape for the list", "Anything changed?", "Upsert to the list", "Move the bookmark"],
+      ["Every 15 minutes", "Read the bookmark", "Start from", "Changed contacts", "Shape for the list", "Anything changed?", "Upsert to the list", "Move the bookmark", "Had a bookmark?", "Bookmark moved"],
+      ["Had a bookmark?:1", "Start the bookmark"],
       ["Anything changed?:1", "Move the bookmark"],
     ],
     story: [
       { title: "Where did we get to?", copy: "A bookmark holds the time the last successful run started.", nodes: ["Every 15 minutes", "Read the bookmark", "Start from"] },
       { title: "Only what changed since", copy: "Unsubscribes travel with the contact, so the email platform never mails someone the CRM says not to.", nodes: ["Changed contacts", "Shape for the list", "Anything changed?"] },
-      { title: "The bookmark moves last", copy: "If the upsert fails the bookmark stays put and the next run picks up the same contacts. Nothing is skipped.", nodes: ["Upsert to the list", "Move the bookmark"] },
+      { title: "The bookmark moves last", copy: "If the upsert fails the bookmark stays put and the next run picks up the same contacts. Nothing is skipped.", nodes: ["Upsert to the list", "Move the bookmark", "Had a bookmark?", "Start the bookmark", "Bookmark moved"] },
     ],
     tests: [
-      { name: "syncs changed contacts and moves the bookmark", seed: { sync_cursors: [{ name: "crm-to-email", value: "2026-01-01T00:00:00Z" }] }, routes: [{ path: "/crm/crm/v3/objects/contacts/search", response: { results: [{ email: "A@b.co", firstname: "Ana", lifecyclestage: "customer" }, { firstname: "No email" }] } }], input: [{}], calls: [{ path: "/crm/crm/v3/objects/contacts/search", body: { modified_since: "2026-01-01T00:00:00Z" } }, { path: "/email/audiences/contacts/batch", body: { contacts: [{ email: "a@b.co", tags: ["customer"] }] } }], output: { node: "Shape for the list", json: { count: 1 } } },
-      { name: "a failed upsert leaves the bookmark where it was", seed: { sync_cursors: [{ name: "crm-to-email", value: "2026-01-01T00:00:00Z" }] }, routes: [{ path: "/crm/crm/v3/objects/contacts/search", response: { results: [{ email: "a@b.co" }] } }], fail: [{ path: "/v3/mail/send", times: 3 }], input: [{}], status: "error", table: { sync_cursors: [{ name: "crm-to-email", value: "2026-01-01T00:00:00Z" }] }, notRan: ["Move the bookmark"] },
+      { name: "syncs changed contacts and moves the bookmark", seed: { sync_cursors: [{ name: "crm-to-email", value: "2026-01-01T00:00:00Z" }] }, routes: [{ path: "api.hubapi.com/crm/v3/objects/contacts/search", response: { results: [{ properties: { email: "A@b.co", firstname: "Ana", lifecyclestage: "customer" } }, { properties: { firstname: "No email" } }] } }], input: [{}], calls: [{ to: "hubspot", path: "/crm/v3/objects/contacts/search", body: { filterGroups: [{ filters: [{ value: "2026-01-01T00:00:00Z" }] }] } }, { to: "mailchimp", path: "/3.0/lists/main-list", body: { members: [{ email_address: "a@b.co", status: "subscribed", tags: ["customer"] }] } }], output: { node: "Shape for the list", json: { count: 1 } } },
+      { name: "a failed upsert leaves the bookmark where it was", seed: { sync_cursors: [{ name: "crm-to-email", value: "2026-01-01T00:00:00Z" }] }, routes: [{ path: "api.hubapi.com/crm/v3/objects/contacts/search", response: { results: [{ properties: { email: "a@b.co" } }] } }], fail: [{ path: "/3.0/lists", times: 3 }], input: [{}], status: "error", table: { sync_cursors: [{ name: "crm-to-email", value: "2026-01-01T00:00:00Z" }] }, notRan: ["Move the bookmark"] },
     ],
   }),
 
@@ -126,7 +133,6 @@ return [{ json: { count: rows.length, contacts: rows.map((c) => ({ email: String
     id: "contract-expiry",
     name: "Contracts · Expiry reminders",
     summary: "Warns the owner of each contract 60, 30 and 7 days before it ends, so renewals are a decision and never an accident.",
-    integrations: ["Schedule", "Datastore", "Email"],
     nodes: [
       schedule("Monday 09:00", "0 9 * * 1"),
       db.find("Active contracts", "contracts", { status: "'active'" }),
@@ -157,7 +163,6 @@ return $input.all().map((i) => i.json).filter((c) => c.ends_on && c.owner_email)
     id: "uptime-monitor",
     name: "Monitoring · Uptime checks",
     summary: "Checks each site every five minutes, alerts after two failures in a row, and reports how long it was down once it recovers.",
-    integrations: ["Schedule", "Datastore", "Chat"],
     nodes: [
       schedule("Every 5 minutes", { minutes: 5 }),
       db.find("Sites to watch", "monitors", null),
@@ -199,7 +204,6 @@ return $input.all().map((item, i) => {
     id: "backup-verify",
     name: "Monitoring · Backup verification",
     summary: "Checks every morning that last night's backup exists, is recent and is not suspiciously small. A backup nobody checks is a hope, not a backup.",
-    integrations: ["Schedule", "Backup", "Chat", "Datastore"],
     nodes: [
       schedule("07:00 daily", "0 7 * * *"),
       http("Latest backup", "BACKUP:/backups/latest", { method: "GET", onFail: "continue" }),

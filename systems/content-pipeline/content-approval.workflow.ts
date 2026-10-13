@@ -12,14 +12,14 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // ReadTheDecision                    code
 // Valid                              if
 // BadRequest                         respondToWebhook
-// LoadTheDraft                       httpRequest                [alwaysOutput] [retry]
+// LoadTheDraft                       supabase                   [creds] [alwaysOutput] [retry]
 // AwaitingApproval                   if
 // NotPending                         respondToWebhook
 // Approved                           if
-// PublishToCms                       httpRequest                [retry]
-// MarkPublished                      httpRequest                [retry]
+// PublishToWordpress                 wordpress                  [creds] [retry]
+// MarkPublished                      supabase                   [creds] [retry]
 // Published                          respondToWebhook
-// MarkRejected                       httpRequest                [retry]
+// MarkRejected                       supabase                   [creds] [retry]
 // Rejected                           respondToWebhook
 //
 // ROUTING MAP
@@ -30,7 +30,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //        → LoadTheDraft
 //          → AwaitingApproval
 //            → Approved
-//              → PublishToCms
+//              → PublishToWordpress
 //                → MarkPublished
 //                  → Published
 //             .out(1) → MarkRejected
@@ -67,8 +67,7 @@ export class ContentPipelineApproveAndPublishWorkflow {
         content: `## Content pipeline · Approve and publish
 Receives a person's decision on a draft. Approved drafts are published to the CMS once and queued for sharing; rejected ones go back with the reason.
 
-**Platforms:** none, this is logic only
-**Settings:** CMS_API_KEY, CMS_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase, WordPress
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/content-pipeline\``,
     };
 
@@ -150,35 +149,28 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
     @node({
         id: 'e82f2931-af53-486d-a69b-60045ba08156',
         name: 'Load the draft',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [780, 270],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     LoadTheDraft = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/content_drafts',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'content_drafts',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'id',
-                    value: "={{ 'eq.' + $json.draft_id }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.draft_id }}',
                 },
             ],
         },
@@ -264,74 +256,77 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
     };
 
     @node({
-        id: 'da3bfa64-8127-442a-af58-b4f958504c20',
-        name: 'Publish to CMS',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        id: 'f79c114b-edea-40aa-a9f9-8cafe84c0785',
+        name: 'Publish to WordPress',
+        type: 'n8n-nodes-base.wordpress',
+        version: 1,
         position: [1560, 90],
+        credentials: { wordpressApi: { id: '__CRED:wordpress__', name: 'WordPress' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
-    PublishToCms = {
-        method: 'POST',
-        url: '={{ $env.CMS_BASE_URL }}/posts',
-        options: {
-            timeout: 15000,
+    PublishToWordpress = {
+        resource: 'post',
+        operation: 'create',
+        title: '={{ $json.title }}',
+        additionalFields: {
+            content: '={{ $json.body }}',
+            status: "={{ 'publish' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CMS_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ title: $json.title, content: $json.body, status: 'publish', meta: { keywords: $json.keywords } }) }}",
     };
 
     @node({
         id: '6bffc76d-2b27-4279-a5c8-83e49d6db969',
         name: 'Mark published',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1820, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkPublished = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/content_drafts',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'content_drafts',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Read the decision').first().json.draft_id }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $('Read the decision').first().json.draft_id }}",
+                    fieldId: 'status',
+                    fieldValue: "={{ 'published' }}",
+                },
+                {
+                    fieldId: 'post_id',
+                    fieldValue: '={{ $json.id }}',
+                },
+                {
+                    fieldId: 'approved_by',
+                    fieldValue: "={{ $('Read the decision').first().json.by }}",
+                },
+                {
+                    fieldId: 'published_at',
+                    fieldValue: '={{ $now.toISO() }}',
+                },
+                {
+                    fieldId: 'shared',
+                    fieldValue: '={{ false }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ status: 'published', post_id: $json.id, approved_by: $('Read the decision').first().json.by, published_at: $now.toISO(), shared: false }) }}",
     };
 
     @node({
@@ -352,41 +347,46 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
     @node({
         id: 'ff443074-0b6f-43cf-a541-0dc7f3a938b4',
         name: 'Mark rejected',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1560, 270],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkRejected = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/content_drafts',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'content_drafts',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.id }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $json.id }}",
+                    fieldId: 'status',
+                    fieldValue: "={{ 'rejected' }}",
+                },
+                {
+                    fieldId: 'rejected_by',
+                    fieldValue: "={{ $('Read the decision').first().json.by }}",
+                },
+                {
+                    fieldId: 'reason',
+                    fieldValue: "={{ $('Read the decision').first().json.reason }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ status: 'rejected', rejected_by: $('Read the decision').first().json.by, reason: $('Read the decision').first().json.reason }) }}",
     };
 
     @node({
@@ -417,9 +417,9 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
         this.LoadTheDraft.out(0).to(this.AwaitingApproval.in(0));
         this.AwaitingApproval.out(0).to(this.Approved.in(0));
         this.AwaitingApproval.out(1).to(this.NotPending.in(0));
-        this.Approved.out(0).to(this.PublishToCms.in(0));
+        this.Approved.out(0).to(this.PublishToWordpress.in(0));
         this.Approved.out(1).to(this.MarkRejected.in(0));
-        this.PublishToCms.out(0).to(this.MarkPublished.in(0));
+        this.PublishToWordpress.out(0).to(this.MarkPublished.in(0));
         this.MarkPublished.out(0).to(this.Published.in(0));
         this.MarkRejected.out(0).to(this.Rejected.in(0));
     }

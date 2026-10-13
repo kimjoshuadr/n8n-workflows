@@ -6,19 +6,17 @@
 
 **What this does about it.** Every lead is researched and scored, every email is written and reviewed by different models, and every reply is read and answered or handed to a person.
 
-1 workflows, 13 tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.
+One canvas of 104 nodes, 13 tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.
 
 ## AI sales team · Research, outreach and replies
 
 Seven agents run outbound end to end: research each new lead, score it, write and review every email, read the replies, propose meeting times and answer objections from the case studies. A person is asked whenever an agent is unsure.
 
-| | |
-|---|---|
-| Starts from | undefined |
-| Platforms | Typeform, Clearbit, SerpAPI, Claude, OpenAI, HubSpot, Supabase, Mailchimp, Pinecone, SendGrid, Gmail, Google Calendar, Slack |
-| Nodes | 104 |
-| Calls | `idempotency-guard`, `notify`, `dead-letter`, `error-handler` |
-| Files | [`ai-sales-team.json`](ai-sales-team.json) · [`ai-sales-team.workflow.ts`](ai-sales-team.workflow.ts) |
+- **Starts from:** Typeform event, Schedule, Gmail event
+- **Platforms:** <img src="../../assets/platforms/typeform.svg" width="16" height="16" alt=""> Typeform &nbsp;·&nbsp; <img src="../../assets/platforms/clearbit.svg" width="16" height="16" alt=""> Clearbit &nbsp;·&nbsp; <img src="../../assets/platforms/serpapi.svg" width="16" height="16" alt=""> SerpAPI &nbsp;·&nbsp; <img src="../../assets/platforms/anthropic.svg" width="16" height="16" alt=""> Claude &nbsp;·&nbsp; <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI &nbsp;·&nbsp; <img src="../../assets/platforms/hubspot.svg" width="16" height="16" alt=""> HubSpot &nbsp;·&nbsp; <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/mailchimp.svg" width="16" height="16" alt=""> Mailchimp &nbsp;·&nbsp; <img src="../../assets/platforms/pinecone.svg" width="16" height="16" alt=""> Pinecone &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid &nbsp;·&nbsp; <img src="../../assets/platforms/gmail.svg" width="16" height="16" alt=""> Gmail &nbsp;·&nbsp; <img src="../../assets/platforms/googleCalendar.svg" width="16" height="16" alt=""> Google Calendar &nbsp;·&nbsp; <img src="../../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack
+- **Nodes:** 104
+- **Calls:** `idempotency-guard`, `notify`, `dead-letter`, `error-handler`
+- **Files:** [`ai-sales-team.json`](ai-sales-team.json) · [`ai-sales-team.workflow.ts`](ai-sales-team.workflow.ts)
 
 ```mermaid
 flowchart LR

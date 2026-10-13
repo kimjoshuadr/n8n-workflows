@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Order ops · Abandoned cart recovery\nEvery half hour, writes once to people who left a cart over an hour ago and have not ordered since.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
+        "content": "## Order ops · Abandoned cart recovery\nEvery half hour, writes once to people who left a cart over an hour ago and have not ordered since.\n\n**Platforms:** Supabase, SendGrid\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
       }
     },
     {
@@ -43,33 +43,26 @@
         90
       ],
       "name": "Open carts",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/carts",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "carts",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "recovered",
-              "value": "={{ 'eq.false' }}"
+              "keyName": "recovered",
+              "condition": "eq",
+              "keyValue": "={{ 'false' }}"
             },
             {
-              "name": "reminded",
-              "value": "={{ 'eq.false' }}"
+              "keyName": "reminded",
+              "condition": "eq",
+              "keyValue": "={{ 'false' }}"
             }
           ]
         }
@@ -77,7 +70,13 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "f596ebf9-a01e-4790-a4f2-6e03f5bd4c6e",
@@ -99,33 +98,22 @@
         90
       ],
       "name": "Ordered since?",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/orders",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "orders",
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "email",
-              "value": "={{ 'eq.' + $json.email }}"
-            },
-            {
-              "name": "limit",
-              "value": "={{ '1' }}"
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.email }}"
             }
           ]
         }
@@ -133,7 +121,13 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "4bd795cf-d826-4fed-abe3-f96e4f87ce3f",
@@ -155,30 +149,39 @@
         90
       ],
       "name": "Send the reminder",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ $json.email }}",
+        "dynamicTemplate": true,
+        "templateId": "={{ 'd-cart-reminder' }}",
+        "dynamicTemplateFields": {
+          "fields": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+              "key": "items",
+              "value": "={{ $json.items }}"
+            },
+            {
+              "key": "cart_url",
+              "value": "={{ $json.cart_url }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: $json.email, subject: 'You left something behind', template: 'cart-reminder', data: { items: $json.items, cart_url: $json.cart_url } }) }}"
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "bffa7485-a137-422c-a30b-1fc7f3ea835d",
@@ -187,39 +190,46 @@
         90
       ],
       "name": "Mark reminded",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/carts",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "carts",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Keep the ones who did not').item.json.id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "id",
-              "value": "={{ 'eq.' + $('Keep the ones who did not').item.json.id }}"
+              "fieldId": "reminded",
+              "fieldValue": "={{ true }}"
+            },
+            {
+              "fieldId": "reminded_at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ reminded: true, reminded_at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     }
   ],
   "connections": {

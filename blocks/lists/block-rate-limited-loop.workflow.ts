@@ -10,7 +10,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
 // FiveAtATime                        splitInBatches
-// Send                               httpRequest                [onError→regular] [retry]
+// Send                               sendGrid                   [onError→regular] [creds] [retry]
 // Pause                              wait
 // Finished                           noOp
 //
@@ -52,8 +52,7 @@ export class BlockLoopThatRespectsARateLimitWorkflow {
         content: `## Block · Loop that respects a rate limit
 Sends items in small batches with a pause between them, for APIs that reject bursts.
 
-**Platforms:** none, this is logic only
-**Settings:** EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/lists\``,
     };
 
@@ -83,32 +82,27 @@ Sends items in small batches with a pause between them, for APIs that reject bur
     @node({
         id: '946085ab-8480-4676-a553-0615fceaff09',
         name: 'Send',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
         position: [520, 90],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     Send = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: '={{ $json.email }}',
+        dynamicTemplate: true,
+        templateId: "={{ 'd-bulk' }}",
+        dynamicTemplateFields: {
+            fields: [],
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ to: $json.email, template: 'bulk' }) }}",
+        additionalFields: {},
     };
 
     @node({

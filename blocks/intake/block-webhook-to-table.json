@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Block · Webhook to a table\nThe smallest useful workflow: receive a form post, keep the fields you named, store a row, answer the sender.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/intake`"
+        "content": "## Block · Webhook to a table\nThe smallest useful workflow: receive a form post, keep the fields you named, store a row, answer the sender.\n\n**Platforms:** Supabase\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/intake`"
       }
     },
     {
@@ -53,30 +53,43 @@
         90
       ],
       "name": "Store the row",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/form_submissions",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "form_submissions",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.email }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $json.message }}"
+            },
+            {
+              "fieldId": "received_at",
+              "fieldValue": "={{ $json.received_at }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "9fc6b43c-2a82-4322-a503-cd2ec12ef109",

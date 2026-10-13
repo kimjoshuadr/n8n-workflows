@@ -9,9 +9,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Every10Minutes                     scheduleTrigger
-// UnansweredTickets                  httpRequest                [retry]
+// UnansweredTickets                  zendesk                    [creds] [alwaysOutput] [retry]
 // MeasureAgainstTheSla               code
-// RememberTheStage                   httpRequest                [retry]
+// RememberTheStage                   zendesk                    [creds] [retry]
 // WriteTheAlert                      code
 // RaiseIt                            executeWorkflow
 //
@@ -53,8 +53,7 @@ export class SupportSlaBreachWatchWorkflow {
         content: `## Support · SLA breach watch
 Every ten minutes, finds tickets about to miss their first-response time, warns the owner, and escalates the ones that already have. Each ticket is raised once per stage.
 
-**Platforms:** none, this is logic only
-**Settings:** HELPDESK_API_KEY, HELPDESK_BASE_URL
+**Platforms:** Zendesk
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/support\``,
     };
 
@@ -79,40 +78,21 @@ Every ten minutes, finds tickets about to miss their first-response time, warns 
     @node({
         id: '28a8502f-811b-413c-a123-00db8e8bff6e',
         name: 'Unanswered tickets',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.zendesk',
+        version: 1,
         position: [260, 90],
+        credentials: { zendeskApi: { id: '__CRED:zendesk__', name: 'Zendesk' } },
+        alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     UnansweredTickets = {
-        method: 'GET',
-        url: '={{ $env.HELPDESK_BASE_URL }}/tickets/search',
+        resource: 'ticket',
+        operation: 'getAll',
+        returnAll: true,
         options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'status',
-                    value: "={{ 'open' }}",
-                },
-                {
-                    name: 'first_response',
-                    value: "={{ 'none' }}",
-                },
-            ],
+            query: "={{ 'status:open' }}",
         },
     };
 
@@ -126,42 +106,32 @@ Every ten minutes, finds tickets about to miss their first-response time, warns 
     MeasureAgainstTheSla = {
         jsCode: `const SLA = { urgent: 30, high: 120, normal: 480, low: 1440 }; // minutes to first response
 const now = Date.now();
-return ($input.first().json.tickets ?? []).map((t) => {
+return $input.all().map((i) => i.json).filter((t) => t.id && t.created_at).map((t) => {
   const limit = SLA[t.priority] ?? SLA.normal;
   const waited = Math.floor((now - new Date(t.created_at).getTime()) / 60000);
   const stage = waited >= limit ? "breached" : waited >= limit * 0.75 ? "at_risk" : "ok";
-  return { id: String(t.id), subject: t.subject, owner: t.owner ?? "unassigned", priority: t.priority ?? "normal", waited, limit, stage, last: t.sla_stage ?? "ok" };
+  return { id: String(t.id), subject: t.subject, owner: t.owner ?? "unassigned", priority: t.priority ?? "normal", waited, limit, stage, last: (t.tags ?? []).includes("sla-breached") ? "breached" : (t.tags ?? []).includes("sla-at-risk") ? "at_risk" : "ok" };
 }).filter((t) => t.stage !== "ok" && t.stage !== t.last).map((json) => ({ json }));`,
     };
 
     @node({
         id: 'bfcdbd2a-2e77-43ff-a71a-de33e60f8282',
         name: 'Remember the stage',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.zendesk',
+        version: 1,
         position: [780, 90],
+        credentials: { zendeskApi: { id: '__CRED:zendesk__', name: 'Zendesk' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     RememberTheStage = {
-        method: 'POST',
-        url: '={{ $env.HELPDESK_BASE_URL }}/tickets/update',
-        options: {
-            timeout: 15000,
+        resource: 'ticket',
+        operation: 'update',
+        id: '={{ $json.id }}',
+        updateFields: {
+            tags: ["={{ $json.stage === 'breached' ? 'sla-breached' : 'sla-at-risk' }}"],
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ ticket_id: $json.id, sla_stage: $json.stage }) }}',
     };
 
     @node({

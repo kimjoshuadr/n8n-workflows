@@ -5,6 +5,7 @@
  *   <folder>/<id>.workflow.ts   the same workflow as a TypeScript file
  *   <folder>/README.md          what each workflow does, its diagram and its tests
  *   catalog.json                the whole library as data
+ *   README.md, schema.sql, .env.example
  *
  * Run it after changing a definition. CI fails if the result differs from what
  * is committed.
@@ -15,6 +16,7 @@ import { execFileSync } from "node:child_process";
 import { loadAll, refsOf, root } from "./load.mjs";
 import { SYSTEMS, TIERS } from "./systems.mjs";
 import { PLATFORMS } from "../lib/platforms.mjs";
+import { marks, writeReadme, writeSchema, writeEnv } from "./readme.mjs";
 
 const defs = await loadAll();
 const byFolder = Map.groupBy(defs, (d) => d.folder);
@@ -41,9 +43,20 @@ function mermaid(def) {
 
 const TRIGGER = { webhook: "Webhook", scheduleTrigger: "Schedule", manualTrigger: "Manual run", executeWorkflowTrigger: "Called by another workflow", errorTrigger: "A failure in any workflow" };
 
+const startsFrom = (def) =>
+  [...new Set(def.graph.nodes.filter((g) => g.kind === "trigger").map((g) => (g.platform ? `${PLATFORMS[g.platform].name} event` : (TRIGGER[def.json.nodes.find((n) => n.name === g.id).type.split(".").pop()] ?? "Trigger"))))].join(", ");
+
 function section(def, level = "##") {
   const out = [`${level} ${def.name}`, "", def.summary, ""];
-  out.push(`| | |`, `|---|---|`, `| Starts from | ${TRIGGER[def.trigger]} |`, `| Platforms | ${def.platforms.length ? def.platforms.map((p) => PLATFORMS[p].name).join(", ") : (def.integrations ?? []).filter((i) => !["Webhook", "Schedule"].includes(i)).join(", ") || "none, logic only"} |`, `| Nodes | ${def.nodeCount} |`, `| Calls | ${refsOf(def).map((r) => `\`${r}\``).join(", ") || "nothing"} |`, `| Files | [\`${def.id}.json\`](${def.id}.json) · [\`${def.id}.workflow.ts\`](${def.id}.workflow.ts) |`, "");
+  const up = "../".repeat(def.folder.split("/").length);
+  out.push(
+    `- **Starts from:** ${startsFrom(def)}`,
+    `- **Platforms:** ${marks(def.platforms, up)}`,
+    `- **Nodes:** ${def.nodeCount}`,
+    `- **Calls:** ${refsOf(def).map((r) => `\`${r}\``).join(", ") || "nothing"}`,
+    `- **Files:** [\`${def.id}.json\`](${def.id}.json) · [\`${def.id}.workflow.ts\`](${def.id}.workflow.ts)`,
+    "",
+  );
   out.push("```mermaid", mermaid(def), "```", "");
   if (def.story?.length) {
     out.push("**How it runs**", "");
@@ -65,7 +78,7 @@ for (const [folder, list] of byFolder) {
   const system = SYSTEMS.find((s) => s.folder === folder);
   const title = system ? system.name : folder.split("/").map((p) => p[0].toUpperCase() + p.slice(1)).join(" · ");
   const head = [`# ${title}`, ""];
-  if (system) head.push(`**${system.line}**`, "", `**The problem.** ${system.problem}`, "", `**What this does about it.** ${system.outcome}`, "", `${list.length} workflows, ${list.reduce((n, d) => n + d.tests.length, 0)} tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.`, "");
+  if (system) head.push(`**${system.line}**`, "", `**The problem.** ${system.problem}`, "", `**What this does about it.** ${system.outcome}`, "", `${list.length === 1 ? `One canvas of ${list[0].nodeCount} nodes` : `${list.length} workflows`}, ${list.reduce((n, d) => n + d.tests.length, 0)} tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.`, "");
   else head.push(`${list.length} workflows. Each one is tested against a real n8n; the cases are listed under it.`, "");
   fs.writeFileSync(path.join(dir, "README.md"), head.join("\n") + "\n" + list.map((d) => section(d)).join("\n"));
 
@@ -80,7 +93,6 @@ for (const [folder, list] of byFolder) {
       summary: def.summary,
       source: "reference",
       trigger: def.trigger,
-      integrations: def.integrations ?? def.platforms.map((p) => PLATFORMS[p].name),
       platforms: def.platforms,
       env: def.env,
       calls: refsOf(def),
@@ -101,20 +113,17 @@ for (const folder of byFolder.keys()) {
 
 const order = { flagship: 0, production: 1, block: 2 };
 catalog.sort((a, b) => order[a.tier] - order[b.tier] || SYSTEMS.findIndex((s) => s.id === a.system) - SYSTEMS.findIndex((s) => s.id === b.system) || 0);
-fs.writeFileSync(
-  path.join(root, "catalog.json"),
-  JSON.stringify(
-    {
-      repo: "https://github.com/kimjoshuadr/n8n-workflows",
-      tested: results ? { n8n: results.n8n, passed: results.passed, failed: results.failed } : null,
-      tiers: TIERS,
-      platforms: Object.fromEntries(Object.entries(PLATFORMS).map(([id, p]) => [id, { name: p.name, job: p.job, icon: p.icon, workflows: catalog.filter((w) => w.platforms.includes(id)).length }])),
-      systems: SYSTEMS.map((s) => ({ ...s, workflows: catalog.filter((w) => w.system === s.id).map((w) => w.id) })),
-      workflows: catalog,
-    },
-    null,
-    2,
-  ) + "\n",
-);
+const doc = {
+  repo: "https://github.com/kimjoshuadr/n8n-workflows",
+  tested: results ? { n8n: results.n8n, passed: results.passed, failed: results.failed } : null,
+  tiers: TIERS,
+  platforms: Object.fromEntries(Object.entries(PLATFORMS).map(([id, p]) => [id, { name: p.name, job: p.job, icon: fs.existsSync(path.join(root, "assets/platforms", `${id}.svg`)) ? `${id}.svg` : `${id}.png`, workflows: catalog.filter((w) => w.platforms.includes(id)).length }])),
+  systems: SYSTEMS.map((s) => ({ ...s, workflows: catalog.filter((w) => w.system === s.id).map((w) => w.id) })),
+  workflows: catalog,
+};
+fs.writeFileSync(path.join(root, "catalog.json"), JSON.stringify(doc, null, 2) + "\n");
+writeReadme(doc);
+writeSchema(defs);
+writeEnv(defs);
 
 console.log(`built ${catalog.length} workflows in ${byFolder.size} folders`);

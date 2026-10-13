@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Block · Templated email\nOne place to send an email from: fills a template, refuses to send with a placeholder left unfilled.\n\n**Platforms:** none, this is logic only\n**Settings:** EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/notify`"
+        "content": "## Block · Templated email\nOne place to send an email from: fills a template, refuses to send with a placeholder left unfilled.\n\n**Platforms:** SendGrid\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/notify`"
       }
     },
     {
@@ -83,30 +83,29 @@
         90
       ],
       "name": "Send",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: $json.to, subject: $json.subject, text: $json.text }) }}"
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "dynamicTemplate": false,
+        "contentType": "text/plain",
+        "contentValue": "={{ $json.text }}",
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "a19e9332-07d8-4ece-a6a9-dc5f20f37db9",

@@ -9,10 +9,10 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // _0800Daily                         scheduleTrigger
-// ActiveSubscriptions                httpRequest                [alwaysOutput] [retry]
+// ActiveSubscriptions                supabase                   [creds] [alwaysOutput] [retry]
 // RenewingInAWeek                    code
-// SendTheNotice                      httpRequest                [retry]
-// MarkReminded                       httpRequest                [retry]
+// SendTheNotice                      sendGrid                   [creds] [retry]
+// MarkReminded                       supabase                   [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -51,8 +51,7 @@ export class SubscriptionsRenewalRemindersWorkflow {
         content: `## Subscriptions · Renewal reminders
 Tells subscribers a week before an annual renewal, once, with the amount and the date, so the charge is never a surprise.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** Supabase, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/commerce\``,
     };
 
@@ -77,39 +76,33 @@ Tells subscribers a week before an annual renewal, once, with the amount and the
     @node({
         id: 'ad792b75-15ae-418c-ac43-2afaa3873c22',
         name: 'Active subscriptions',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ActiveSubscriptions = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/subscriptions',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'subscriptions',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'status',
-                    value: "={{ 'eq.active' }}",
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'active' }}",
                 },
                 {
-                    name: 'interval',
-                    value: "={{ 'eq.year' }}",
+                    keyName: 'interval',
+                    condition: 'eq',
+                    keyValue: "={{ 'year' }}",
                 },
             ],
         },
@@ -133,71 +126,80 @@ return $input.all().map((i) => i.json).filter((s) => s.email && s.renews_at).fil
     @node({
         id: 'a23c2148-c86f-40f1-a64c-d266c6082ec6',
         name: 'Send the notice',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
         position: [780, 90],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SendTheNotice = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: '={{ $json.email }}',
+        dynamicTemplate: true,
+        templateId: "={{ 'd-renewal-notice' }}",
+        dynamicTemplateFields: {
+            fields: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
+                    key: 'amount',
+                    value: '={{ $json.amount }}',
+                },
+                {
+                    key: 'currency',
+                    value: '={{ $json.currency }}',
+                },
+                {
+                    key: 'renews_at',
+                    value: '={{ $json.renews_at }}',
+                },
+                {
+                    key: 'manage_url',
+                    value: '={{ $json.manage_url }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $json.email, subject: 'Your plan renews on ' + $json.renews_at.slice(0, 10), template: 'renewal-notice', data: { amount: $json.amount, currency: $json.currency, renews_at: $json.renews_at, manage_url: $json.manage_url } }) }}",
+        additionalFields: {},
     };
 
     @node({
         id: 'af87ac3d-445b-4495-a5df-98a64360233b',
         name: 'Mark reminded',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1040, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkReminded = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/subscriptions',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'subscriptions',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Renewing in a week').item.json.id }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $('Renewing in a week').item.json.id }}",
+                    fieldId: 'reminded_for',
+                    fieldValue: "={{ $('Renewing in a week').item.json.renews_at }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ reminded_for: $('Renewing in a week').item.json.renews_at }) }}",
     };
 
     // =====================================================================

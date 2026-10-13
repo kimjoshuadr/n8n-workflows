@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Lead intake · Booking sync\nWhen a call is booked, moves the lead forward everywhere at once: the lead record, the CRM deal and the sales channel.\n\n**Platforms:** none, this is logic only\n**Settings:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/lead-intake`"
+        "content": "## Lead intake · Booking sync\nWhen a call is booked, moves the lead forward everywhere at once: the lead record, the CRM deal and the sales channel.\n\n**Platforms:** Calendly, Supabase, HubSpot\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/lead-intake`"
       }
     },
     {
@@ -23,15 +23,21 @@
         180
       ],
       "name": "Booking created",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.calendlyTrigger",
+      "typeVersion": 1,
       "parameters": {
-        "httpMethod": "POST",
-        "path": "booking-created",
-        "responseMode": "onReceived",
-        "options": {}
+        "scope": "user",
+        "events": [
+          "invitee.created"
+        ]
       },
-      "webhookId": "d49bdb06-49d1-42c9-a8ca-322db50b2b75"
+      "webhookId": "6d80594e-fccd-4ffa-aea2-f6e57bdfd9b1",
+      "credentials": {
+        "calendlyApi": {
+          "id": "__CRED:calendly__",
+          "name": "Calendly"
+        }
+      }
     },
     {
       "id": "3b3c3936-85d6-4201-a037-354c8fd65b78",
@@ -43,7 +49,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const b = $input.first().json.body ?? {};\nconst p = b.payload ?? b;\nconst email = String(p.attendees?.[0]?.email ?? p.email ?? \"\").toLowerCase();\nif (!email) throw new Error(\"Booking has no attendee email\");\nreturn [{ json: { email, starts_at: p.startTime ?? p.start_time, booking_id: String(p.uid ?? p.id), scope: \"booking\", key: String(p.uid ?? p.id) } }];"
+        "jsCode": "return $input.all().map((item) => {\n  const p = item.json.payload ?? item.json;\n  const email = String(p.email ?? \"\").toLowerCase();\n  const id = String(p.uri ?? p.scheduled_event?.uri ?? \"\").split(\"/\").pop();\n  if (!email || !id) throw new Error(\"Booking has no invitee email or id\");\n  return { json: { email, starts_at: p.scheduled_event?.start_time ?? null, booking_id: id, scope: \"booking\", key: id } };\n});"
       }
     },
     {
@@ -105,40 +111,51 @@
         90
       ],
       "name": "Mark lead booked",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/leads",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "leads",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.email }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "email",
-              "value": "={{ 'eq.' + $json.email }}"
+              "fieldId": "booked",
+              "fieldValue": "={{ true }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ 'booked' }}"
+            },
+            {
+              "fieldId": "call_at",
+              "fieldValue": "={{ $json.starts_at }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ booked: true, status: 'booked', call_at: $json.starts_at }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "f67ef109-1e4f-4987-a57e-83259f3a24cd",
@@ -181,30 +198,26 @@
         90
       ],
       "name": "Open CRM deal",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CRM_BASE_URL }}/crm/v3/objects/deals",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ properties: { dealname: 'Intro call: ' + $json.name, dealstage: 'appointmentscheduled', closedate: $json.call_at }, contact_email: $json.email }) }}"
+        "authentication": "appToken",
+        "resource": "deal",
+        "operation": "create",
+        "stage": "={{ 'appointmentscheduled' }}",
+        "additionalFields": {
+          "dealName": "={{ 'Intro call: ' + $json.name }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
     },
     {
       "id": "1aac9ee7-5844-42fb-affb-c6dd52e52f0b",

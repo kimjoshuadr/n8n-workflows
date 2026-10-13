@@ -2,7 +2,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : CRM · Enrich new contacts
-// Nodes   : 11  |  Connections: 9
+// Nodes   : 12  |  Connections: 10
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
@@ -11,10 +11,11 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // ContactCreated                     webhook
 // ReadTheContact                     code
 // WorkEmail                          if
-// LookThemUp                         httpRequest                [onError→out(1)] [retry]
+// LookThemUp                         clearbit                   [onError→regular] [creds]
+// FoundThem                          if
 // OnlyTheBlanks                      code
 // AnythingToAdd                      if
-// UpdateTheContact                   httpRequest                [retry]
+// UpdateTheContact                   httpRequest                [creds] [retry]
 // PersonalEmailSkipped               noOp
 // NothingNew                         noOp
 // LookupFailedLeftAsIs               noOp
@@ -25,11 +26,12 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //    → ReadTheContact
 //      → WorkEmail
 //        → LookThemUp
-//          → OnlyTheBlanks
-//            → AnythingToAdd
-//              → UpdateTheContact
-//             .out(1) → NothingNew
-//         .out(1) → LookupFailedLeftAsIs
+//          → FoundThem
+//            → OnlyTheBlanks
+//              → AnythingToAdd
+//                → UpdateTheContact
+//               .out(1) → NothingNew
+//           .out(1) → LookupFailedLeftAsIs
 //       .out(1) → PersonalEmailSkipped
 // </workflow-map>
 
@@ -61,8 +63,7 @@ export class CrmEnrichNewContactsWorkflow {
         content: `## CRM · Enrich new contacts
 Fills in company, role and size for a new CRM contact from an enrichment service, and never overwrites what a person already typed.
 
-**Platforms:** none, this is logic only
-**Settings:** CRM_API_KEY, CRM_BASE_URL, ENRICH_API_KEY, ENRICH_BASE_URL
+**Platforms:** Clearbit, HubSpot
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/sales\``,
     };
 
@@ -130,32 +131,49 @@ return [{ json: { id: String(c.id), email, existing: c.properties ?? {}, skip: !
     @node({
         id: '8c8855ac-5b0a-4840-a801-55dc66fdaf02',
         name: 'Look them up',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.clearbit',
+        version: 1,
         position: [780, 90],
-        onError: 'continueErrorOutput',
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
+        credentials: { clearbitApi: { id: '__CRED:clearbit__', name: 'Clearbit' } },
+        onError: 'continueRegularOutput',
     })
     LookThemUp = {
-        method: 'POST',
-        url: '={{ $env.ENRICH_BASE_URL }}/people/match',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'person',
+        operation: 'enrich',
+        email: '={{ $json.email }}',
+        additionalFields: {},
+    };
+
+    @node({
+        id: 'd423b654-803a-4575-a37f-6ca3fb141bbb',
+        name: 'Found them?',
+        type: 'n8n-nodes-base.if',
+        version: 2.2,
+        position: [1040, 180],
+    })
+    FoundThem = {
+        conditions: {
+            options: {
+                caseSensitive: true,
+                leftValue: '',
+                typeValidation: 'loose',
+                version: 2,
+            },
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.ENRICH_API_KEY }}",
+                    id: '6724cdbe-ebbc-4299-ac6d-5baba92784b6',
+                    leftValue: '={{ !$json.error && !!$json.employment }}',
+                    rightValue: '',
+                    operator: {
+                        type: 'boolean',
+                        operation: 'true',
+                        singleValue: true,
+                    },
                 },
             ],
+            combinator: 'and',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ email: $json.email }) }}',
+        options: {},
     };
 
     @node({
@@ -163,12 +181,12 @@ return [{ json: { id: String(c.id), email, existing: c.properties ?? {}, skip: !
         name: 'Only the blanks',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1040, 90],
+        position: [1300, 90],
     })
     OnlyTheBlanks = {
         jsCode: `const c = $("Work email?").first().json;
-const found = $input.first().json.person ?? {};
-const candidate = { company: found.organization?.name, jobtitle: found.title, company_size: found.organization?.estimated_num_employees, linkedin: found.linkedin_url };
+const found = $input.first().json ?? {};
+const candidate = { company: found.employment?.name, jobtitle: found.employment?.title, linkedin: found.linkedin?.handle ? "https://www.linkedin.com/" + found.linkedin.handle : null };
 const updates = Object.fromEntries(Object.entries(candidate).filter(([k, v]) => v != null && v !== "" && !c.existing[k]));
 return [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } }];`,
     };
@@ -178,7 +196,7 @@ return [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } 
         name: 'Anything to add?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1300, 180],
+        position: [1560, 180],
     })
     AnythingToAdd = {
         conditions: {
@@ -210,29 +228,23 @@ return [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } 
         name: 'Update the contact',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1560, 90],
+        position: [1820, 90],
+        credentials: { hubspotAppToken: { id: '__CRED:hubspot__', name: 'HubSpot' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     UpdateTheContact = {
-        method: 'POST',
-        url: '={{ $env.CRM_BASE_URL }}/crm/v3/objects/contacts/update',
+        method: 'PATCH',
+        url: "={{ 'https://api.hubapi.com/crm/v3/objects/contacts/' + $json.id }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'hubspotAppToken',
+        sendBody: true,
+        specifyBody: 'json',
+        jsonBody: '={{ JSON.stringify({ properties: $json.updates }) }}',
         options: {
             timeout: 15000,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CRM_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ id: $json.id, properties: $json.updates }) }}',
     };
 
     @node({
@@ -249,7 +261,7 @@ return [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } 
         name: 'Nothing new',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1560, 270],
+        position: [1820, 270],
     })
     NothingNew = {};
 
@@ -258,7 +270,7 @@ return [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } 
         name: 'Lookup failed, left as is',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1040, 270],
+        position: [1300, 270],
     })
     LookupFailedLeftAsIs = {};
 
@@ -272,8 +284,9 @@ return [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } 
         this.ReadTheContact.out(0).to(this.WorkEmail.in(0));
         this.WorkEmail.out(0).to(this.LookThemUp.in(0));
         this.WorkEmail.out(1).to(this.PersonalEmailSkipped.in(0));
-        this.LookThemUp.out(0).to(this.OnlyTheBlanks.in(0));
-        this.LookThemUp.out(1).to(this.LookupFailedLeftAsIs.in(0));
+        this.LookThemUp.out(0).to(this.FoundThem.in(0));
+        this.FoundThem.out(0).to(this.OnlyTheBlanks.in(0));
+        this.FoundThem.out(1).to(this.LookupFailedLeftAsIs.in(0));
         this.OnlyTheBlanks.out(0).to(this.AnythingToAdd.in(0));
         this.AnythingToAdd.out(0).to(this.UpdateTheContact.in(0));
         this.AnythingToAdd.out(1).to(this.NothingNew.in(0));

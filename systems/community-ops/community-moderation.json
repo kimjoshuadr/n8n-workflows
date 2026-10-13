@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Community ops · Message moderation\nChecks each message, removes clear scams, sends borderline ones to moderators, and never removes anything when the model is unavailable.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/community-ops`"
+        "content": "## Community ops · Message moderation\nChecks each message, removes clear scams, sends borderline ones to moderators, and never removes anything when the model is unavailable.\n\n**Platforms:** OpenAI, Discord, Supabase\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/community-ops`"
       }
     },
     {
@@ -49,53 +49,80 @@
     {
       "id": "f207acb2-b765-4972-aaf0-3b903b66e2ba",
       "position": [
-        520,
-        270
+        620,
+        140
       ],
       "name": "Judge it",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "promptType": "define",
+        "text": "={{ $json.content }}",
+        "hasOutputParser": true,
         "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: \"[task:moderate] You moderate a community server. Reply with JSON: { action: 'allow'|'review'|'remove', reason: string }. Remove only clear scams, phishing links and threats. Use review for insults and anything you are unsure about. Disagreement and criticism are allowed.\" },\n    { role: \"user\", content: $json.content }\n  ]\n}) }}"
+          "systemMessage": "[task:moderate] You moderate a community server. Reply with JSON: { action: 'allow'|'review'|'remove', reason: string }. Remove only clear scams, phishing links and threats. Use review for insults and anything you are unsure about. Disagreement and criticism are allowed.",
+          "maxIterations": 2
+        }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000,
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "1eaf493c-5ccf-4d85-ab7b-965410461062",
+      "position": [
+        520,
+        360
+      ],
+      "name": "Judge it · GPT",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "720ca1dd-1af5-482f-af87-5825184e8430",
+      "position": [
+        720,
+        360
+      ],
+      "name": "Judge it · shape",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"action\": \"allow\",\n  \"reason\": \"Why.\"\n}"
+      }
     },
     {
       "id": "c79361ed-de8f-4c6a-a2d9-91fc2ee5f564",
       "position": [
-        780,
+        980,
         270
       ],
       "name": "Read the verdict",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const before = $(\"Read the message\").all();\nconst out = [];\nfor (const [i, item] of $input.all().entries()) {\n  let reply = {\"action\":\"review\",\"reason\":\"The model was unavailable, so a person should look.\"};\n  let parse_error = false;\n  try {\n    reply = JSON.parse(item.json.choices[0].message.content);\n  } catch (e) {\n    parse_error = true;\n  }\n  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });\n}\nreturn out;"
+        "jsCode": "const before = $(\"Read the message\").all();\nconst out = [];\nfor (const [i, item] of $input.all().entries()) {\n  const answer = item.json.output;\n  const ok = answer && typeof answer === \"object\" && !Array.isArray(answer);\n  out.push({ json: { ...(before[i]?.json ?? {}), ...(ok ? answer : {\"action\":\"review\",\"reason\":\"The model was unavailable, so a person should look.\"}), parse_error: !ok } });\n}\nreturn out;"
       }
     },
     {
       "id": "2a9c7d7c-5aeb-4529-a878-b59740499487",
       "position": [
-        1040,
+        1240,
         270
       ],
       "name": "What to do?",
@@ -164,104 +191,127 @@
     {
       "id": "2cc4b682-85e5-4cf0-a678-272cd16265e0",
       "position": [
-        1300,
+        1500,
         90
       ],
       "name": "Delete the message",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DISCORD_BASE_URL }}/channels/messages/delete",
-        "options": {
-          "timeout": 15000
+        "authentication": "botToken",
+        "resource": "message",
+        "operation": "deleteMessage",
+        "guildId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ '100000000000000001' }}"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DISCORD_API_KEY }}"
-            }
-          ]
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.channel_id }}"
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel_id: $json.channel_id, message_id: $json.message_id }) }}"
+        "messageId": "={{ $json.message_id }}"
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "discordBotApi": {
+          "id": "__CRED:discord__",
+          "name": "Discord"
+        }
+      }
     },
     {
       "id": "6677c49a-18c8-444e-ace4-f2eb1aa9bd1b",
       "position": [
-        1560,
+        1760,
         270
       ],
       "name": "Time the author out",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DISCORD_BASE_URL }}/guilds/members/timeout",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DISCORD_API_KEY }}"
-            }
-          ]
-        },
+        "method": "PATCH",
+        "url": "={{ 'https://discord.com/api/v10/guilds/100000000000000001/members/' + $('What to do?').first().json.user_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "discordBotApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ user_id: $('What to do?').first().json.user_id, minutes: 60 }) }}"
+        "jsonBody": "={{ JSON.stringify({ communication_disabled_until: $now.plus({ minutes: 60 }).toISO() }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "discordBotApi": {
+          "id": "__CRED:discord__",
+          "name": "Discord"
+        }
+      }
     },
     {
       "id": "42eba279-1d64-4fc0-a50d-b8316047edf6",
       "position": [
-        1820,
+        2020,
         270
       ],
       "name": "Log the action",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/moderation_log",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "moderation_log",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "message_id",
+              "fieldValue": "={{ $('What to do?').first().json.message_id }}"
+            },
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $('What to do?').first().json.user_id }}"
+            },
+            {
+              "fieldId": "action",
+              "fieldValue": "={{ 'removed' }}"
+            },
+            {
+              "fieldId": "reason",
+              "fieldValue": "={{ $('What to do?').first().json.reason }}"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('What to do?').first().json.content }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ message_id: $('What to do?').first().json.message_id, user_id: $('What to do?').first().json.user_id, action: 'removed', reason: $('What to do?').first().json.reason, content: $('What to do?').first().json.content, at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "6fd1f7c1-e801-4df2-a48c-41a1d530e9a1",
       "position": [
-        2080,
+        2280,
         270
       ],
       "name": "Removed message",
@@ -274,7 +324,7 @@
     {
       "id": "cfef1a6f-3e53-45ee-a625-667d79d8eff3",
       "position": [
-        1300,
+        1500,
         270
       ],
       "name": "Review message",
@@ -287,7 +337,7 @@
     {
       "id": "c94baa18-48f5-4d99-a38b-de71b931f840",
       "position": [
-        2340,
+        2540,
         270
       ],
       "name": "Tell moderators",
@@ -305,7 +355,7 @@
     {
       "id": "f36881e3-2c0c-41fe-a8e4-7cda9cadc893",
       "position": [
-        1300,
+        1500,
         450
       ],
       "name": "Leave it",
@@ -434,6 +484,28 @@
           {
             "node": "Tell moderators",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge it · GPT": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Judge it",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge it · shape": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Judge it",
+            "type": "ai_outputParser",
             "index": 0
           }
         ]

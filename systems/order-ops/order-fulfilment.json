@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Order ops · Shipping updates\nTurns a courier status into the right message for the customer, and tells a person when a parcel fails delivery.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
+        "content": "## Order ops · Shipping updates\nTurns a courier status into the right message for the customer, and tells a person when a parcel fails delivery.\n\n**Platforms:** Supabase, SendGrid\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
       }
     },
     {
@@ -87,44 +87,52 @@
         90
       ],
       "name": "Update the order",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/orders",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "orders",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "order_id",
-              "value": "={{ 'eq.' + $json.order_id }}"
+              "keyName": "order_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.order_id }}"
             },
             {
-              "name": "status",
-              "value": "={{ 'neq.' + $json.status }}"
+              "keyName": "status",
+              "condition": "neq",
+              "keyValue": "={{ $json.status }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: $json.status, tracking_url: $json.tracking_url }) }}"
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            },
+            {
+              "fieldId": "tracking_url",
+              "fieldValue": "={{ $json.tracking_url }}"
+            }
+          ]
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "16d95082-c695-421d-a908-179fb68bc8d6",
@@ -211,30 +219,39 @@
         90
       ],
       "name": "Email the customer",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ $json.email }}",
+        "dynamicTemplate": true,
+        "templateId": "={{ 'd-shipping-' + $json.status }}",
+        "dynamicTemplateFields": {
+          "fields": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+              "key": "order_id",
+              "value": "={{ $json.order_id }}"
+            },
+            {
+              "key": "tracking_url",
+              "value": "={{ $json.tracking_url }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: $json.email, subject: { shipped: 'Your order is on its way', out_for_delivery: 'Arriving today', delivered: 'Delivered' }[$json.status], template: 'shipping-' + $json.status, data: { order_id: $json.order_id, tracking_url: $json.tracking_url } }) }}"
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "d038a7e2-f962-40cd-a0c9-cd7da023a8ca",

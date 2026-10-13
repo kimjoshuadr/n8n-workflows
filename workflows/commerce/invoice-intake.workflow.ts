@@ -2,7 +2,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Finance · Supplier invoice intake
-// Nodes   : 12  |  Connections: 10
+// Nodes   : 14  |  Connections: 10
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
@@ -10,13 +10,15 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // InvoiceReceived                    webhook
 // ReadTheUpload                      code
-// ExtractTheFields                   httpRequest                [onError→regular] [retry]
+// ExtractTheFields                   agent                      [AI] [onError→regular]
+// ExtractTheFieldsGpt                lmChatOpenAi               [creds] [ai_languageModel]
+// ExtractTheFieldsShape              outputParserStructured     [ai_outputParser]
 // ReadTheFields                      code
-// SeenThisInvoice                    httpRequest                [alwaysOutput] [retry]
+// SeenThisInvoice                    supabase                   [creds] [alwaysOutput] [retry]
 // CheckIt                            code
 // Clean                              if
-// FileIt                             httpRequest                [retry]
-// QueueForReview                     httpRequest                [retry]
+// FileIt                             supabase                   [creds] [retry]
+// QueueForReview                     supabase                   [creds] [retry]
 // ReviewMessage                      code
 // TellFinance                        executeWorkflow
 //
@@ -33,6 +35,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //               .out(1) → QueueForReview
 //                  → ReviewMessage
 //                    → TellFinance
+//
+// AI CONNECTIONS
+// ExtractTheFields.uses({ ai_languageModel: ExtractTheFieldsGpt, ai_outputParser: ExtractTheFieldsShape })
 // </workflow-map>
 
 // =====================================================================
@@ -63,8 +68,7 @@ export class FinanceSupplierInvoiceIntakeWorkflow {
         content: `## Finance · Supplier invoice intake
 Reads a supplier invoice with a model, checks the arithmetic and the duplicate history itself, and files it or sends it for review.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** OpenAI, Supabase
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/commerce\``,
     };
 
@@ -74,7 +78,7 @@ Reads a supplier invoice with a model, checks the arithmetic and the duplicate h
         name: 'Invoice received',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 180],
+        position: [0, 220],
     })
     InvoiceReceived = {
         httpMethod: 'POST',
@@ -88,7 +92,7 @@ Reads a supplier invoice with a model, checks the arithmetic and the duplicate h
         name: 'Read the upload',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [260, 180],
+        position: [260, 220],
     })
     ReadTheUpload = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -98,40 +102,58 @@ return [{ json: { file_url: b.file_url ?? null, text: String(b.text ?? "").slice
     @node({
         id: 'be6efcea-4980-4068-ab30-c0b58ec2b4e2',
         name: 'Extract the fields',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [520, 180],
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
+        position: [620, 90],
         onError: 'continueRegularOutput',
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
     })
     ExtractTheFields = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: '={{ $json.text }}',
+        hasOutputParser: true,
         options: {
-            timeout: 15000,
+            systemMessage:
+                "[task:extract] Extract from this supplier invoice. Reply with JSON: { vendor: string, invoice_number: string, total: number, currency: string, due_date: 'YYYY-MM-DD', confidence: 0-1 }. Use null for anything not present. Do not guess.",
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
+    };
+
+    @node({
+        id: '035c0412-8d36-44b9-a4cf-9fd802eb6d8d',
+        name: 'Extract the fields · GPT',
+        type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+        version: 1.2,
+        position: [520, 310],
+        credentials: { openAiApi: { id: '__CRED:openai__', name: 'OpenAI' } },
+    })
+    ExtractTheFieldsGpt = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'gpt-4o-mini',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  response_format: { type: "json_object" },
-  messages: [
-    { role: "system", content: "[task:extract] Extract from this supplier invoice. Reply with JSON: { vendor: string, invoice_number: string, total: number, currency: string, due_date: 'YYYY-MM-DD', confidence: 0-1 }. Use null for anything not present. Do not guess." },
-    { role: "user", content: $json.text }
-  ]
-}) }}`,
+        options: {
+            temperature: 0,
+        },
+    };
+
+    @node({
+        id: '70d96529-4d34-4df0-ae1a-82a238dacde4',
+        name: 'Extract the fields · shape',
+        type: '@n8n/n8n-nodes-langchain.outputParserStructured',
+        version: 1.3,
+        position: [720, 310],
+    })
+    ExtractTheFieldsShape = {
+        schemaType: 'fromJson',
+        jsonSchemaExample: `{
+  "vendor": "Acme Supplies",
+  "invoice_number": "INV-1",
+  "total": 100.5,
+  "currency": "USD",
+  "due_date": "2026-11-15",
+  "confidence": 0.9
+}`,
     };
 
     @node({
@@ -139,20 +161,15 @@ return [{ json: { file_url: b.file_url ?? null, text: String(b.text ?? "").slice
         name: 'Read the fields',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [780, 180],
+        position: [980, 220],
     })
     ReadTheFields = {
         jsCode: `const before = $("Read the upload").all();
 const out = [];
 for (const [i, item] of $input.all().entries()) {
-  let reply = {"vendor":null,"invoice_number":null,"total":null,"confidence":0};
-  let parse_error = false;
-  try {
-    reply = JSON.parse(item.json.choices[0].message.content);
-  } catch (e) {
-    parse_error = true;
-  }
-  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });
+  const answer = item.json.output;
+  const ok = answer && typeof answer === "object" && !Array.isArray(answer);
+  out.push({ json: { ...(before[i]?.json ?? {}), ...(ok ? answer : {"vendor":null,"invoice_number":null,"total":null,"confidence":0}), parse_error: !ok } });
 }
 return out;`,
     };
@@ -160,39 +177,33 @@ return out;`,
     @node({
         id: '92aa97fc-c57f-4b53-ae7f-ce0206030bf0',
         name: 'Seen this invoice?',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1040, 180],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [1240, 220],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SeenThisInvoice = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/supplier_invoices',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'supplier_invoices',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'vendor',
-                    value: "={{ 'eq.' + $json.vendor }}",
+                    keyName: 'vendor',
+                    condition: 'eq',
+                    keyValue: '={{ $json.vendor }}',
                 },
                 {
-                    name: 'invoice_number',
-                    value: "={{ 'eq.' + $json.invoice_number }}",
+                    keyName: 'invoice_number',
+                    condition: 'eq',
+                    keyValue: '={{ $json.invoice_number }}',
                 },
             ],
         },
@@ -203,7 +214,7 @@ return out;`,
         name: 'Check it',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1300, 180],
+        position: [1500, 220],
     })
     CheckIt = {
         jsCode: `const f = $("Read the fields").first().json;
@@ -223,7 +234,7 @@ return [{ json: { ...f, duplicate, problems, ok: problems.length === 0 } }];`,
         name: 'Clean?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1560, 180],
+        position: [1760, 220],
     })
     Clean = {
         conditions: {
@@ -253,63 +264,94 @@ return [{ json: { ...f, duplicate, problems, ok: problems.length === 0 } }];`,
     @node({
         id: 'cd45c33b-3b28-49ba-ae08-c9d3cc192e7f',
         name: 'File it',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1820, 90],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [2020, 130],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     FileIt = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/supplier_invoices',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'supplier_invoices',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'vendor',
+                    fieldValue: '={{ $json.vendor }}',
+                },
+                {
+                    fieldId: 'invoice_number',
+                    fieldValue: '={{ $json.invoice_number }}',
+                },
+                {
+                    fieldId: 'total',
+                    fieldValue: '={{ $json.total }}',
+                },
+                {
+                    fieldId: 'currency',
+                    fieldValue: '={{ $json.currency }}',
+                },
+                {
+                    fieldId: 'due_date',
+                    fieldValue: '={{ $json.due_date }}',
+                },
+                {
+                    fieldId: 'file_url',
+                    fieldValue: '={{ $json.file_url }}',
+                },
+                {
+                    fieldId: 'status',
+                    fieldValue: "={{ 'awaiting_payment' }}",
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ vendor: $json.vendor, invoice_number: $json.invoice_number, total: $json.total, currency: $json.currency, due_date: $json.due_date, file_url: $json.file_url, status: 'awaiting_payment', at: $now.toISO() }) }}",
     };
 
     @node({
         id: 'c799b624-8903-400f-a667-8b17653a9225',
         name: 'Queue for review',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1820, 270],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [2020, 310],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     QueueForReview = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/invoice_review',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'invoice_review',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'file_url',
+                    fieldValue: '={{ $json.file_url }}',
+                },
+                {
+                    fieldId: 'extracted',
+                    fieldValue:
+                        '={{ { vendor: $json.vendor, invoice_number: $json.invoice_number, total: $json.total } }}',
+                },
+                {
+                    fieldId: 'problems',
+                    fieldValue: '={{ $json.problems }}',
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            '={{ JSON.stringify({ file_url: $json.file_url, extracted: { vendor: $json.vendor, invoice_number: $json.invoice_number, total: $json.total }, problems: $json.problems, at: $now.toISO() }) }}',
     };
 
     @node({
@@ -317,7 +359,7 @@ return [{ json: { ...f, duplicate, problems, ok: problems.length === 0 } }];`,
         name: 'Review message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2080, 180],
+        position: [2280, 220],
     })
     ReviewMessage = {
         jsCode: `const f = $("Clean?").first().json;
@@ -329,7 +371,7 @@ return [{ json: { channel: "#finance", level: "warn", text: "An invoice" + (f.ve
         name: 'Tell finance',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2340, 180],
+        position: [2540, 220],
     })
     TellFinance = {
         workflowId: {
@@ -356,5 +398,10 @@ return [{ json: { channel: "#finance", level: "warn", text: "An invoice" + (f.ve
         this.Clean.out(1).to(this.QueueForReview.in(0));
         this.QueueForReview.out(0).to(this.ReviewMessage.in(0));
         this.ReviewMessage.out(0).to(this.TellFinance.in(0));
+
+        this.ExtractTheFields.uses({
+            ai_languageModel: this.ExtractTheFieldsGpt.output,
+            ai_outputParser: this.ExtractTheFieldsShape.output,
+        });
     }
 }

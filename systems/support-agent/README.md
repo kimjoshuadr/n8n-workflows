@@ -12,13 +12,11 @@
 
 Answers a customer's message from the help centre when it is confident, and hands the conversation to a person with a summary when it is not.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Helpdesk, LLM, Datastore, Chat |
-| Nodes | 16 |
-| Calls | `idempotency-guard`, `error-handler` |
-| Files | [`support-answer.json`](support-answer.json) · [`support-answer.workflow.ts`](support-answer.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/zendesk.svg" width="16" height="16" alt=""> Zendesk &nbsp;·&nbsp; <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI &nbsp;·&nbsp; <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase
+- **Nodes:** 18
+- **Calls:** `idempotency-guard`, `error-handler`
+- **Files:** [`support-answer.json`](support-answer.json) · [`support-answer.workflow.ts`](support-answer.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -28,15 +26,17 @@ flowchart LR
   n15x6d6n{"New message?"}
   n19sycpm[/"Search the help centre"/]
   n1vchxqf["Build the context"]
-  nb8srwr[/"Draft an answer"/]
+  nb8srwr[["Draft an answer"]]
+  nue7lal("Draft an answer · GPT")
+  ngbzhur("Draft an answer · shape")
   nlz0nj["Read the draft"]
   n1fqwg62{"Confident?"}
-  nk7j93e[/"Send the reply"/]
-  n12fjapb[/"Hand to a person"/]
-  n1hpt4hq[/"Leave a private note"/]
+  nk7j93e["Send the reply"]
+  n12fjapb["Hand to a person"]
+  n1hpt4hq["Leave a private note"]
   n1voqbr8["Answered"]
   ny2qpjz["Handed over"]
-  n196wgcg[/"Log the outcome"/]
+  n196wgcg["Log the outcome"]
   n1ntcjch["Ignore the repeat"]
   n1aodkap --> n2grn5h
   n2grn5h --> n1ja4syq
@@ -54,12 +54,14 @@ flowchart LR
   n12fjapb --> n1hpt4hq
   n1hpt4hq --> ny2qpjz
   ny2qpjz --> n196wgcg
+  nue7lal -.-> nb8srwr
+  ngbzhur -.-> nb8srwr
 ```
 
 **How it runs**
 
-1. **A customer writes in.** The helpdesk sends every message here. The agent's own replies and repeats are dropped.
-2. **It looks things up first.** The help centre is searched and the best four articles become the only thing the model may answer from.
+1. **A customer writes in.** Zendesk sends every message here. The agent's own replies and repeats are dropped.
+2. **It looks things up first.** The Zendesk help centre is searched and the best four articles become the only thing the model may answer from.
 3. **It drafts, with a confidence.** The model returns an answer, its sources and whether a person should take over.
 4. **Confident: it replies.** Above the threshold, the answer goes to the customer.
 5. **Not confident: a person takes over.** The conversation is assigned with a private note, so nobody has to ask the customer to repeat themselves.
@@ -77,25 +79,25 @@ flowchart LR
 
 Labels each new ticket by topic and urgency, routes it to the right team, and pages someone only when it is urgent.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | LLM, Helpdesk, Chat |
-| Nodes | 12 |
-| Calls | `notify`, `error-handler` |
-| Files | [`support-triage.json`](support-triage.json) · [`support-triage.workflow.ts`](support-triage.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI &nbsp;·&nbsp; <img src="../../assets/platforms/zendesk.svg" width="16" height="16" alt=""> Zendesk
+- **Nodes:** 14
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`support-triage.json`](support-triage.json) · [`support-triage.workflow.ts`](support-triage.workflow.ts)
 
 ```mermaid
 flowchart LR
   nrt9ol7(["Ticket created"])
   nqcyqn2["Read the ticket"]
-  ngdb163[/"Classify"/]
+  ngdb163[["Classify"]]
+  ndiiwvh("Classify · GPT")
+  n1ol06tf("Classify · shape")
   nmg6ngx["Read the labels"]
   n5j63bh{"By topic"}
-  nvd7hxk[/"Close as spam"/]
-  nwbajxj[/"Send to billing"/]
-  n1dcjfgf[/"Send to engineering"/]
-  n6ip5mt[/"Send to general queue"/]
+  nvd7hxk["Close as spam"]
+  nwbajxj["Send to billing"]
+  n1dcjfgf["Send to engineering"]
+  n6ip5mt["Send to general queue"]
   ndbcv13{"Urgent?"}
   nnootul["Page message"]
   n1k846n6[["Page on-call"]]
@@ -112,6 +114,8 @@ flowchart LR
   n6ip5mt --> ndbcv13
   ndbcv13 --> nnootul
   nnootul --> n1k846n6
+  ndiiwvh -.-> ngdb163
+  n1ol06tf -.-> ngdb163
 ```
 
 **How it runs**
@@ -132,29 +136,29 @@ flowchart LR
 
 Every Monday, reads what the agent could not answer last week and tells the team which help articles are missing.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, LLM, Chat |
-| Nodes | 7 |
-| Calls | `error-handler` |
-| Files | [`support-gap-report.json`](support-gap-report.json) · [`support-gap-report.workflow.ts`](support-gap-report.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/anthropic.svg" width="16" height="16" alt=""> Claude &nbsp;·&nbsp; <img src="../../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack
+- **Nodes:** 8
+- **Calls:** `error-handler`
+- **Files:** [`support-gap-report.json`](support-gap-report.json) · [`support-gap-report.workflow.ts`](support-gap-report.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1pl2pmx(["Monday 08:00"])
-  nqvyoqj[/"Unanswered last week"/]
+  nqvyoqj["Unanswered last week"]
   n1b0gn8g["Gather the questions"]
   ne9k16v{"Any gaps?"}
-  nq48i2k[/"Group into topics"/]
-  n1fshfek[/"Post the report"/]
-  nxl0tpx[/"Post all clear"/]
+  nq48i2k[["Group into topics"]]
+  n10rlqp7("Group into topics · Claude")
+  n1fshfek["Post the report"]
+  nxl0tpx["Post all clear"]
   n1pl2pmx --> nqvyoqj
   nqvyoqj --> n1b0gn8g
   n1b0gn8g --> ne9k16v
   ne9k16v -->|yes| nq48i2k
   nq48i2k --> n1fshfek
   ne9k16v -->|no| nxl0tpx
+  n10rlqp7 -.-> nq48i2k
 ```
 
 **How it runs**

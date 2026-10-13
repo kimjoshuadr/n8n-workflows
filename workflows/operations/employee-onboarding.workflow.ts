@@ -2,20 +2,21 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : People · New hire onboarding
-// Nodes   : 12  |  Connections: 10
+// Nodes   : 13  |  Connections: 11
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // HireConfirmed                      webhook
+// FetchTheEmployee                   httpRequest                [creds] [retry]
 // ReadTheHire                        code
 // SeenBefore                         executeWorkflow
 // NewHire                            if
 // BuildTheChecklist                  code
-// SaveTheTask                        httpRequest                [retry]
-// BookFirstDayWelcome                httpRequest                [onError→regular] [executeOnce] [retry]
-// ScheduleTheWelcomeEmail            httpRequest                [executeOnce] [retry]
+// SaveTheTask                        supabase                   [creds] [retry]
+// BookFirstDayWelcome                googleCalendar             [onError→regular] [creds] [executeOnce] [retry]
+// ScheduleTheWelcomeEmail            sendGrid                   [creds] [executeOnce] [retry]
 // TeamMessage                        code
 // TellTheTeam                        executeWorkflow
 // AlreadySetUp                       noOp
@@ -23,16 +24,17 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
 // HireConfirmed
-//    → ReadTheHire
-//      → SeenBefore
-//        → NewHire
-//          → BuildTheChecklist
-//            → SaveTheTask
-//              → BookFirstDayWelcome
-//                → ScheduleTheWelcomeEmail
-//                  → TeamMessage
-//                    → TellTheTeam
-//         .out(1) → AlreadySetUp
+//    → FetchTheEmployee
+//      → ReadTheHire
+//        → SeenBefore
+//          → NewHire
+//            → BuildTheChecklist
+//              → SaveTheTask
+//                → BookFirstDayWelcome
+//                  → ScheduleTheWelcomeEmail
+//                    → TeamMessage
+//                      → TellTheTeam
+//           .out(1) → AlreadySetUp
 // </workflow-map>
 
 // =====================================================================
@@ -63,8 +65,7 @@ export class PeopleNewHireOnboardingWorkflow {
         content: `## People · New hire onboarding
 When someone is hired, creates their checklist, books their first-week meetings, tells the people who need to act, and sends the welcome email on the right morning.
 
-**Platforms:** none, this is logic only
-**Settings:** CALENDAR_API_KEY, CALENDAR_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** BambooHR, Supabase, Google Calendar, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/operations\``,
     };
 
@@ -84,16 +85,55 @@ When someone is hired, creates their checklist, books their first-week meetings,
     };
 
     @node({
+        id: '1df97c2a-f2ba-4be0-a209-7820c30f4841',
+        name: 'Fetch the employee',
+        type: 'n8n-nodes-base.httpRequest',
+        version: 4.2,
+        position: [260, 180],
+        credentials: { bambooHrApi: { id: '__CRED:bamboohr__', name: 'BambooHR' } },
+        retryOnFail: true,
+        maxTries: 3,
+        waitBetweenTries: 1000,
+    })
+    FetchTheEmployee = {
+        method: 'GET',
+        url: "={{ 'https://api.bamboohr.com/api/gateway.php/acme/v1/employees/' + $json.body.id }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'bambooHrApi',
+        sendHeaders: true,
+        headerParameters: {
+            parameters: [
+                {
+                    name: 'Accept',
+                    value: "={{ 'application/json' }}",
+                },
+            ],
+        },
+        sendQuery: true,
+        queryParameters: {
+            parameters: [
+                {
+                    name: 'fields',
+                    value: "={{ 'firstName,lastName,workEmail,jobTitle,supervisorEmail,hireDate,location' }}",
+                },
+            ],
+        },
+        options: {
+            timeout: 15000,
+        },
+    };
+
+    @node({
         id: '1a62c906-18bd-447c-ac2f-9912c625a41d',
         name: 'Read the hire',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [260, 180],
+        position: [520, 180],
     })
     ReadTheHire = {
-        jsCode: `const h = $input.first().json.body ?? {};
-if (!h.email || !h.start_date) throw new Error("A hire needs an email and a start date");
-return [{ json: { employee_id: String(h.id ?? h.email), email: String(h.email).toLowerCase(), name: h.name ?? "New hire", role: h.role ?? "", manager: h.manager_email ?? null, start_date: h.start_date, remote: h.remote === true, scope: "hire", key: String(h.id ?? h.email) } }];`,
+        jsCode: `const h = $input.first().json ?? {};
+if (!h.workEmail || !h.hireDate) throw new Error("A hire needs a work email and a hire date in BambooHR");
+return [{ json: { employee_id: String(h.id), email: String(h.workEmail).toLowerCase(), name: [h.firstName, h.lastName].filter(Boolean).join(" ") || "New hire", role: h.jobTitle ?? "", manager: h.supervisorEmail ?? null, start_date: h.hireDate, remote: /remote/i.test(h.location ?? ""), scope: "hire", key: String(h.id) } }];`,
     };
 
     @node({
@@ -101,7 +141,7 @@ return [{ json: { employee_id: String(h.id ?? h.email), email: String(h.email).t
         name: 'Seen before?',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [520, 180],
+        position: [780, 180],
     })
     SeenBefore = {
         workflowId: {
@@ -117,7 +157,7 @@ return [{ json: { employee_id: String(h.id ?? h.email), email: String(h.email).t
         name: 'New hire?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [780, 180],
+        position: [1040, 180],
     })
     NewHire = {
         conditions: {
@@ -149,7 +189,7 @@ return [{ json: { employee_id: String(h.id ?? h.email), email: String(h.email).t
         name: 'Build the checklist',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1040, 90],
+        position: [1300, 90],
     })
     BuildTheChecklist = {
         jsCode: `const h = $input.first().json;
@@ -168,39 +208,56 @@ return tasks.map((t) => ({ json: { ...t, employee_id: h.employee_id, employee: h
     @node({
         id: '00c9cf76-60fb-4b61-a133-14df519df8c2',
         name: 'Save the task',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1300, 180],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [1560, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SaveTheTask = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/onboarding_tasks',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'onboarding_tasks',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'owner',
+                    fieldValue: '={{ $json.owner }}',
+                },
+                {
+                    fieldId: 'task',
+                    fieldValue: '={{ $json.task }}',
+                },
+                {
+                    fieldId: 'due',
+                    fieldValue: '={{ $json.due }}',
+                },
+                {
+                    fieldId: 'employee_id',
+                    fieldValue: '={{ $json.employee_id }}',
+                },
+                {
+                    fieldId: 'employee',
+                    fieldValue: '={{ $json.employee }}',
+                },
+                {
+                    fieldId: 'status',
+                    fieldValue: '={{ $json.status }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify($json) }}',
     };
 
     @node({
         id: 'dcae3ec7-e95d-47e4-adbc-f00f76c29366',
         name: 'Book first-day welcome',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1560, 180],
+        type: 'n8n-nodes-base.googleCalendar',
+        version: 1.3,
+        position: [1820, 180],
+        credentials: { googleCalendarOAuth2Api: { id: '__CRED:googleCalendar__', name: 'Google Calendar' } },
         onError: 'continueRegularOutput',
         executeOnce: true,
         retryOnFail: true,
@@ -208,56 +265,58 @@ return tasks.map((t) => ({ json: { ...t, employee_id: h.employee_id, employee: h
         waitBetweenTries: 1000,
     })
     BookFirstDayWelcome = {
-        method: 'POST',
-        url: '={{ $env.CALENDAR_BASE_URL }}/bookings',
-        options: {
-            timeout: 15000,
+        resource: 'event',
+        operation: 'create',
+        calendar: {
+            __rl: true,
+            mode: 'id',
+            value: 'kim@example.com',
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CALENDAR_API_KEY }}",
-                },
+        start: "={{ $('New hire?').first().json.start_date + 'T09:30:00' }}",
+        end: "={{ $('New hire?').first().json.start_date + 'T10:00:00' }}",
+        additionalFields: {
+            summary: "={{ 'Welcome, ' + $('New hire?').first().json.name }}",
+            attendees: [
+                "={{ [$('New hire?').first().json.email, $('New hire?').first().json.manager].filter(Boolean).join(',') }}",
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ title: 'Welcome, ' + $('New hire?').first().json.name, start: $('New hire?').first().json.start_date + 'T09:30:00', attendees: [$('New hire?').first().json.email, $('New hire?').first().json.manager].filter(Boolean) }) }}",
     };
 
     @node({
         id: '6de40182-e2bc-4e5e-a6a3-53f294f5ebf2',
         name: 'Schedule the welcome email',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1820, 180],
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
+        position: [2080, 180],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         executeOnce: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ScheduleTheWelcomeEmail = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: "={{ $('New hire?').first().json.email }}",
+        dynamicTemplate: true,
+        templateId: "={{ 'd-welcome-new-hire' }}",
+        dynamicTemplateFields: {
+            fields: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
+                    key: 'name',
+                    value: "={{ $('New hire?').first().json.name }}",
+                },
+                {
+                    key: 'role',
+                    value: "={{ $('New hire?').first().json.role }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $('New hire?').first().json.email, subject: 'Welcome aboard, ' + $('New hire?').first().json.name, template: 'welcome-new-hire', send_at: $('New hire?').first().json.start_date + 'T08:00:00', data: { role: $('New hire?').first().json.role } }) }}",
+        additionalFields: {
+            sendAt: "={{ $('New hire?').first().json.start_date + 'T08:00:00' }}",
+        },
     };
 
     @node({
@@ -265,7 +324,7 @@ return tasks.map((t) => ({ json: { ...t, employee_id: h.employee_id, employee: h
         name: 'Team message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2080, 180],
+        position: [2340, 180],
     })
     TeamMessage = {
         jsCode: `const h = $("New hire?").first().json;
@@ -277,7 +336,7 @@ return [{ json: { channel: "#people", level: "info", text: h.name + " (" + h.rol
         name: 'Tell the team',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2340, 180],
+        position: [2600, 180],
     })
     TellTheTeam = {
         workflowId: {
@@ -293,7 +352,7 @@ return [{ json: { channel: "#people", level: "info", text: h.name + " (" + h.rol
         name: 'Already set up',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1040, 270],
+        position: [1300, 270],
     })
     AlreadySetUp = {};
 
@@ -303,7 +362,8 @@ return [{ json: { channel: "#people", level: "info", text: h.name + " (" + h.rol
 
     @links()
     defineRouting() {
-        this.HireConfirmed.out(0).to(this.ReadTheHire.in(0));
+        this.HireConfirmed.out(0).to(this.FetchTheEmployee.in(0));
+        this.FetchTheEmployee.out(0).to(this.ReadTheHire.in(0));
         this.ReadTheHire.out(0).to(this.SeenBefore.in(0));
         this.SeenBefore.out(0).to(this.NewHire.in(0));
         this.NewHire.out(0).to(this.BuildTheChecklist.in(0));

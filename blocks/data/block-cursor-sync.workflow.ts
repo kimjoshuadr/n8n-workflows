@@ -9,12 +9,12 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // RunManually                        manualTrigger
-// ReadBookmark                       httpRequest                [alwaysOutput] [retry]
-// FetchNewer                         httpRequest                [retry]
+// ReadBookmark                       supabase                   [creds] [alwaysOutput] [retry]
+// FetchNewer                         httpRequest                [creds] [retry]
 // NewestId                           code
 // AnythingNew                        if
-// WriteRows                          httpRequest                [retry]
-// MoveBookmark                       httpRequest                [retry]
+// WriteRows                          httpRequest                [creds] [retry]
+// MoveBookmark                       httpRequest                [creds] [retry]
 // UpToDate                           noOp
 //
 // ROUTING MAP
@@ -57,8 +57,7 @@ export class BlockIncrementalSyncWithABookmarkWorkflow {
         content: `## Block · Incremental sync with a bookmark
 The skeleton of every reliable sync: read the bookmark, fetch what is newer, write it, and only then move the bookmark.
 
-**Platforms:** none, this is logic only
-**Settings:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase, HubSpot
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/data\``,
     };
 
@@ -74,35 +73,28 @@ The skeleton of every reliable sync: read the bookmark, fetch what is newer, wri
     @node({
         id: '2b38276a-8f8a-4515-a388-aa41e4683216',
         name: 'Read bookmark',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ReadBookmark = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/sync_cursors',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'sync_cursors',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'name',
-                    value: "={{ 'eq.block-sync' }}",
+                    keyName: 'name',
+                    condition: 'eq',
+                    keyValue: "={{ 'block-sync' }}",
                 },
             ],
         },
@@ -114,33 +106,31 @@ The skeleton of every reliable sync: read the bookmark, fetch what is newer, wri
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [520, 180],
+        credentials: { hubspotAppToken: { id: '__CRED:hubspot__', name: 'HubSpot' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     FetchNewer = {
         method: 'GET',
-        url: '={{ $env.CRM_BASE_URL }}/changes',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CRM_API_KEY }}",
-                },
-            ],
-        },
+        url: "={{ 'https://api.hubapi.com/crm/v3/objects/contacts' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'hubspotAppToken',
         sendQuery: true,
         queryParameters: {
             parameters: [
                 {
-                    name: 'since',
+                    name: 'after',
                     value: "={{ $json.value ?? '0' }}",
                 },
+                {
+                    name: 'limit',
+                    value: "={{ '100' }}",
+                },
             ],
+        },
+        options: {
+            timeout: 15000,
         },
     };
 
@@ -194,28 +184,41 @@ return [{ json: { rows, count: rows.length, newest: rows.length ? String(Math.ma
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [1300, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     WriteRows = {
         method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/synced',
-        options: {
-            timeout: 15000,
-        },
+        url: "={{ 'https://acme.supabase.co/rest/v1/synced' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'supabaseApi',
         sendHeaders: true,
         headerParameters: {
             parameters: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    name: 'Prefer',
+                    value: "={{ 'resolution=merge-duplicates,return=representation' }}",
+                },
+            ],
+        },
+        sendQuery: true,
+        queryParameters: {
+            parameters: [
+                {
+                    name: 'on_conflict',
+                    value: "={{ 'id' }}",
                 },
             ],
         },
         sendBody: true,
         specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify($json.rows) }}',
+        jsonBody:
+            '={{ JSON.stringify($json.rows.map((r) => ({ id: String(r.id), email: r.properties?.email ?? null }))) }}',
+        options: {
+            timeout: 15000,
+        },
     };
 
     @node({
@@ -224,26 +227,22 @@ return [{ json: { rows, count: rows.length, newest: rows.length ? String(Math.ma
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [1560, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MoveBookmark = {
         method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/sync_cursors',
-        options: {
-            timeout: 15000,
-        },
+        url: "={{ 'https://acme.supabase.co/rest/v1/sync_cursors' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'supabaseApi',
         sendHeaders: true,
         headerParameters: {
             parameters: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-                {
                     name: 'Prefer',
-                    value: 'resolution=merge-duplicates',
+                    value: "={{ 'resolution=merge-duplicates,return=representation' }}",
                 },
             ],
         },
@@ -259,6 +258,9 @@ return [{ json: { rows, count: rows.length, newest: rows.length ? String(Math.ma
         sendBody: true,
         specifyBody: 'json',
         jsonBody: "={{ JSON.stringify({ name: 'block-sync', value: $('Newest id').first().json.newest }) }}",
+        options: {
+            timeout: 15000,
+        },
     };
 
     @node({

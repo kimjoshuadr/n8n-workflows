@@ -10,12 +10,12 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // SurveyAnswered                     webhook
 // ReadTheScore                       code
-// RecordIt                           httpRequest                [retry]
+// RecordIt                           supabase                   [creds] [retry]
 // WhichGroup                         switch
-// OpenATicket                        httpRequest                [retry]
+// OpenATicket                        zendesk                    [creds] [retry]
 // DetractorMessage                   code
 // TellCustomerSuccess                executeWorkflow
-// InviteAPublicReview                httpRequest                [retry]
+// InviteAPublicReview                sendGrid                   [creds] [retry]
 // RecordedOnly                       noOp
 //
 // ROUTING MAP
@@ -59,8 +59,7 @@ export class FeedbackRouteSurveyScoresWorkflow {
         content: `## Feedback · Route survey scores
 Sends each survey score where it is useful: unhappy customers to a person today, happy ones to a review request, and every score to the record.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL
+**Platforms:** Supabase, Zendesk, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/sales\``,
     };
 
@@ -96,32 +95,43 @@ return [{ json: { email: String(b.email ?? "").toLowerCase(), score, comment: St
     @node({
         id: '66dfdaed-cb42-48de-acc5-47de7847afbe',
         name: 'Record it',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [520, 270],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     RecordIt = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/nps_responses',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'nps_responses',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'email',
+                    fieldValue: '={{ $json.email }}',
+                },
+                {
+                    fieldId: 'score',
+                    fieldValue: '={{ $json.score }}',
+                },
+                {
+                    fieldId: 'comment',
+                    fieldValue: '={{ $json.comment }}',
+                },
+                {
+                    fieldId: 'group',
+                    fieldValue: '={{ $json.group }}',
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            '={{ JSON.stringify({ email: $json.email, score: $json.score, comment: $json.comment, group: $json.group, at: $now.toISO() }) }}',
     };
 
     @node({
@@ -194,32 +204,23 @@ return [{ json: { email: String(b.email ?? "").toLowerCase(), score, comment: St
     @node({
         id: '455d6e26-f5f7-40a8-a4fb-dfff6fcf7d0e',
         name: 'Open a ticket',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.zendesk',
+        version: 1,
         position: [1040, 90],
+        credentials: { zendeskApi: { id: '__CRED:zendesk__', name: 'Zendesk' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     OpenATicket = {
-        method: 'POST',
-        url: '={{ $env.HELPDESK_BASE_URL }}/tickets',
-        options: {
-            timeout: 15000,
+        resource: 'ticket',
+        operation: 'create',
+        description:
+            "={{ $('Read the score').first().json.email + ' said: ' + ($('Read the score').first().json.comment || '(no comment)') }}",
+        additionalFields: {
+            subject: "={{ 'Unhappy customer (score ' + $('Read the score').first().json.score + ')' }}",
+            tags: ['nps-detractor'],
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ subject: 'Unhappy customer (score ' + $('Read the score').first().json.score + ')', from: $('Read the score').first().json.email, body: $('Read the score').first().json.comment, priority: 'high', team: 'success' }) }}",
     };
 
     @node({
@@ -253,32 +254,26 @@ return [{ json: { level: "warn", text: s.email + " scored us " + s.score + "/10"
     @node({
         id: 'cdf61384-7b85-4098-ad49-2bfa6d5847bc',
         name: 'Invite a public review',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
         position: [1040, 270],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     InviteAPublicReview = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: "={{ $('Read the score').first().json.email }}",
+        dynamicTemplate: true,
+        templateId: "={{ 'd-review-invite' }}",
+        dynamicTemplateFields: {
+            fields: [],
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $('Read the score').first().json.email, subject: 'Thank you. Would you share that?', template: 'review-invite' }) }}",
+        additionalFields: {},
     };
 
     @node({

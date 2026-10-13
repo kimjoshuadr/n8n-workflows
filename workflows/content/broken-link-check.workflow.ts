@@ -9,12 +9,12 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Sunday2300                         scheduleTrigger
-// PagesToCheck                       httpRequest                [alwaysOutput] [retry]
+// PagesToCheck                       supabase                   [creds] [alwaysOutput] [retry]
 // VisitThePage                       httpRequest                [onError→regular]
 // FindTheBrokenOnes                  code
 // AnyBroken                          if
-// ReportThem                         httpRequest                [retry]
-// SaveTheRun                         httpRequest                [retry]
+// ReportThem                         slack                      [creds] [retry]
+// SaveTheRun                         supabase                   [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -56,8 +56,7 @@ export class SeoBrokenLinkCheckWorkflow {
         content: `## SEO · Broken link check
 Every Sunday night, visits each page in the sitemap list and reports the ones that no longer load, with the status each returned.
 
-**Platforms:** none, this is logic only
-**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase, Slack
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/content\``,
     };
 
@@ -82,29 +81,20 @@ Every Sunday night, visits each page in the sitemap list and reports the ones th
     @node({
         id: '8fa0038a-a8b3-4563-aa94-abf2505256d6',
         name: 'Pages to check',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     PagesToCheck = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/site_pages',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'site_pages',
+        returnAll: true,
     };
 
     @node({
@@ -178,62 +168,61 @@ return [{ json: { checked: results.length, broken, any: broken.length > 0, text:
     @node({
         id: '8b399977-3748-4f85-a978-495a85a9dd35',
         name: 'Report them',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
         position: [1300, 90],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ReportThem = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '#website' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: "={{ ':link: ' + $json.text }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ channel: '#website', text: ':link: ' + $json.text }) }}",
     };
 
     @node({
         id: '457c27ef-751e-4d52-a4d3-dd43cc695c91',
         name: 'Save the run',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1560, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SaveTheRun = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/link_checks',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'link_checks',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'checked',
+                    fieldValue: "={{ $('Find the broken ones').first().json.checked }}",
+                },
+                {
+                    fieldId: 'broken',
+                    fieldValue: "={{ $('Find the broken ones').first().json.broken.length }}",
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ checked: $('Find the broken ones').first().json.checked, broken: $('Find the broken ones').first().json.broken.length, at: $now.toISO() }) }}",
     };
 
     // =====================================================================

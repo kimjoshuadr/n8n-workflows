@@ -13,44 +13,56 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Support · Inbox triage and first reply\nSorts the shared inbox: answers the handful of questions that have a fixed answer, files newsletters and receipts, and leaves everything else for a person.\n\n**Platforms:** none, this is logic only\n**Settings:** EMAIL_API_KEY, EMAIL_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/support`"
+        "content": "## Support · Inbox triage and first reply\nSorts the shared inbox: answers the handful of questions that have a fixed answer, files newsletters and receipts, and leaves everything else for a person.\n\n**Platforms:** Gmail, OpenAI, SendGrid, Zendesk\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/support`"
       }
     },
     {
       "id": "3f7b9eab-f73c-4bae-a39a-5fb5bb509649",
       "position": [
         0,
-        180
+        310
       ],
       "name": "Email received",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
       "parameters": {
-        "httpMethod": "POST",
-        "path": "email-received",
-        "responseMode": "onReceived",
-        "options": {}
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": true,
+        "filters": {
+          "readStatus": "unread"
+        }
       },
-      "webhookId": "a973a74e-8779-4a7d-a978-d37891cf2e2b"
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "__CRED:gmail__",
+          "name": "Gmail"
+        }
+      }
     },
     {
       "id": "3fffe216-4bbc-4ff0-ab69-6419df3bf306",
       "position": [
         260,
-        180
+        310
       ],
       "name": "Read the email",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const m = $input.first().json.body ?? {};\nconst from = String(m.from ?? \"\").toLowerCase();\nconst auto = /no-?reply|mailer-daemon|notifications?@|newsletter/.test(from) || !!m.headers?.[\"auto-submitted\"] || !!m.headers?.[\"list-unsubscribe\"];\nreturn [{ json: { id: String(m.id), from, subject: String(m.subject ?? \"\"), text: String(m.text ?? \"\").slice(0, 3000), auto } }];"
+        "jsCode": "const m = $input.first().json ?? {};\nconst from = (/[\\w.+-]+@[\\w-]+(\\.[\\w-]+)+/.exec(String(m.From ?? m.from ?? \"\").toLowerCase()) ?? [\"\"])[0];\nconst auto = /no-?reply|mailer-daemon|notifications?@|newsletter/.test(from) || !!m.headers?.[\"auto-submitted\"] || !!m.headers?.[\"list-unsubscribe\"];\nreturn [{ json: { id: String(m.id), from, subject: String(m.Subject ?? m.subject ?? \"\"), text: String(m.text ?? m.snippet ?? \"\").slice(0, 3000), auto } }];"
       }
     },
     {
       "id": "881bc208-f9ee-4cd0-ae33-179c2b3f916c",
       "position": [
         520,
-        180
+        310
       ],
       "name": "From a person?",
       "type": "n8n-nodes-base.if",
@@ -83,86 +95,108 @@
     {
       "id": "95e0eb93-a0f2-4785-a029-af48ba64748d",
       "position": [
-        780,
+        880,
         90
       ],
       "name": "Archive it",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/messages/archive",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ id: $json.id, label: 'automated' }) }}"
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000
-    },
-    {
-      "id": "f16bc1e7-80cf-4fd6-a52f-2c1331b1a456",
-      "position": [
-        780,
-        270
-      ],
-      "name": "What is it asking?",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: \"[task:classify-intent] Classify this email. Reply with JSON: { intent: 'opening_hours'|'pricing'|'reset_password'|'other', confident: boolean }. Use 'other' unless the email is plainly and only asking that one thing.\" },\n    { role: \"user\", content: $json.subject + '\\n\\n' + $json.text }\n  ]\n}) }}"
+        "resource": "message",
+        "operation": "removeLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "INBOX"
+        ]
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "__CRED:gmail__",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "id": "f16bc1e7-80cf-4fd6-a52f-2c1331b1a456",
+      "position": [
+        880,
+        270
+      ],
+      "name": "What is it asking?",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.subject + '\\n\\n' + $json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "[task:classify-intent] Classify this email. Reply with JSON: { intent: 'opening_hours'|'pricing'|'reset_password'|'other', confident: boolean }. Use 'other' unless the email is plainly and only asking that one thing.",
+          "maxIterations": 2
+        }
+      },
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "541badc6-df20-4c07-ac51-1e9ac0e6199a",
+      "position": [
+        780,
+        490
+      ],
+      "name": "What is it asking? · GPT",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "d021447f-d76b-4b42-aea4-1972772b64ac",
+      "position": [
+        980,
+        490
+      ],
+      "name": "What is it asking? · shape",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"intent\": \"other\",\n  \"confident\": false\n}"
+      }
     },
     {
       "id": "76dd5537-8f50-436d-afee-cb0960475ee5",
       "position": [
-        1040,
-        180
+        1240,
+        310
       ],
       "name": "Read the intent",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const before = $(\"From a person?\").all();\nconst out = [];\nfor (const [i, item] of $input.all().entries()) {\n  let reply = {\"intent\":\"other\",\"confident\":false};\n  let parse_error = false;\n  try {\n    reply = JSON.parse(item.json.choices[0].message.content);\n  } catch (e) {\n    parse_error = true;\n  }\n  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });\n}\nreturn out;"
+        "jsCode": "const before = $(\"From a person?\").all();\nconst out = [];\nfor (const [i, item] of $input.all().entries()) {\n  const answer = item.json.output;\n  const ok = answer && typeof answer === \"object\" && !Array.isArray(answer);\n  out.push({ json: { ...(before[i]?.json ?? {}), ...(ok ? answer : {\"intent\":\"other\",\"confident\":false}), parse_error: !ok } });\n}\nreturn out;"
       }
     },
     {
       "id": "0dbffd99-c923-4469-a808-a283219c1739",
       "position": [
-        1300,
-        180
+        1500,
+        310
       ],
       "name": "A fixed-answer question?",
       "type": "n8n-nodes-base.if",
@@ -195,98 +229,97 @@
     {
       "id": "cb18c537-3f8a-4656-adde-32ca7e1ea845",
       "position": [
-        1560,
-        90
+        1760,
+        220
       ],
       "name": "Send the standard reply",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ $json.from }}",
+        "dynamicTemplate": true,
+        "templateId": "={{ 'd-faq-' + $json.intent }}",
+        "dynamicTemplateFields": {
+          "fields": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+              "key": "subject",
+              "value": "={{ $json.subject }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: $json.from, subject: 'Re: ' + $json.subject, template: 'faq-' + $json.intent, in_reply_to: $json.id }) }}"
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "61936198-2dd8-47cb-aa85-04c3879a8f47",
       "position": [
-        1820,
-        180
+        2020,
+        310
       ],
       "name": "Label as answered",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/messages/label",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ id: $('A fixed-answer question?').first().json.id, label: 'auto-answered' }) }}"
+        "resource": "message",
+        "operation": "addLabels",
+        "messageId": "={{ $('A fixed-answer question?').first().json.id }}",
+        "labelIds": [
+          "Label_auto_answered"
+        ]
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "__CRED:gmail__",
+          "name": "Gmail"
+        }
+      }
     },
     {
       "id": "d2ffd372-0eb1-4b45-aae4-858e0bf68533",
       "position": [
-        1560,
-        270
+        1760,
+        400
       ],
       "name": "Leave for a person",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.zendesk",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.HELPDESK_BASE_URL }}/tickets",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}"
-            }
+        "resource": "ticket",
+        "operation": "create",
+        "description": "={{ 'From ' + $json.from + ':\\n\\n' + $json.text }}",
+        "additionalFields": {
+          "subject": "={{ $json.subject }}",
+          "tags": [
+            "from-email"
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ subject: $json.subject, from: $json.from, body: $json.text, source: 'email' }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "zendeskApi": {
+          "id": "__CRED:zendesk__",
+          "name": "Zendesk"
+        }
+      }
     }
   ],
   "connections": {
@@ -376,6 +409,28 @@
           {
             "node": "Label as answered",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "What is it asking? · GPT": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "What is it asking?",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "What is it asking? · shape": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "What is it asking?",
+            "type": "ai_outputParser",
             "index": 0
           }
         ]

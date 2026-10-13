@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Payments · Overdue reminders\nEach morning, reminds customers with overdue invoices at 3, 7 and 14 days, then hands the invoice to a person at 21.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
+        "content": "## Payments · Overdue reminders\nEach morning, reminds customers with overdue invoices at 3, 7 and 14 days, then hands the invoice to a person at 21.\n\n**Platforms:** Supabase, SendGrid\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
       }
     },
     {
@@ -43,29 +43,21 @@
         180
       ],
       "name": "Open invoices",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/invoices",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "invoices",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "status",
-              "value": "={{ 'eq.open' }}"
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "={{ 'open' }}"
             }
           ]
         }
@@ -73,7 +65,13 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "d89d4d11-6045-419c-a79a-a03f73268e36",
@@ -129,30 +127,43 @@
         90
       ],
       "name": "Send the reminder",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ $json.email }}",
+        "dynamicTemplate": true,
+        "templateId": "={{ 'd-overdue-' + $json.step }}",
+        "dynamicTemplateFields": {
+          "fields": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+              "key": "number",
+              "value": "={{ $json.number }}"
+            },
+            {
+              "key": "amount",
+              "value": "={{ $json.amount }}"
+            },
+            {
+              "key": "pay_url",
+              "value": "={{ $json.pay_url }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: $json.email, subject: 'Invoice ' + $json.number + ' is ' + $json.overdue + ' days overdue', template: 'overdue-' + $json.step, data: { number: $json.number, amount: $json.amount, pay_url: $json.pay_url } }) }}"
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "28d0640a-b3f0-4b68-a581-6844dca138a2",
@@ -161,39 +172,46 @@
         90
       ],
       "name": "Record the step",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/invoices",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "invoices",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Which step is due?').item.json.id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "id",
-              "value": "={{ 'eq.' + $('Which step is due?').item.json.id }}"
+              "fieldId": "last_reminder_step",
+              "fieldValue": "={{ $('Which step is due?').item.json.step }}"
+            },
+            {
+              "fieldId": "last_reminder_at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ last_reminder_step: $('Which step is due?').item.json.step, last_reminder_at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "96fbefc6-3619-4e39-a5bd-15e65425b541",
@@ -233,39 +251,46 @@
         180
       ],
       "name": "Mark escalated",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/invoices",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "invoices",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Escalation message').item.json.id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "id",
-              "value": "={{ 'eq.' + $('Escalation message').item.json.id }}"
+              "fieldId": "last_reminder_step",
+              "fieldValue": "={{ 21 }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ 'escalated' }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ last_reminder_step: 21, status: 'escalated' }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     }
   ],
   "connections": {

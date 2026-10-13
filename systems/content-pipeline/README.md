@@ -12,29 +12,30 @@
 
 Takes the next topic off the list, researches it, drafts the article, and asks a person to approve it. Nothing is published from here.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, Search, LLM, Chat |
-| Nodes | 14 |
-| Calls | `error-handler` |
-| Files | [`content-draft.json`](content-draft.json) · [`content-draft.workflow.ts`](content-draft.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/serpapi.svg" width="16" height="16" alt=""> SerpAPI &nbsp;·&nbsp; <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI &nbsp;·&nbsp; <img src="../../assets/platforms/anthropic.svg" width="16" height="16" alt=""> Claude &nbsp;·&nbsp; <img src="../../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack
+- **Nodes:** 17
+- **Calls:** `error-handler`
+- **Files:** [`content-draft.json`](content-draft.json) · [`content-draft.workflow.ts`](content-draft.workflow.ts)
 
 ```mermaid
 flowchart LR
   njkudyd(["Weekdays 07:00"])
-  n1s0dx61[/"Next topic"/]
+  n1s0dx61["Next topic"]
   nsqkm2s{"Is there one?"}
-  n1twx045[/"Claim the topic"/]
+  n1twx045["Claim the topic"]
   n1y58p8i[/"Research"/]
   nsbkp8b["Collect sources"]
-  n1wxltmj[/"Outline"/]
+  n1wxltmj[["Outline"]]
+  nrxu5bx("Outline · GPT")
+  n19u6mr("Outline · shape")
   n13epnow["Read the outline"]
   n11h8q5a{"Usable outline?"}
-  nq8z416[/"Write the draft"/]
-  nqrrbjq[/"Save the draft"/]
-  nk0wy08[/"Ask for approval"/]
-  n1dhughj[/"Return the topic"/]
+  nq8z416[["Write the draft"]]
+  n15u3fjx("Write the draft · Claude")
+  nqrrbjq["Save the draft"]
+  nk0wy08["Ask for approval"]
+  n1dhughj["Return the topic"]
   n11tw0rx["Queue is empty"]
   njkudyd --> n1s0dx61
   n1s0dx61 --> nsqkm2s
@@ -49,6 +50,9 @@ flowchart LR
   nqrrbjq --> nk0wy08
   nsqkm2s -->|no| n11tw0rx
   n11h8q5a -->|no| n1dhughj
+  nrxu5bx -.-> n1wxltmj
+  n19u6mr -.-> n1wxltmj
+  n15u3fjx -.-> nq8z416
 ```
 
 **How it runs**
@@ -69,13 +73,11 @@ flowchart LR
 
 Receives a person's decision on a draft. Approved drafts are published to the CMS once and queued for sharing; rejected ones go back with the reason.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Datastore, CMS, Chat |
-| Nodes | 13 |
-| Calls | `error-handler` |
-| Files | [`content-approval.json`](content-approval.json) · [`content-approval.workflow.ts`](content-approval.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/wordpress.svg" width="16" height="16" alt=""> WordPress
+- **Nodes:** 13
+- **Calls:** `error-handler`
+- **Files:** [`content-approval.json`](content-approval.json) · [`content-approval.workflow.ts`](content-approval.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -83,22 +85,22 @@ flowchart LR
   nmemhf2["Read the decision"]
   n2xqlyi{"Valid?"}
   nmff94d(["Bad request"])
-  n293tr3[/"Load the draft"/]
+  n293tr3["Load the draft"]
   n1n0t10v{"Awaiting approval?"}
   n1012if7(["Not pending"])
   n1dst0kh{"Approved?"}
-  nfiixwc[/"Publish to CMS"/]
-  nl86jia[/"Mark published"/]
+  n1en492k["Publish to WordPress"]
+  nl86jia["Mark published"]
   nybv44n(["Published"])
-  n18u9pka[/"Mark rejected"/]
+  n18u9pka["Mark rejected"]
   n1tvvf6t(["Rejected"])
   ne9uvpf --> nmemhf2
   nmemhf2 --> n2xqlyi
   n2xqlyi -->|yes| n293tr3
   n293tr3 --> n1n0t10v
   n1n0t10v -->|yes| n1dst0kh
-  n1dst0kh -->|yes| nfiixwc
-  nfiixwc --> nl86jia
+  n1dst0kh -->|yes| n1en492k
+  n1en492k --> nl86jia
   nl86jia --> nybv44n
   n2xqlyi -->|no| nmff94d
   n1n0t10v -->|no| n1012if7
@@ -125,24 +127,26 @@ flowchart LR
 
 Every hour, writes a post per network for anything newly published and schedules it. One network failing does not stop the others.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, LLM, Social |
-| Nodes | 10 |
-| Calls | `error-handler` |
-| Files | [`content-distribute.json`](content-distribute.json) · [`content-distribute.workflow.ts`](content-distribute.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI &nbsp;·&nbsp; <img src="../../assets/platforms/linkedin.svg" width="16" height="16" alt=""> LinkedIn &nbsp;·&nbsp; <img src="../../assets/platforms/x.svg" width="16" height="16" alt=""> X &nbsp;·&nbsp; <img src="../../assets/platforms/facebook.svg" width="16" height="16" alt=""> Facebook
+- **Nodes:** 14
+- **Calls:** `error-handler`
+- **Files:** [`content-distribute.json`](content-distribute.json) · [`content-distribute.workflow.ts`](content-distribute.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1vk30ig(["Hourly"])
-  n1yw96nh[/"Published, not shared"/]
+  n1yw96nh["Published, not shared"]
   nqlf16e{"Anything new?"}
   n11omdtq["Each article"]
-  nqfj3vg[/"Write the posts"/]
-  n1ag558f["One item per network"]
-  n21o5xt[/"Schedule the post"/]
-  nskp575[/"Mark shared"/]
+  nqfj3vg[["Write the posts"]]
+  n1nzmdpa("Write the posts · GPT")
+  n18ipvzo("Write the posts · shape")
+  nt9ojid["Cut each post to length"]
+  nqjjk6i["Post to LinkedIn"]
+  n16jzrxo["Post to X"]
+  nf08e4y["Post to Facebook"]
+  nskp575["Mark shared"]
   nnsftqe["Nothing new"]
   n54ca1["Done"]
   n1vk30ig --> n1yw96nh
@@ -151,17 +155,21 @@ flowchart LR
   nqlf16e -->|no| nnsftqe
   n11omdtq -->|done| n54ca1
   n11omdtq -->|each| nqfj3vg
-  nqfj3vg --> n1ag558f
-  n1ag558f --> n21o5xt
-  n21o5xt --> nskp575
+  nqfj3vg --> nt9ojid
+  nt9ojid --> nqjjk6i
+  nqjjk6i --> n16jzrxo
+  n16jzrxo --> nf08e4y
+  nf08e4y --> nskp575
   nskp575 --> n11omdtq
+  n1nzmdpa -.-> nqfj3vg
+  n18ipvzo -.-> nqfj3vg
 ```
 
 **How it runs**
 
 1. **It looks for new articles.** Published and not yet shared. The flag in the datastore is the only state.
 2. **A post for each network.** The model writes three versions. If it fails, a plain title-and-link post is used instead.
-3. **Scheduled, then marked.** Each network is scheduled on its own, so one outage costs one post and not all three.
+3. **Scheduled, then marked.** LinkedIn, X and Facebook are posted one after another, so one outage costs one post and not all three.
 
 **Tested behaviour**
 

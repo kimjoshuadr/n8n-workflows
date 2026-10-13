@@ -11,10 +11,10 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // ShipmentUpdate                     webhook
 // ReadTheUpdate                      code
 // AStatusWeActOn                     if
-// UpdateTheOrder                     httpRequest                [alwaysOutput] [retry]
+// UpdateTheOrder                     supabase                   [creds] [alwaysOutput] [retry]
 // Changed                            if
 // WhichStatus                        switch
-// EmailTheCustomer                   httpRequest                [retry]
+// EmailTheCustomer                   sendGrid                   [creds] [retry]
 // FailedDeliveryMessage              code
 // TellSupport                        executeWorkflow
 // NothingToDo                        noOp
@@ -63,8 +63,7 @@ export class OrderOpsShippingUpdatesWorkflow {
         content: `## Order ops · Shipping updates
 Turns a courier status into the right message for the customer, and tells a person when a parcel fails delivery.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** Supabase, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/order-ops\``,
     };
 
@@ -131,45 +130,48 @@ return [{ json: { order_id: String(b.order_id), status: map[b.status] ?? null, r
     @node({
         id: 'cc409fbe-411d-4196-ae48-6f0559fd5099',
         name: 'Update the order',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [780, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     UpdateTheOrder = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/orders',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'orders',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'order_id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.order_id }}',
+                },
+                {
+                    keyName: 'status',
+                    condition: 'neq',
+                    keyValue: '={{ $json.status }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'order_id',
-                    value: "={{ 'eq.' + $json.order_id }}",
+                    fieldId: 'status',
+                    fieldValue: '={{ $json.status }}',
                 },
                 {
-                    name: 'status',
-                    value: "={{ 'neq.' + $json.status }}",
+                    fieldId: 'tracking_url',
+                    fieldValue: '={{ $json.tracking_url }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ status: $json.status, tracking_url: $json.tracking_url }) }}',
     };
 
     @node({
@@ -249,32 +251,35 @@ return [{ json: { order_id: String(b.order_id), status: map[b.status] ?? null, r
     @node({
         id: '6eb79a8a-b24f-4bb7-a5d7-4f96bdd185c8',
         name: 'Email the customer',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
         position: [1560, 90],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     EmailTheCustomer = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: '={{ $json.email }}',
+        dynamicTemplate: true,
+        templateId: "={{ 'd-shipping-' + $json.status }}",
+        dynamicTemplateFields: {
+            fields: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
+                    key: 'order_id',
+                    value: '={{ $json.order_id }}',
+                },
+                {
+                    key: 'tracking_url',
+                    value: '={{ $json.tracking_url }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $json.email, subject: { shipped: 'Your order is on its way', out_for_delivery: 'Arriving today', delivered: 'Delivered' }[$json.status], template: 'shipping-' + $json.status, data: { order_id: $json.order_id, tracking_url: $json.tracking_url } }) }}",
+        additionalFields: {},
     };
 
     @node({

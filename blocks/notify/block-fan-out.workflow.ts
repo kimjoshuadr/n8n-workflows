@@ -9,9 +9,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
-// Chat                               httpRequest                [onError→regular] [retry]
-// Email                              httpRequest                [onError→regular] [retry]
-// Sms                                httpRequest                [onError→regular] [retry]
+// Chat                               slack                      [onError→regular] [creds] [retry]
+// Email                              sendGrid                   [onError→regular] [creds] [retry]
+// Sms                                twilio                     [onError→regular] [creds] [retry]
 // Report                             code
 //
 // ROUTING MAP
@@ -51,8 +51,7 @@ export class BlockOneEventThreeChannelsWorkflow {
         content: `## Block · One event, three channels
 Sends the same message by chat, email and SMS, where each channel failing leaves the other two untouched.
 
-**Platforms:** none, this is logic only
-**Settings:** CHAT_API_KEY, CHAT_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, SMS_API_KEY, SMS_BASE_URL
+**Platforms:** Slack, SendGrid, Twilio
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/notify\``,
     };
 
@@ -70,96 +69,74 @@ Sends the same message by chat, email and SMS, where each channel failing leaves
     @node({
         id: '25f408bd-0113-4440-a475-74d1d68017c2',
         name: 'Chat',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
         position: [260, 90],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     Chat = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '#general' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: '={{ $json.text }}',
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ channel: '#general', text: $json.text }) }}",
     };
 
     @node({
         id: 'f3ca4c32-3691-404a-af90-893f391fe04a',
         name: 'Email',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
         position: [520, 90],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     Email = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $('When called').item.json.email, subject: 'Notice', text: $('When called').item.json.text }) }}",
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: "={{ $('When called').item.json.email }}",
+        subject: "={{ 'Notice' }}",
+        dynamicTemplate: false,
+        contentType: 'text/plain',
+        contentValue: "={{ $('When called').item.json.text }}",
+        additionalFields: {},
     };
 
     @node({
         id: 'b02d9e72-5abb-4a3f-a51a-636fd8586fe0',
         name: 'SMS',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.twilio',
+        version: 1,
         position: [780, 90],
+        credentials: { twilioApi: { id: '__CRED:twilio__', name: 'Twilio' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     Sms = {
-        method: 'POST',
-        url: '={{ $env.SMS_BASE_URL }}/Messages',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.SMS_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ To: $('When called').item.json.phone, Body: $('When called').item.json.text.slice(0, 160) }) }}",
+        resource: 'sms',
+        operation: 'send',
+        from: '+15550000',
+        to: "={{ $('When called').item.json.phone }}",
+        message: "={{ $('When called').item.json.text.slice(0, 160) }}",
+        options: {},
     };
 
     @node({

@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Subscriptions · Renewal reminders\nTells subscribers a week before an annual renewal, once, with the amount and the date, so the charge is never a surprise.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
+        "content": "## Subscriptions · Renewal reminders\nTells subscribers a week before an annual renewal, once, with the amount and the date, so the charge is never a surprise.\n\n**Platforms:** Supabase, SendGrid\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
       }
     },
     {
@@ -43,33 +43,26 @@
         90
       ],
       "name": "Active subscriptions",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/subscriptions",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "subscriptions",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "status",
-              "value": "={{ 'eq.active' }}"
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "={{ 'active' }}"
             },
             {
-              "name": "interval",
-              "value": "={{ 'eq.year' }}"
+              "keyName": "interval",
+              "condition": "eq",
+              "keyValue": "={{ 'year' }}"
             }
           ]
         }
@@ -77,7 +70,13 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "a75161ec-ba9d-4a9c-ac63-bdef70d7803f",
@@ -99,30 +98,47 @@
         90
       ],
       "name": "Send the notice",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ $json.email }}",
+        "dynamicTemplate": true,
+        "templateId": "={{ 'd-renewal-notice' }}",
+        "dynamicTemplateFields": {
+          "fields": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+              "key": "amount",
+              "value": "={{ $json.amount }}"
+            },
+            {
+              "key": "currency",
+              "value": "={{ $json.currency }}"
+            },
+            {
+              "key": "renews_at",
+              "value": "={{ $json.renews_at }}"
+            },
+            {
+              "key": "manage_url",
+              "value": "={{ $json.manage_url }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: $json.email, subject: 'Your plan renews on ' + $json.renews_at.slice(0, 10), template: 'renewal-notice', data: { amount: $json.amount, currency: $json.currency, renews_at: $json.renews_at, manage_url: $json.manage_url } }) }}"
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "af87ac3d-445b-4495-a5df-98a64360233b",
@@ -131,39 +147,42 @@
         90
       ],
       "name": "Mark reminded",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/subscriptions",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "subscriptions",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Renewing in a week').item.json.id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "id",
-              "value": "={{ 'eq.' + $('Renewing in a week').item.json.id }}"
+              "fieldId": "reminded_for",
+              "fieldValue": "={{ $('Renewing in a week').item.json.renews_at }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ reminded_for: $('Renewing in a week').item.json.renews_at }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     }
   ],
   "connections": {

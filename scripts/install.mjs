@@ -5,8 +5,9 @@
  *   N8N_URL=https://n8n.example.com N8N_API_KEY=... node scripts/install.mjs
  *   ... node scripts/install.mjs lead-intake        only that system and what it calls
  *
- * Workflows are created inactive and prefixed nowhere: review them, set the
- * environment variables listed in .env.example, then publish the ones you want.
+ * Each platform node is pointed at a credential of the right type if your
+ * instance has one; the types that are missing are listed at the end.
+ * Workflows are created inactive: review them, then publish the ones you want.
  */
 import { loadAll, refsOf } from "./load.mjs";
 
@@ -42,6 +43,29 @@ for (let cursor; ; ) {
   if (!(cursor = page.nextCursor)) break;
 }
 
+// Credentials already in the instance, by type. Older versions of n8n cannot list them.
+const credentials = new Map();
+try {
+  for (let cursor; ; ) {
+    const page = await api("GET", `/credentials?limit=100${cursor ? `&cursor=${cursor}` : ""}`);
+    for (const c of page.data) if (!credentials.has(c.type)) credentials.set(c.type, { id: c.id, name: c.name });
+    if (!(cursor = page.nextCursor)) break;
+  }
+} catch {}
+const missing = new Set();
+const withCredentials = (workflow) => {
+  for (const node of workflow.nodes) {
+    for (const type of Object.keys(node.credentials ?? {})) {
+      if (credentials.has(type)) node.credentials[type] = credentials.get(type);
+      else {
+        delete node.credentials[type];
+        missing.add(type);
+      }
+    }
+  }
+  return workflow;
+};
+
 const ids = {};
 const pending = [...picked.values()];
 while (pending.length) {
@@ -53,10 +77,11 @@ while (pending.length) {
       console.log(`  =  ${def.json.name} (already there, left alone)`);
     } else {
       const body = JSON.parse(JSON.stringify(def.json).replace(/__WF:([a-z0-9-]+)__/g, (_, id) => ids[id]));
-      ids[def.id] = (await api("POST", "/workflows", body)).id;
+      ids[def.id] = (await api("POST", "/workflows", withCredentials(body))).id;
       console.log(`  +  ${def.json.name}`);
     }
     pending.splice(pending.indexOf(def), 1);
   }
 }
 console.log(`\n${picked.size} workflows are in place. They are inactive until you publish them.`);
+if (missing.size) console.log(`\nCreate a credential of each of these types, then choose it on the nodes that need it:\n  ${[...missing].sort().join(", ")}`);

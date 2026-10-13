@@ -8,13 +8,13 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // ──────────────────────────────────────────────────────────────────
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
-// BookingCreated                     webhook
+// BookingCreated                     calendlyTrigger            [creds]
 // ReadTheBooking                     code
 // SeenBefore                         executeWorkflow
 // NewBooking                         if
-// MarkLeadBooked                     httpRequest                [alwaysOutput] [retry]
+// MarkLeadBooked                     supabase                   [creds] [alwaysOutput] [retry]
 // KnownLead                          if
-// OpenCrmDeal                        httpRequest                [retry]
+// OpenCrmDeal                        hubspot                    [creds] [retry]
 // BookedMessage                      code
 // TellSales                          executeWorkflow
 // UnknownMessage                     code
@@ -65,24 +65,22 @@ export class LeadIntakeBookingSyncWorkflow {
         content: `## Lead intake · Booking sync
 When a call is booked, moves the lead forward everywhere at once: the lead record, the CRM deal and the sales channel.
 
-**Platforms:** none, this is logic only
-**Settings:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** Calendly, Supabase, HubSpot
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/lead-intake\``,
     };
 
     @node({
         id: 'eb5c4352-6a48-4ebf-a77f-145bcb91c5a1',
-        webhookId: 'd49bdb06-49d1-42c9-a8ca-322db50b2b75',
+        webhookId: '6d80594e-fccd-4ffa-aea2-f6e57bdfd9b1',
         name: 'Booking created',
-        type: 'n8n-nodes-base.webhook',
-        version: 2,
+        type: 'n8n-nodes-base.calendlyTrigger',
+        version: 1,
         position: [0, 180],
+        credentials: { calendlyApi: { id: '__CRED:calendly__', name: 'Calendly' } },
     })
     BookingCreated = {
-        httpMethod: 'POST',
-        path: 'booking-created',
-        responseMode: 'onReceived',
-        options: {},
+        scope: 'user',
+        events: ['invitee.created'],
     };
 
     @node({
@@ -93,11 +91,13 @@ When a call is booked, moves the lead forward everywhere at once: the lead recor
         position: [260, 180],
     })
     ReadTheBooking = {
-        jsCode: `const b = $input.first().json.body ?? {};
-const p = b.payload ?? b;
-const email = String(p.attendees?.[0]?.email ?? p.email ?? "").toLowerCase();
-if (!email) throw new Error("Booking has no attendee email");
-return [{ json: { email, starts_at: p.startTime ?? p.start_time, booking_id: String(p.uid ?? p.id), scope: "booking", key: String(p.uid ?? p.id) } }];`,
+        jsCode: `return $input.all().map((item) => {
+  const p = item.json.payload ?? item.json;
+  const email = String(p.email ?? "").toLowerCase();
+  const id = String(p.uri ?? p.scheduled_event?.uri ?? "").split("/").pop();
+  if (!email || !id) throw new Error("Booking has no invitee email or id");
+  return { json: { email, starts_at: p.scheduled_event?.start_time ?? null, booking_id: id, scope: "booking", key: id } };
+});`,
     };
 
     @node({
@@ -151,41 +151,47 @@ return [{ json: { email, starts_at: p.startTime ?? p.start_time, booking_id: Str
     @node({
         id: '0857e053-49af-4f1b-a87f-19a8aedeb853',
         name: 'Mark lead booked',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1040, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkLeadBooked = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/leads',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'leads',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: '={{ $json.email }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'email',
-                    value: "={{ 'eq.' + $json.email }}",
+                    fieldId: 'booked',
+                    fieldValue: '={{ true }}',
+                },
+                {
+                    fieldId: 'status',
+                    fieldValue: "={{ 'booked' }}",
+                },
+                {
+                    fieldId: 'call_at',
+                    fieldValue: '={{ $json.starts_at }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ booked: true, status: 'booked', call_at: $json.starts_at }) }}",
     };
 
     @node({
@@ -223,32 +229,22 @@ return [{ json: { email, starts_at: p.startTime ?? p.start_time, booking_id: Str
     @node({
         id: 'f312fc35-ad53-4b12-a1e1-bb1bdbbf77a1',
         name: 'Open CRM deal',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.hubspot',
+        version: 2.1,
         position: [1560, 90],
+        credentials: { hubspotAppToken: { id: '__CRED:hubspot__', name: 'HubSpot' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     OpenCrmDeal = {
-        method: 'POST',
-        url: '={{ $env.CRM_BASE_URL }}/crm/v3/objects/deals',
-        options: {
-            timeout: 15000,
+        authentication: 'appToken',
+        resource: 'deal',
+        operation: 'create',
+        stage: "={{ 'appointmentscheduled' }}",
+        additionalFields: {
+            dealName: "={{ 'Intro call: ' + $json.name }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CRM_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ properties: { dealname: 'Intro call: ' + $json.name, dealstage: 'appointmentscheduled', closedate: $json.call_at }, contact_email: $json.email }) }}",
     };
 
     @node({

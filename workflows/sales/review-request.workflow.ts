@@ -9,12 +9,12 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // _1000Daily                         scheduleTrigger
-// DeliveredOrders                    httpRequest                [alwaysOutput] [retry]
+// DeliveredOrders                    supabase                   [creds] [alwaysOutput] [retry]
 // DeliveredAWeekAgo                  code
-// OpenConversation                   httpRequest                [alwaysOutput] [retry]
+// OpenConversation                   supabase                   [creds] [alwaysOutput] [retry]
 // HappyCustomersOnly                 code
-// AskForAReview                      httpRequest                [retry]
-// MarkAsked                          httpRequest                [retry]
+// AskForAReview                      sendGrid                   [creds] [retry]
+// MarkAsked                          supabase                   [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -55,8 +55,7 @@ export class ReviewsAskAfterDeliveryWorkflow {
         content: `## Reviews · Ask after delivery
 A week after an order is delivered, asks for a review once. Customers with an open support conversation are not asked.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** Supabase, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/sales\``,
     };
 
@@ -81,39 +80,33 @@ A week after an order is delivered, asks for a review once. Customers with an op
     @node({
         id: '588c8bb6-ae47-4ea1-a866-7fb00092c8d6',
         name: 'Delivered orders',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     DeliveredOrders = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/orders',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'orders',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'status',
-                    value: "={{ 'eq.delivered' }}",
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'delivered' }}",
                 },
                 {
-                    name: 'review_requested',
-                    value: "={{ 'is.null' }}",
+                    keyName: 'review_requested',
+                    condition: 'is',
+                    keyValue: "={{ 'null' }}",
                 },
             ],
         },
@@ -136,43 +129,34 @@ return $input.all().map((i) => i.json).filter((o) => o.email && o.delivered_at)
     @node({
         id: '114943dd-33dd-4235-a5cb-60a812fcfd28',
         name: 'Open conversation?',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [780, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     OpenConversation = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/support_conversations',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'support_conversations',
+        returnAll: false,
+        limit: 1,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'email',
-                    value: "={{ 'eq.' + $json.email }}",
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: '={{ $json.email }}',
                 },
                 {
-                    name: 'status',
-                    value: "={{ 'eq.open' }}",
-                },
-                {
-                    name: 'limit',
-                    value: "={{ '1' }}",
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'open' }}",
                 },
             ],
         },
@@ -193,71 +177,68 @@ return $input.all().map((item, i) => ({ order: orders[i]?.json, open: !!item.jso
     @node({
         id: 'b8a8cda5-898f-4c8b-a116-4c314605eb46',
         name: 'Ask for a review',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
         position: [1300, 90],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     AskForAReview = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: '={{ $json.email }}',
+        dynamicTemplate: true,
+        templateId: "={{ 'd-review-request' }}",
+        dynamicTemplateFields: {
+            fields: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
+                    key: 'order_id',
+                    value: '={{ $json.order_id }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $json.email, subject: 'How was your order?', template: 'review-request', data: { order_id: $json.order_id } }) }}",
+        additionalFields: {},
     };
 
     @node({
         id: '6dceb0d3-ec0d-4c4c-a36a-8e05da7c8222',
         name: 'Mark asked',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1560, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkAsked = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/orders',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'orders',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'order_id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Happy customers only').item.json.order_id }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'order_id',
-                    value: "={{ 'eq.' + $('Happy customers only').item.json.order_id }}",
+                    fieldId: 'review_requested',
+                    fieldValue: '={{ true }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ review_requested: true }) }}',
     };
 
     // =====================================================================

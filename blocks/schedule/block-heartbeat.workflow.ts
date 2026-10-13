@@ -9,7 +9,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
-// CheckIn                            httpRequest                [retry]
+// CheckIn                            httpRequest                [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -43,10 +43,9 @@ export class BlockCheckInWithTheHeartbeatMonitorWorkflow {
         width: 640,
         height: 230,
         content: `## Block · Check in with the heartbeat monitor
-The two nodes a scheduled workflow adds so the heartbeat monitor can tell when it stops running.
+What a scheduled workflow calls when it finishes, so the heartbeat monitor can tell when it stops running.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/schedule\``,
     };
 
@@ -67,26 +66,22 @@ The two nodes a scheduled workflow adds so the heartbeat monitor can tell when i
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [260, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     CheckIn = {
         method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/heartbeats',
-        options: {
-            timeout: 15000,
-        },
+        url: "={{ 'https://acme.supabase.co/rest/v1/heartbeats' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'supabaseApi',
         sendHeaders: true,
         headerParameters: {
             parameters: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-                {
                     name: 'Prefer',
-                    value: 'resolution=merge-duplicates',
+                    value: "={{ 'resolution=merge-duplicates,return=representation' }}",
                 },
             ],
         },
@@ -103,6 +98,9 @@ The two nodes a scheduled workflow adds so the heartbeat monitor can tell when i
         specifyBody: 'json',
         jsonBody:
             '={{ JSON.stringify({ name: $json.name, last_seen: $now.toISO(), max_gap_minutes: $json.max_gap_minutes ?? 90 }) }}',
+        options: {
+            timeout: 15000,
+        },
     };
 
     // =====================================================================

@@ -1,8 +1,8 @@
 import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
-// Workflow : Block · Save a remote file to storage
-// Nodes   : 7  |  Connections: 5
+// Workflow : Block · Archive a Drive file once
+// Nodes   : 6  |  Connections: 4
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
@@ -10,19 +10,17 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
 // NameIt                             code
-// ClaimTheName                       httpRequest                [alwaysOutput] [retry]
-// NewFile                            if
-// CopyToStorage                      httpRequest                [retry]
-// AlreadyStored                      noOp
+// ClaimTheFile                       supabase                   [onError→out(1)] [creds] [retry]
+// CopyToTheArchive                   googleDrive                [creds] [retry]
+// AlreadyArchived                    noOp
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
 // WhenCalled
 //    → NameIt
-//      → ClaimTheName
-//        → NewFile
-//          → CopyToStorage
-//         .out(1) → AlreadyStored
+//      → ClaimTheFile
+//        → CopyToTheArchive
+//       .out(1) → AlreadyArchived
 // </workflow-map>
 
 // =====================================================================
@@ -31,11 +29,11 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 @workflow({
     id: undefined,
-    name: 'Block · Save a remote file to storage',
+    name: 'Block · Archive a Drive file once',
     active: undefined,
     settings: { executionOrder: 'v1', errorWorkflow: '__WF:error-handler__' },
 })
-export class BlockSaveARemoteFileToStorageWorkflow {
+export class BlockArchiveADriveFileOnceWorkflow {
     // =====================================================================
     // CONFIGURATION DES NOEUDS
     // =====================================================================
@@ -50,11 +48,10 @@ export class BlockSaveARemoteFileToStorageWorkflow {
     AboutThisWorkflow = {
         width: 640,
         height: 230,
-        content: `## Block · Save a remote file to storage
-Records a file under a name derived from its own address, so the same file fetched twice is stored once.
+        content: `## Block · Archive a Drive file once
+Copies a Google Drive file into the archive folder under a dated name, and records it so the same file sent twice is archived once.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, STORAGE_API_KEY, STORAGE_BASE_URL
+**Platforms:** Supabase, Google Drive
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/data\``,
     };
 
@@ -78,123 +75,84 @@ Records a file under a name derived from its own address, so the same file fetch
     })
     NameIt = {
         jsCode: `return $input.all().map((item) => {
-  const url = String(item.json.url ?? "");
-  let h = 0; for (const c of url) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  const ext = (/\\.([a-z0-9]{2,5})(?:\\?|$)/i.exec(url)?.[1] ?? "bin").toLowerCase();
-  return { json: { url, key: "files/" + h.toString(16).padStart(8, "0") + "." + ext } };
+  const name = String(item.json.name ?? "file").replace(/[\\\\/:*?"<>|]+/g, "-").trim();
+  return { json: { file_id: String(item.json.file_id ?? ""), key: "drive/" + item.json.file_id, archive_name: new Date().toISOString().slice(0, 10) + " " + name } };
 });`,
     };
 
     @node({
-        id: 'b72669aa-59b6-44de-a337-75fa7c6da333',
-        name: 'Claim the name',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        id: '141f8168-5d0e-4f7c-a3ad-f1a9f9680484',
+        name: 'Claim the file',
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [520, 180],
-        alwaysOutputData: true,
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
+        onError: 'continueErrorOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
-    ClaimTheName = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/stored_files',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+    ClaimTheFile = {
+        resource: 'row',
+        operation: 'create',
+        tableId: 'stored_files',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'key',
+                    fieldValue: '={{ $json.key }}',
+                },
+                {
+                    fieldId: 'source',
+                    fieldValue: '={{ $json.file_id }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'on_conflict',
-                    value: "={{ 'key' }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ key: $json.key, source: $json.url }) }}',
     };
 
     @node({
-        id: 'e1db9b96-99b8-4460-a710-5f7abfb94805',
-        name: 'New file?',
-        type: 'n8n-nodes-base.if',
-        version: 2.2,
-        position: [780, 180],
+        id: '31b82eb1-88ca-4138-aed3-ad4b22b04b50',
+        name: 'Copy to the archive',
+        type: 'n8n-nodes-base.googleDrive',
+        version: 3,
+        position: [780, 90],
+        credentials: { googleDriveOAuth2Api: { id: '__CRED:googleDrive__', name: 'Google Drive' } },
+        retryOnFail: true,
+        maxTries: 3,
+        waitBetweenTries: 1000,
     })
-    NewFile = {
-        conditions: {
-            options: {
-                caseSensitive: true,
-                leftValue: '',
-                typeValidation: 'loose',
-                version: 2,
-            },
-            conditions: [
-                {
-                    id: '2b30a432-0123-4d1f-ab19-cd595c413721',
-                    leftValue: '={{ !!$json.key }}',
-                    rightValue: '',
-                    operator: {
-                        type: 'boolean',
-                        operation: 'true',
-                        singleValue: true,
-                    },
-                },
-            ],
-            combinator: 'and',
+    CopyToTheArchive = {
+        resource: 'file',
+        operation: 'copy',
+        fileId: {
+            __rl: true,
+            mode: 'id',
+            value: "={{ $('Name it').item.json.file_id }}",
+        },
+        name: "={{ $('Name it').item.json.archive_name }}",
+        sameFolder: false,
+        driveId: {
+            __rl: true,
+            mode: 'list',
+            value: 'My Drive',
+        },
+        folderId: {
+            __rl: true,
+            mode: 'id',
+            value: 'archive-folder-id',
         },
         options: {},
     };
 
     @node({
-        id: '8ceaf464-815e-4fc6-ae54-2b3764a0e754',
-        name: 'Copy to storage',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1040, 90],
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
-    })
-    CopyToStorage = {
-        method: 'POST',
-        url: '={{ $env.STORAGE_BASE_URL }}/copy',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.STORAGE_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ source_url: $json.source, key: $json.key }) }}',
-    };
-
-    @node({
-        id: '83f99df7-c607-4679-ac8a-392aeb49c2c6',
-        name: 'Already stored',
+        id: 'eea57e11-f1c9-46b9-a70d-d8441c8c30c9',
+        name: 'Already archived',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1040, 270],
+        position: [780, 270],
     })
-    AlreadyStored = {};
+    AlreadyArchived = {};
 
     // =====================================================================
     // ROUTAGE ET CONNEXIONS
@@ -203,9 +161,8 @@ Records a file under a name derived from its own address, so the same file fetch
     @links()
     defineRouting() {
         this.WhenCalled.out(0).to(this.NameIt.in(0));
-        this.NameIt.out(0).to(this.ClaimTheName.in(0));
-        this.ClaimTheName.out(0).to(this.NewFile.in(0));
-        this.NewFile.out(0).to(this.CopyToStorage.in(0));
-        this.NewFile.out(1).to(this.AlreadyStored.in(0));
+        this.NameIt.out(0).to(this.ClaimTheFile.in(0));
+        this.ClaimTheFile.out(0).to(this.CopyToTheArchive.in(0));
+        this.ClaimTheFile.out(1).to(this.AlreadyArchived.in(0));
     }
 }

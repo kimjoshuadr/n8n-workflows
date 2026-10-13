@@ -6,19 +6,17 @@
 
 **What this does about it.** Agents research, write, fact-check and optimise each piece. A person approves it, then it is published, voiced and shared, and its results come back as next week's brief.
 
-1 workflows, 13 tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.
+One canvas of 84 nodes, 13 tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.
 
 ## AI content studio · Research to published, voiced and shared
 
 Seven agents take a topic from research to a fact-checked, optimised draft. A person approves it in Slack, then it is published to WordPress with a cover image and an ElevenLabs voice-over, shared to LinkedIn, X and Facebook, and its results in PostHog become next week's topics.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Supabase, SerpAPI, Claude, Pinecone, OpenAI, Slack, WordPress, ElevenLabs, LinkedIn, X, Facebook, PostHog |
-| Nodes | 84 |
-| Calls | `notify`, `error-handler` |
-| Files | [`ai-content-studio.json`](ai-content-studio.json) · [`ai-content-studio.workflow.ts`](ai-content-studio.workflow.ts) |
+- **Starts from:** Schedule, Webhook
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/serpapi.svg" width="16" height="16" alt=""> SerpAPI &nbsp;·&nbsp; <img src="../../assets/platforms/anthropic.svg" width="16" height="16" alt=""> Claude &nbsp;·&nbsp; <img src="../../assets/platforms/pinecone.svg" width="16" height="16" alt=""> Pinecone &nbsp;·&nbsp; <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI &nbsp;·&nbsp; <img src="../../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack &nbsp;·&nbsp; <img src="../../assets/platforms/wordpress.svg" width="16" height="16" alt=""> WordPress &nbsp;·&nbsp; <img src="../../assets/platforms/elevenlabs.svg" width="16" height="16" alt=""> ElevenLabs &nbsp;·&nbsp; <img src="../../assets/platforms/linkedin.svg" width="16" height="16" alt=""> LinkedIn &nbsp;·&nbsp; <img src="../../assets/platforms/x.svg" width="16" height="16" alt=""> X &nbsp;·&nbsp; <img src="../../assets/platforms/facebook.svg" width="16" height="16" alt=""> Facebook &nbsp;·&nbsp; <img src="../../assets/platforms/posthog.svg" width="16" height="16" alt=""> PostHog
+- **Nodes:** 84
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`ai-content-studio.json`](ai-content-studio.json) · [`ai-content-studio.workflow.ts`](ai-content-studio.workflow.ts)
 
 ```mermaid
 flowchart LR

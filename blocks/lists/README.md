@@ -6,13 +6,11 @@
 
 Keeps the first of each item sharing a key, after normalising it, so 'A@B.co ' and 'a@b.co' count as one.
 
-| | |
-|---|---|
-| Starts from | Called by another workflow |
-| Platforms | none, logic only |
-| Nodes | 2 |
-| Calls | `error-handler` |
-| Files | [`block-dedupe.json`](block-dedupe.json) · [`block-dedupe.workflow.ts`](block-dedupe.workflow.ts) |
+- **Starts from:** Called by another workflow
+- **Platforms:** none, logic only
+- **Nodes:** 2
+- **Calls:** `error-handler`
+- **Files:** [`block-dedupe.json`](block-dedupe.json) · [`block-dedupe.workflow.ts`](block-dedupe.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -29,13 +27,11 @@ flowchart LR
 
 Follows a cursor until the API says there is no more, with a hard stop so a broken API cannot loop forever.
 
-| | |
-|---|---|
-| Starts from | Manual run |
-| Platforms | CRM |
-| Nodes | 6 |
-| Calls | `error-handler` |
-| Files | [`block-paginate.json`](block-paginate.json) · [`block-paginate.workflow.ts`](block-paginate.workflow.ts) |
+- **Starts from:** Manual run
+- **Platforms:** <img src="../../assets/platforms/hubspot.svg" width="16" height="16" alt=""> HubSpot
+- **Nodes:** 6
+- **Calls:** `error-handler`
+- **Files:** [`block-paginate.json`](block-paginate.json) · [`block-paginate.workflow.ts`](block-paginate.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -61,19 +57,17 @@ flowchart LR
 
 Sends items in small batches with a pause between them, for APIs that reject bursts.
 
-| | |
-|---|---|
-| Starts from | Called by another workflow |
-| Platforms | Email |
-| Nodes | 5 |
-| Calls | `error-handler` |
-| Files | [`block-rate-limited-loop.json`](block-rate-limited-loop.json) · [`block-rate-limited-loop.workflow.ts`](block-rate-limited-loop.workflow.ts) |
+- **Starts from:** Called by another workflow
+- **Platforms:** <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 5
+- **Calls:** `error-handler`
+- **Files:** [`block-rate-limited-loop.json`](block-rate-limited-loop.json) · [`block-rate-limited-loop.workflow.ts`](block-rate-limited-loop.workflow.ts)
 
 ```mermaid
 flowchart LR
   nxyuboc(["When called"])
   nrg1xgy["Five at a time"]
-  n5dpnz[/"Send"/]
+  n5dpnz["Send"]
   n4l3bjj["Pause"]
   n1st2q3d["Finished"]
   nxyuboc --> nrg1xgy
@@ -91,13 +85,11 @@ flowchart LR
 
 Groups a long list into chunks of 100 and upserts each chunk in one request.
 
-| | |
-|---|---|
-| Starts from | Called by another workflow |
-| Platforms | Datastore |
-| Nodes | 3 |
-| Calls | `error-handler` |
-| Files | [`block-batch-upsert.json`](block-batch-upsert.json) · [`block-batch-upsert.workflow.ts`](block-batch-upsert.workflow.ts) |
+- **Starts from:** Called by another workflow
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase
+- **Nodes:** 3
+- **Calls:** `error-handler`
+- **Files:** [`block-batch-upsert.json`](block-batch-upsert.json) · [`block-batch-upsert.workflow.ts`](block-batch-upsert.workflow.ts)
 
 ```mermaid
 flowchart LR

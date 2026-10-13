@@ -6,13 +6,11 @@
 
 Calls an address up to four times, waiting longer each time, and reports clearly whether it finally worked.
 
-| | |
-|---|---|
-| Starts from | Called by another workflow |
-| Platforms | none, logic only |
-| Nodes | 8 |
-| Calls | `error-handler` |
-| Files | [`block-retry-backoff.json`](block-retry-backoff.json) · [`block-retry-backoff.workflow.ts`](block-retry-backoff.workflow.ts) |
+- **Starts from:** Called by another workflow
+- **Platforms:** none, logic only
+- **Nodes:** 8
+- **Calls:** `error-handler`
+- **Files:** [`block-retry-backoff.json`](block-retry-backoff.json) · [`block-retry-backoff.workflow.ts`](block-retry-backoff.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -43,13 +41,11 @@ flowchart LR
 
 The pattern for any write that must not be lost: try, and if it still fails after retries, park the payload.
 
-| | |
-|---|---|
-| Starts from | Called by another workflow |
-| Platforms | CRM |
-| Nodes | 5 |
-| Calls | `dead-letter`, `error-handler` |
-| Files | [`block-error-to-dead-letter.json`](block-error-to-dead-letter.json) · [`block-error-to-dead-letter.workflow.ts`](block-error-to-dead-letter.workflow.ts) |
+- **Starts from:** Called by another workflow
+- **Platforms:** <img src="../../assets/platforms/hubspot.svg" width="16" height="16" alt=""> HubSpot
+- **Nodes:** 5
+- **Calls:** `dead-letter`, `error-handler`
+- **Files:** [`block-error-to-dead-letter.json`](block-error-to-dead-letter.json) · [`block-error-to-dead-letter.workflow.ts`](block-error-to-dead-letter.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -73,19 +69,17 @@ flowchart LR
 
 Answers whether a key (a user, an IP, a customer) is still under its hourly limit, and counts the attempt.
 
-| | |
-|---|---|
-| Starts from | Called by another workflow |
-| Platforms | Datastore |
-| Nodes | 6 |
-| Calls | `error-handler` |
-| Files | [`block-throttle.json`](block-throttle.json) · [`block-throttle.workflow.ts`](block-throttle.workflow.ts) |
+- **Starts from:** Called by another workflow
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase
+- **Nodes:** 6
+- **Calls:** `error-handler`
+- **Files:** [`block-throttle.json`](block-throttle.json) · [`block-throttle.workflow.ts`](block-throttle.workflow.ts)
 
 ```mermaid
 flowchart LR
   nxyuboc(["When called"])
   n17xnp7j["This hour's bucket"]
-  nldq4d[/"Read the count"/]
+  nldq4d["Read the count"]
   n1ti2wcv["Decide"]
   ny6ql3a[/"Count the attempt"/]
   n1s86opx["Answer"]
@@ -104,19 +98,17 @@ flowchart LR
 
 Records a pending decision and gives back approve and reject links. Nothing proceeds until one is pressed, and each link works once.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Datastore |
-| Nodes | 6 |
-| Calls | `error-handler` |
-| Files | [`block-approval-gate.json`](block-approval-gate.json) · [`block-approval-gate.workflow.ts`](block-approval-gate.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase
+- **Nodes:** 6
+- **Calls:** `error-handler`
+- **Files:** [`block-approval-gate.json`](block-approval-gate.json) · [`block-approval-gate.workflow.ts`](block-approval-gate.workflow.ts)
 
 ```mermaid
 flowchart LR
   ngegbnb(["Decision link"])
   ng29arw["Read the link"]
-  nodb587[/"Resolve if still pending"/]
+  nodb587["Resolve if still pending"]
   nryvszu{"Resolved now?"}
   n23b0ds(["Thanks"])
   nsrr7wl(["Link no longer valid"])

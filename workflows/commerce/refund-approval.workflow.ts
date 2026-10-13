@@ -12,16 +12,16 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // ReadTheRequest                     code
 // Valid                              if
 // Invalid                            respondToWebhook
-// LoadTheOrder                       httpRequest                [alwaysOutput] [retry]
+// LoadTheOrder                       supabase                   [creds] [alwaysOutput] [retry]
 // OrderFound                         if
 // UnknownOrder                       respondToWebhook
-// PastRefunds                        httpRequest                [alwaysOutput] [retry]
+// PastRefunds                        supabase                   [creds] [alwaysOutput] [retry]
 // ApplyThePolicy                     code
 // Decision                           switch
 // AlreadyRefunded                    respondToWebhook
-// RefundAtTheProcessor               httpRequest                [retry]
-// RecordTheRefund                    httpRequest                [retry]
-// MarkTheOrder                       httpRequest                [retry]
+// RefundInStripe                     httpRequest                [creds] [retry]
+// RecordTheRefund                    supabase                   [creds] [retry]
+// MarkTheOrder                       supabase                   [creds] [retry]
 // Refunded                           respondToWebhook
 // ReviewMessage                      code
 // AskFinance                         executeWorkflow
@@ -38,7 +38,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //              → ApplyThePolicy
 //                → Decision
 //                  → AlreadyRefunded
-//                 .out(1) → RefundAtTheProcessor
+//                 .out(1) → RefundInStripe
 //                    → RecordTheRefund
 //                      → MarkTheOrder
 //                        → Refunded
@@ -77,8 +77,7 @@ export class PaymentsRefundRequestsWorkflow {
         content: `## Payments · Refund requests
 Refunds small amounts on recent orders automatically, and sends anything larger, older or repeated to a person with the facts attached.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, PAYMENTS_API_KEY, PAYMENTS_BASE_URL
+**Platforms:** Supabase, Stripe
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/commerce\``,
     };
 
@@ -159,35 +158,28 @@ return [{ json: { order_id: String(b.order_id ?? ""), reason: String(b.reason ??
     @node({
         id: '6398f882-6201-40a1-a1ec-914c2274ef81',
         name: 'Load the order',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [780, 360],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     LoadTheOrder = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/orders',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'orders',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'order_id',
-                    value: "={{ 'eq.' + $json.order_id }}",
+                    keyName: 'order_id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.order_id }}',
                 },
             ],
         },
@@ -243,35 +235,28 @@ return [{ json: { order_id: String(b.order_id ?? ""), reason: String(b.reason ??
     @node({
         id: '165d585a-b746-4539-a49c-4c591a7e7a98',
         name: 'Past refunds',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1300, 360],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     PastRefunds = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/refunds',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'refunds',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'email',
-                    value: "={{ 'eq.' + $json.email }}",
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: '={{ $json.email }}',
                 },
             ],
         },
@@ -379,28 +364,24 @@ return [{ json: { order_id: o.order_id, email: o.email, amount: Number(o.total),
     };
 
     @node({
-        id: '08dc9c47-152b-436c-ae18-e450884688a8',
-        name: 'Refund at the processor',
+        id: '7225295a-239b-48f6-a6fa-32653e6a7b49',
+        name: 'Refund in Stripe',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [2080, 270],
+        credentials: { stripeApi: { id: '__CRED:stripe__', name: 'Stripe' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
-    RefundAtTheProcessor = {
+    RefundInStripe = {
         method: 'POST',
-        url: '={{ $env.PAYMENTS_BASE_URL }}/refunds',
-        options: {
-            timeout: 15000,
-        },
+        url: "={{ 'https://api.stripe.com/v1/refunds' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'stripeApi',
         sendHeaders: true,
         headerParameters: {
             parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.PAYMENTS_API_KEY }}",
-                },
                 {
                     name: 'Idempotency-Key',
                     value: "={{ 'refund-' + $json.order_id }}",
@@ -410,76 +391,88 @@ return [{ json: { order_id: o.order_id, email: o.email, amount: Number(o.total),
         sendBody: true,
         specifyBody: 'json',
         jsonBody: '={{ JSON.stringify({ charge: $json.charge_id, amount: Math.round($json.amount * 100) }) }}',
+        options: {
+            timeout: 15000,
+        },
     };
 
     @node({
         id: '96cf1058-4f1e-43e4-a62b-b17d9a28d5fd',
         name: 'Record the refund',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [2340, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     RecordTheRefund = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/refunds',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'refunds',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'order_id',
+                    fieldValue: "={{ $('Decision').first().json.order_id }}",
+                },
+                {
+                    fieldId: 'email',
+                    fieldValue: "={{ $('Decision').first().json.email }}",
+                },
+                {
+                    fieldId: 'amount',
+                    fieldValue: "={{ $('Decision').first().json.amount }}",
+                },
+                {
+                    fieldId: 'auto',
+                    fieldValue: '={{ true }}',
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ order_id: $('Decision').first().json.order_id, email: $('Decision').first().json.email, amount: $('Decision').first().json.amount, auto: true, at: $now.toISO() }) }}",
     };
 
     @node({
         id: 'aa509920-8bdf-4c3c-ac51-af0894d62c6b',
         name: 'Mark the order',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [2600, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkTheOrder = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/orders',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'orders',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'order_id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Decision').first().json.order_id }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'order_id',
-                    value: "={{ 'eq.' + $('Decision').first().json.order_id }}",
+                    fieldId: 'status',
+                    fieldValue: "={{ 'refunded' }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ status: 'refunded' }) }}",
     };
 
     @node({
@@ -556,9 +549,9 @@ return [{ json: { channel: "#finance", level: "warn", text: "Refund request for 
         this.PastRefunds.out(0).to(this.ApplyThePolicy.in(0));
         this.ApplyThePolicy.out(0).to(this.Decision.in(0));
         this.Decision.out(0).to(this.AlreadyRefunded.in(0));
-        this.Decision.out(1).to(this.RefundAtTheProcessor.in(0));
+        this.Decision.out(1).to(this.RefundInStripe.in(0));
         this.Decision.out(2).to(this.ReviewMessage.in(0));
-        this.RefundAtTheProcessor.out(0).to(this.RecordTheRefund.in(0));
+        this.RefundInStripe.out(0).to(this.RecordTheRefund.in(0));
         this.RecordTheRefund.out(0).to(this.MarkTheOrder.in(0));
         this.MarkTheOrder.out(0).to(this.Refunded.in(0));
         this.ReviewMessage.out(0).to(this.AskFinance.in(0));

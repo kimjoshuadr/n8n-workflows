@@ -9,10 +9,10 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Every5Minutes                      scheduleTrigger
-// SitesToWatch                       httpRequest                [alwaysOutput] [retry]
+// SitesToWatch                       supabase                   [creds] [alwaysOutput] [retry]
 // RequestTheSite                     httpRequest                [onError→regular]
 // DecideTheState                     code
-// SaveTheState                       httpRequest                [retry]
+// SaveTheState                       supabase                   [creds] [retry]
 // AlertsForChanges                   code
 // Alert                              executeWorkflow
 //
@@ -55,8 +55,7 @@ export class MonitoringUptimeChecksWorkflow {
         content: `## Monitoring · Uptime checks
 Checks each site every five minutes, alerts after two failures in a row, and reports how long it was down once it recovers.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/monitoring\``,
     };
 
@@ -81,29 +80,20 @@ Checks each site every five minutes, alerts after two failures in a row, and rep
     @node({
         id: 'a59acde9-ea44-4855-a081-a100d1ac6563',
         name: 'Sites to watch',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SitesToWatch = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/monitors',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'monitors',
+        returnAll: true,
     };
 
     @node({
@@ -155,41 +145,50 @@ return $input.all().map((item, i) => {
     @node({
         id: 'b14e6c12-3537-4eca-afb3-6e53b4eab7c5',
         name: 'Save the state',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1040, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SaveTheState = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/monitors',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'monitors',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.id }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $json.id }}",
+                    fieldId: 'state',
+                    fieldValue: '={{ $json.state }}',
+                },
+                {
+                    fieldId: 'failures',
+                    fieldValue: '={{ $json.failures }}',
+                },
+                {
+                    fieldId: 'down_since',
+                    fieldValue: '={{ $json.down_since }}',
+                },
+                {
+                    fieldId: 'checked_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            '={{ JSON.stringify({ state: $json.state, failures: $json.failures, down_since: $json.down_since, checked_at: $now.toISO() }) }}',
     };
 
     @node({

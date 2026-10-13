@@ -1,6 +1,6 @@
 /** Production workflows for content, SEO, e-commerce and payments. */
 import { webhook, schedule, http, code, iff, route, respond, noop, call, define } from "../lib/wf.mjs";
-import { db, slack, sendgrid, ask, readAnswer } from "../lib/nodes.mjs";
+import { db, slack, sendgrid, stripe, shopify, serp, ask, readAnswer } from "../lib/nodes.mjs";
 
 const content = { folder: "workflows/content", tier: "production", category: "Content and SEO" };
 const commerce = { folder: "workflows/commerce", tier: "production", category: "E-commerce and payments" };
@@ -11,7 +11,6 @@ export default [
     id: "feed-digest",
     name: "Content · Industry news digest",
     summary: "Each Friday, reads the feeds you follow, drops what was already sent, and emails a short digest of what is new.",
-    integrations: ["Schedule", "Datastore", "LLM", "Email"],
     nodes: [
       schedule("Friday 15:00", "0 15 * * 5"),
       db.find("Feeds to read", "feeds", null),
@@ -19,27 +18,30 @@ export default [
       code("Collect the items", `const items = $input.all().flatMap((i) => i.json.items ?? []).filter((x) => x && x.url && x.title);
 const unique = [...new Map(items.map((x) => [x.url, x])).values()];
 return unique.map((x) => ({ json: { url: x.url, title: x.title, summary: String(x.summary ?? "").slice(0, 500) } }));`),
-      http("Claim as seen", "DB:/seen_items", { query: { on_conflict: "'url'" }, body: "{ url: $json.url, title: $json.title, summary: $json.summary }", alwaysOutput: true }),
-      code("Only the new ones", `const fresh = $input.all().map((i) => i.json).filter((r) => r && r.url);
-return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + " (" + r.url + "): " + r.summary).join("\\n") } }];`),
+      db.find("Already seen", "seen_items", null, { once: true }),
+      code("Only the new ones", `const seen = new Set($input.all().map((i) => i.json.url).filter(Boolean));
+const fresh = $("Collect the items").all().map((i) => i.json).filter((r) => r.url && !seen.has(r.url));
+return [{ json: { count: fresh.length, rows: fresh, list: fresh.map((r) => "- " + r.title + " (" + r.url + "): " + r.summary).join("\\n") } }];`),
       iff("Anything new?", "$json.count > 0"),
-      ...ask("Write the digest", { task: "summarise", system: "Write a short weekly digest from these items: one line per item saying why it matters, grouped under at most three headings. Keep every link. Add nothing that is not in the items.", prompt: "$json.list" }),
-      sendgrid.text("Send the digest", { to: "'team@example.com'", subject: "'This week: ' + $('Only the new ones').first().json.count + ' things worth reading'", text: "$json.output ?? $('Only the new ones').first().json.list" }),
+      code("One row per item", `return $input.first().json.rows.map((json) => ({ json }));`),
+      db.insert("Remember them", "seen_items", { url: "$json.url", title: "$json.title", summary: "$json.summary" }),
+      ...ask("Write the digest", { task: "summarise", system: "Write a short weekly digest from these items: one line per item saying why it matters, grouped under at most three headings. Keep every link. Add nothing that is not in the items.", prompt: "$('Only the new ones').first().json.list" }, { once: true }),
+      sendgrid.text("Send the digest", { to: "'team@example.com'", subject: "'This week: ' + $('Only the new ones').first().json.count + ' things worth reading'", text: "$json.output ?? $('Only the new ones').first().json.list" }, { once: true }),
       noop("Quiet week"),
     ],
     flow: [
-      ["Friday 15:00", "Feeds to read", "Fetch the feed", "Collect the items", "Claim as seen", "Only the new ones", "Anything new?", "Write the digest", "Send the digest"],
+      ["Friday 15:00", "Feeds to read", "Fetch the feed", "Collect the items", "Already seen", "Only the new ones", "Anything new?", "One row per item", "Remember them", "Write the digest", "Send the digest"],
       ["Anything new?:1", "Quiet week"],
     ],
     story: [
       { title: "It reads your feeds", copy: "One dead feed does not stop the others.", nodes: ["Friday 15:00", "Feeds to read", "Fetch the feed", "Collect the items"] },
-      { title: "Seen once, sent once", copy: "Each link is claimed in the datastore. Only links that were new this run go forward.", nodes: ["Claim as seen", "Only the new ones", "Anything new?", "Quiet week"] },
+      { title: "Seen once, sent once", copy: "The links already sent are read from Supabase. Only the ones that are new go forward, and they are remembered before the digest is written.", nodes: ["Already seen", "Only the new ones", "Anything new?", "Quiet week", "One row per item", "Remember them"] },
       { title: "A digest, or the plain list", copy: "If the model is down the raw list is sent instead of nothing.", nodes: ["Write the digest", "Send the digest"] },
     ],
     tests: [
-      { name: "sends only items not seen before", seed: { feeds: [{ url: "http://mocks:4010/feed/a" }], seen_items: [{ url: "https://x.example/old", title: "Old" }] }, routes: [{ path: "/feed/a", response: { items: [{ url: "https://x.example/old", title: "Old" }, { url: "https://x.example/new", title: "New thing", summary: "It is new." }] } }], input: [{}], output: { node: "Only the new ones", json: { count: 1 } }, calls: [{ to: "sendgrid", path: "/v3/mail/send", body: { subject: "This week: 1 things worth reading" } }] },
+      { name: "sends only items not seen before", seed: { feeds: [{ url: "http://mocks:4010/feed/a" }], seen_items: [{ url: "https://x.example/old", title: "Old" }] }, routes: [{ path: "/feed/a", response: { items: [{ url: "https://x.example/old", title: "Old" }, { url: "https://x.example/new", title: "New thing", summary: "It is new." }] } }], input: [{}], output: { node: "Only the new ones", json: { count: 1 } }, calls: [{ to: "sendgrid", path: "/v3/mail/send", body: { personalizations: [{ subject: "This week: 1 things worth reading" }] } }] },
       { name: "sends nothing in a quiet week", seed: { feeds: [{ url: "http://mocks:4010/feed/a" }], seen_items: [{ url: "https://x.example/old" }] }, routes: [{ path: "/feed/a", response: { items: [{ url: "https://x.example/old", title: "Old" }] } }], input: [{}], ran: ["Quiet week"], noCalls: ["sendgrid", "openai", "anthropic"] },
-      { name: "sends the plain list when the model is down", seed: { feeds: [{ url: "http://mocks:4010/feed/a" }] }, routes: [{ path: "/feed/a", response: { items: [{ url: "https://x.example/n", title: "New thing", summary: "S" }] } }], fail: [{ path: "/v1/chat/completions", times: 20 }, { path: "/v1/messages", times: 20 }], input: [{}], calls: [{ to: "sendgrid", path: "/v3/mail/send", body: { text: "- New thing (https://x.example/n): S" } }] },
+      { name: "sends the plain list when the model is down", seed: { feeds: [{ url: "http://mocks:4010/feed/a" }] }, routes: [{ path: "/feed/a", response: { items: [{ url: "https://x.example/n", title: "New thing", summary: "S" }] } }], fail: [{ path: "/v1/chat/completions", times: 20 }, { path: "/v1/messages", times: 20 }], input: [{}], calls: [{ to: "sendgrid", path: "/v3/mail/send", body: { content: [{ value: "- New thing (https://x.example/n): S" }] } }] },
     ],
   }),
 
@@ -48,7 +50,6 @@ return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + "
     id: "broken-link-check",
     name: "SEO · Broken link check",
     summary: "Every Sunday night, visits each page in the sitemap list and reports the ones that no longer load, with the status each returned.",
-    integrations: ["Schedule", "Datastore", "Chat"],
     nodes: [
       schedule("Sunday 23:00", "0 23 * * 0"),
       db.find("Pages to check", "site_pages", null),
@@ -81,18 +82,17 @@ return [{ json: { checked: results.length, broken, any: broken.length > 0, text:
     id: "rank-tracker",
     name: "SEO · Keyword rank tracker",
     summary: "Records where the site ranks for each tracked keyword every day, and alerts when one falls five places or drops off the first page.",
-    integrations: ["Schedule", "Datastore", "Search", "Chat"],
     nodes: [
       schedule("05:00 daily", "0 5 * * *"),
       db.find("Tracked keywords", "keywords", null),
-      http("Search for it", "SEARCH:/serp", { body: "{ query: $json.keyword, num: 30 }", onFail: "continue" }),
+      serp.search("Search for it", "$json.keyword", { onFail: "continue" }),
       code("Find our position", `const kws = $("Tracked keywords").all();
 return $input.all().map((item, i) => {
   const k = kws[i]?.json;
   if (!k?.keyword) return null;
-  const results = item.json.results;
+  const results = item.json.organic_results;
   if (!Array.isArray(results)) return { json: { ...k, position: null, checked: false } };
-  const idx = results.findIndex((r) => String(r.url ?? "").includes(k.domain));
+  const idx = results.findIndex((r) => String(r.link ?? "").includes(k.domain));
   const position = idx === -1 ? null : idx + 1;
   const before = k.last_position ?? null;
   const fell = before !== null && (position === null || position - before >= 5);
@@ -119,9 +119,9 @@ return [{ json: { channel: "#seo", level: "warn", text: drops.length + " keyword
       { title: "Drops are raised together", copy: "Five places down, or off the first page. One message lists them all.", nodes: ["Gather the drops", "Alert"] },
     ],
     tests: [
-      { name: "records the position and alerts on a fall off page one", seed: { keywords: [{ keyword: "prop firm reviews", domain: "oursite.com", last_position: 4 }] }, routes: [{ path: "/search/serp", response: { results: [...Array(11).fill({ url: "https://other.com" }), { url: "https://oursite.com/reviews" }] } }], input: [{}], calls: [{ to: "supabase", path: "/rest/v1/rank_history", body: { keyword: "prop firm reviews", position: 12 } }, { to: "slack", path: "/api/chat.postMessage" }], table: { keywords: [{ keyword: "prop firm reviews", last_position: 12 }] } },
-      { name: "a small move is recorded without an alert", seed: { keywords: [{ keyword: "k", domain: "oursite.com", last_position: 3 }] }, routes: [{ path: "/search/serp", response: { results: [{ url: "https://a.com" }, { url: "https://b.com" }, { url: "https://c.com" }, { url: "https://oursite.com" }] } }], input: [{}], calls: [{ to: "supabase", path: "/rest/v1/rank_history", body: { position: 4 } }], noCalls: ["slack"] },
-      { name: "a failed search keeps yesterday's position", seed: { keywords: [{ keyword: "k", domain: "oursite.com", last_position: 3 }] }, fail: [{ path: "/search", times: 3 }], input: [{}], ran: ["Search failed, keep yesterday"], noCalls: ["/rest/v1/rank_history", "slack"] },
+      { name: "records the position and alerts on a fall off page one", seed: { keywords: [{ keyword: "prop firm reviews", domain: "oursite.com", last_position: 4 }] }, routes: [{ path: "serpapi.com/search.json", response: { organic_results: [...Array(11).fill({ link: "https://other.com" }), { link: "https://oursite.com/reviews" }] } }], input: [{}], calls: [{ to: "supabase", path: "/rest/v1/rank_history", body: { keyword: "prop firm reviews", position: 12 } }, { to: "slack", path: "/api/chat.postMessage" }], table: { keywords: [{ keyword: "prop firm reviews", last_position: 12 }] } },
+      { name: "a small move is recorded without an alert", seed: { keywords: [{ keyword: "k", domain: "oursite.com", last_position: 3 }] }, routes: [{ path: "serpapi.com/search.json", response: { organic_results: [{ link: "https://a.com" }, { link: "https://b.com" }, { link: "https://c.com" }, { link: "https://oursite.com" }] } }], input: [{}], calls: [{ to: "supabase", path: "/rest/v1/rank_history", body: { position: 4 } }], noCalls: ["slack"] },
+      { name: "a failed search keeps yesterday's position", seed: { keywords: [{ keyword: "k", domain: "oursite.com", last_position: 3 }] }, fail: [{ path: "/search.json", times: 3 }], input: [{}], ran: ["Search failed, keep yesterday"], noCalls: ["/rest/v1/rank_history", "slack"] },
     ],
   }),
 
@@ -130,12 +130,14 @@ return [{ json: { channel: "#seo", level: "warn", text: drops.length + " keyword
     id: "mention-monitor",
     name: "Brand · Mention monitor",
     summary: "Checks hourly for new mentions of the brand, and raises the negative ones straight away with the text and the link.",
-    integrations: ["Schedule", "Search", "Datastore", "LLM", "Chat"],
     nodes: [
       schedule("Hourly", { hours: 1 }),
-      http("Search for mentions", "SEARCH:/mentions", { body: "{ query: 'YourBrand', since_hours: 2 }" }),
-      code("One item per mention", `return ($input.first().json.mentions ?? []).filter((m) => m.url && m.text).map((m) => ({ json: { url: m.url, text: String(m.text).slice(0, 1500), author: m.author ?? "unknown" } }));`),
-      http("Claim as seen", "DB:/seen_mentions", { query: { on_conflict: "'url'" }, body: "{ url: $json.url, text: $json.text, author: $json.author }", alwaysOutput: true }),
+      serp.search("Search for mentions", "'\"YourBrand\" -site:yourbrand.com'"),
+      code("One item per mention", `return ($input.first().json.organic_results ?? []).filter((m) => m.link && m.snippet).map((m) => ({ json: { url: m.link, text: String(m.snippet).slice(0, 1500), author: m.source ?? "unknown" } }));`),
+      db.find("Already seen", "seen_mentions", null, { once: true }),
+      code("Keep the unseen", `const seen = new Set($input.all().map((i) => i.json.url).filter(Boolean));
+return $("One item per mention").all().filter((i) => !seen.has(i.json.url));`),
+      db.insert("Remember it", "seen_mentions", { url: "$json.url", text: "$json.text", author: "$json.author" }),
       iff("New mention?", "!!$json.url"),
       ...ask("Read the tone", { task: "classify", system: "Classify a public mention of a brand. Reply with JSON: { label: string, urgent: boolean, sentiment: 'negative'|'neutral'|'positive' }.", prompt: "$json.text", example: { label: "billing", urgent: false, sentiment: "neutral" } }),
       readAnswer("Read the verdict", { from: "New mention?", fallback: { sentiment: "unknown" } }),
@@ -143,15 +145,15 @@ return [{ json: { channel: "#seo", level: "warn", text: drops.length + " keyword
       code("Write the alert", `return $input.all().map((i) => ({ json: { channel: "#brand", level: "warn", text: (i.json.sentiment === "unknown" ? "Unclassified" : "Negative") + " mention by " + i.json.author + ": \\"" + i.json.text.slice(0, 240) + "\\" " + i.json.url } }));`),
       call("Raise it", "notify"),
     ],
-    flow: [["Hourly", "Search for mentions", "One item per mention", "Claim as seen", "New mention?", "Read the tone", "Read the verdict", "Needs attention?", "Write the alert", "Raise it"]],
+    flow: [["Hourly", "Search for mentions", "One item per mention", "Already seen", "Keep the unseen", "Remember it", "New mention?", "Read the tone", "Read the verdict", "Needs attention?", "Write the alert", "Raise it"]],
     story: [
-      { title: "New mentions, hourly", copy: "The search window overlaps the last run on purpose, and each link is claimed so overlap costs nothing.", nodes: ["Hourly", "Search for mentions", "One item per mention", "Claim as seen", "New mention?"] },
+      { title: "New mentions, hourly", copy: "The search overlaps the last run on purpose. Links already seen are read from Supabase and dropped, so overlap costs nothing.", nodes: ["Hourly", "Search for mentions", "One item per mention", "Already seen", "Keep the unseen", "Remember it", "New mention?"] },
       { title: "A model reads the tone", copy: "A mention it could not read is treated as needing attention, not as fine.", nodes: ["Read the tone", "Read the verdict", "Needs attention?"] },
-      { title: "Negative ones are raised with the link", copy: "Positive and neutral mentions are kept in the datastore and nobody is interrupted.", nodes: ["Write the alert", "Raise it"] },
+      { title: "Negative ones are raised with the link", copy: "Positive and neutral mentions are kept in Supabase and nobody is interrupted.", nodes: ["Write the alert", "Raise it"] },
     ],
     tests: [
-      { name: "raises a negative mention once", routes: [{ path: "/search/mentions", response: { mentions: [{ url: "https://x.example/1", text: "Worst service, terrible", author: "sam" }, { url: "https://x.example/2", text: "Loved it", author: "ana" }] } }], repeat: 2, input: [{}], callCount: { "slack /api/chat.postMessage": 1 }, calls: [{ to: "slack", path: "/api/chat.postMessage", body: { channel: "#brand" } }] },
-      { name: "a mention it cannot classify is raised too", routes: [{ path: "/search/mentions", response: { mentions: [{ url: "https://x.example/3", text: "Hmm", author: "sam" }] } }], fail: [{ path: "/v1/chat/completions", times: 20 }, { path: "/v1/messages", times: 20 }], input: [{}], calls: [{ to: "slack", path: "/api/chat.postMessage", body: { channel: "#brand" } }] },
+      { name: "raises a negative mention once", routes: [{ path: "serpapi.com/search.json", response: { organic_results: [{ link: "https://x.example/1", snippet: "Worst service, terrible", source: "sam" }, { link: "https://x.example/2", snippet: "Loved it", source: "ana" }] } }], repeat: 2, input: [{}], callCount: { "slack /api/chat.postMessage": 1 }, calls: [{ to: "slack", path: "/api/chat.postMessage", body: { channel: "#brand" } }] },
+      { name: "a mention it cannot classify is raised too", routes: [{ path: "serpapi.com/search.json", response: { organic_results: [{ link: "https://x.example/3", snippet: "Hmm", source: "sam" }] } }], fail: [{ path: "/v1/chat/completions", times: 20 }, { path: "/v1/messages", times: 20 }], input: [{}], calls: [{ to: "slack", path: "/api/chat.postMessage", body: { channel: "#brand" } }] },
     ],
   }),
 
@@ -160,7 +162,6 @@ return [{ json: { channel: "#seo", level: "warn", text: drops.length + " keyword
     id: "inventory-sync",
     name: "Inventory · Supplier stock sync",
     summary: "Pulls the supplier's stock feed every two hours and updates the store only for products whose quantity changed, refusing a feed that looks wrong.",
-    integrations: ["Schedule", "Supplier", "Datastore", "Shop", "Chat"],
     nodes: [
       schedule("Every 2 hours", { hours: 2 }),
       http("Supplier feed", "SUPPLIER:/stock", { method: "GET" }),
@@ -174,25 +175,29 @@ const suspicious = feed.length === 0 || (known.size >= 10 && zeroed / known.size
 return [{ json: { feed_size: feed.length, changes, suspicious, zeroed } }];`),
       iff("Feed looks sane?", "!$json.suspicious"),
       code("One item per change", `return $input.first().json.changes.map((json) => ({ json }));`),
-      http("Update the store", "SHOP:/inventory_levels/set", { body: "{ sku: $json.sku, available: $json.quantity }", onFail: "continue" }),
-      http("Update the snapshot", "DB:/stock_snapshot", { query: { on_conflict: "'sku'" }, headers: { Prefer: "resolution=merge-duplicates" }, body: "{ sku: $('One item per change').item.json.sku, quantity: $('One item per change').item.json.quantity, at: $now.toISO() }" }),
+      shopify.setStock("Update the store", { sku: "$json.sku", to: "$json.quantity" }, { onFail: "continue" }),
+      db.update("Update the snapshot", "stock_snapshot", { sku: "$('One item per change').item.json.sku" }, { quantity: "$('One item per change').item.json.quantity", at: "$now.toISO()" }),
+      iff("Known product?", "!!$json.sku"),
+      db.insert("Add to the snapshot", "stock_snapshot", { sku: "$('One item per change').item.json.sku", quantity: "$('One item per change').item.json.quantity", at: "$now.toISO()" }),
+      noop("Snapshot updated"),
       code("Refused message", `const r = $input.first().json;
 return [{ json: { level: "critical", text: "Supplier stock feed refused: " + (r.feed_size === 0 ? "it was empty" : r.zeroed + " products went to zero at once") + ". The store was not changed. Check the feed." } }];`),
       call("Alert", "notify"),
     ],
     flow: [
-      ["Every 2 hours", "Supplier feed", "Last known stock", "What changed?", "Feed looks sane?", "One item per change", "Update the store", "Update the snapshot"],
+      ["Every 2 hours", "Supplier feed", "Last known stock", "What changed?", "Feed looks sane?", "One item per change", "Update the store", "Update the snapshot", "Known product?", "Snapshot updated"],
+      ["Known product?:1", "Add to the snapshot"],
       ["Feed looks sane?:1", "Refused message", "Alert"],
     ],
     story: [
       { title: "The supplier's numbers, and ours", copy: "The feed is compared with the last snapshot.", nodes: ["Every 2 hours", "Supplier feed", "Last known stock", "What changed?"] },
       { title: "A broken feed is refused", copy: "An empty feed, or one that zeroes most of the catalogue, changes nothing and raises an alert. That one check is what stops a supplier outage from taking every product off sale.", nodes: ["Feed looks sane?", "Refused message", "Alert"] },
-      { title: "Only the differences are written", copy: "Ten changed products means ten calls, not ten thousand.", nodes: ["One item per change", "Update the store", "Update the snapshot"] },
+      { title: "Only the differences are written", copy: "Ten changed products means ten calls, not ten thousand.", nodes: ["One item per change", "Update the store", "Update the snapshot", "Known product?", "Add to the snapshot", "Snapshot updated"] },
     ],
     tests: [
-      { name: "updates only what changed", routes: [{ path: "/supplier/stock", response: { items: [{ sku: "A", quantity: 5 }, { sku: "B", quantity: 9 }] } }], seed: { stock_snapshot: [{ sku: "A", quantity: 5 }, { sku: "B", quantity: 12 }] }, input: [{}], callCount: { "/shop/inventory_levels/set": 1 }, calls: [{ path: "/shop/inventory_levels/set", body: { sku: "B", available: 9 } }], table: { stock_snapshot: [{ sku: "B", quantity: 9 }] } },
-      { name: "refuses an empty feed", routes: [{ path: "/supplier/stock", response: { items: [] } }], seed: { stock_snapshot: [{ sku: "A", quantity: 5 }] }, input: [{}], ran: ["Alert"], noCalls: ["/shop"] },
-      { name: "refuses a feed that zeroes most of the catalogue", routes: [{ path: "/supplier/stock", response: { items: Array.from({ length: 12 }, (_, i) => ({ sku: "S" + i, quantity: 0 })) } }], seed: { stock_snapshot: Array.from({ length: 12 }, (_, i) => ({ sku: "S" + i, quantity: 8 })) }, input: [{}], ran: ["Alert"], noCalls: ["/shop"] },
+      { name: "updates only what changed", routes: [{ path: "/supplier/stock", response: { items: [{ sku: "A", quantity: 5 }, { sku: "B", quantity: 9 }] } }], seed: { stock_snapshot: [{ sku: "A", quantity: 5 }, { sku: "B", quantity: 12 }] }, input: [{}], callCount: { "shopify /admin/api/2025-01/inventory_levels/set.json": 1 }, calls: [{ to: "shopify", path: "/admin/api/2025-01/inventory_levels/set.json", body: { sku: "B", available: 9 } }], table: { stock_snapshot: [{ sku: "B", quantity: 9 }] } },
+      { name: "refuses an empty feed", routes: [{ path: "/supplier/stock", response: { items: [] } }], seed: { stock_snapshot: [{ sku: "A", quantity: 5 }] }, input: [{}], ran: ["Alert"], noCalls: ["shopify"] },
+      { name: "refuses a feed that zeroes most of the catalogue", routes: [{ path: "/supplier/stock", response: { items: Array.from({ length: 12 }, (_, i) => ({ sku: "S" + i, quantity: 0 })) } }], seed: { stock_snapshot: Array.from({ length: 12 }, (_, i) => ({ sku: "S" + i, quantity: 8 })) }, input: [{}], ran: ["Alert"], noCalls: ["shopify"] },
     ],
   }),
 
@@ -201,7 +206,6 @@ return [{ json: { level: "critical", text: "Supplier stock feed refused: " + (r.
     id: "refund-approval",
     name: "Payments · Refund requests",
     summary: "Refunds small amounts on recent orders automatically, and sends anything larger, older or repeated to a person with the facts attached.",
-    integrations: ["Webhook", "Datastore", "Payments", "Email", "Chat"],
     nodes: [
       webhook("Refund requested", "refund-request"),
       code("Read the request", `const b = $input.first().json.body ?? {};
@@ -223,7 +227,7 @@ if (past.length >= 2) reasons.push("third refund for this customer");
 return [{ json: { order_id: o.order_id, email: o.email, amount: Number(o.total), charge_id: o.charge_id ?? null, auto: reasons.length === 0, already: o.status === "refunded", reasons, request_reason: $("Read the request").first().json.reason } }];`),
       route("Decision", { already: "$json.already", auto: "$json.auto" }),
       respond("Already refunded", "{ ok: true, status: 'already_refunded' }"),
-      http("Refund at the processor", "PAYMENTS:/refunds", { body: "{ charge: $json.charge_id, amount: Math.round($json.amount * 100) }", headers: { "Idempotency-Key": "='refund-' + $json.order_id" } }),
+      stripe.refund("Refund in Stripe", { charge: "$json.charge_id", amount: "Math.round($json.amount * 100)", key: "'refund-' + $json.order_id" }),
       db.insert("Record the refund", "refunds", { order_id: "$('Decision').first().json.order_id", email: "$('Decision').first().json.email", amount: "$('Decision').first().json.amount", auto: "true", at: "$now.toISO()" }),
       db.update("Mark the order", "orders", { order_id: "$('Decision').first().json.order_id" }, { status: "'refunded'" }, { alwaysOutput: false }),
       respond("Refunded", "{ ok: true, status: 'refunded' }"),
@@ -237,21 +241,21 @@ return [{ json: { channel: "#finance", level: "warn", text: "Refund request for 
       ["Valid?:1", "Invalid"],
       ["Order found?:1", "Unknown order"],
       ["Decision:0", "Already refunded"],
-      ["Decision:1", "Refund at the processor", "Record the refund", "Mark the order", "Refunded"],
+      ["Decision:1", "Refund in Stripe", "Record the refund", "Mark the order", "Refunded"],
       ["Decision:2", "Review message", "Ask finance", "Under review"],
     ],
     story: [
       { title: "A refund is asked for", copy: "The order is loaded, along with every refund this customer has had before.", nodes: ["Refund requested", "Read the request", "Valid?", "Invalid", "Load the order", "Order found?", "Unknown order", "Past refunds"] },
       { title: "The policy is written down", copy: "Under 100, within 30 days, and not a third refund. Each rule that fails is named.", nodes: ["Apply the policy", "Decision", "Already refunded"] },
-      { title: "Inside the policy: refunded now", copy: "The processor call carries an idempotency key, so a retry can never refund twice.", nodes: ["Refund at the processor", "Record the refund", "Mark the order", "Refunded"] },
+      { title: "Inside the policy: refunded now", copy: "The processor call carries an idempotency key, so a retry can never refund twice.", nodes: ["Refund in Stripe", "Record the refund", "Mark the order", "Refunded"] },
       { title: "Outside it: a person decides", copy: "Finance gets the amount, the rules it failed and what the customer said.", nodes: ["Review message", "Ask finance", "Under review"] },
     ],
     tests: [
-      { name: "a small recent order is refunded automatically", seed: { orders: [{ order_id: "1", email: "a@b.co", total: 40, charge_id: "ch_1", status: "delivered", created_at: new Date().toISOString() }] }, request: { body: { order_id: 1, reason: "Wrong size" } }, response: { body: { status: "refunded" } }, calls: [{ path: "/payments/refunds", body: { charge: "ch_1", amount: 4000 } }], table: { orders: [{ order_id: "1", status: "refunded" }] } },
-      { name: "a large order goes to finance", seed: { orders: [{ order_id: "2", email: "a@b.co", total: 450, status: "delivered", created_at: new Date().toISOString() }] }, request: { body: { order_id: 2 } }, response: { body: { status: "under_review" } }, noCalls: ["/payments"], ran: ["Ask finance"] },
-      { name: "a third refund goes to finance", seed: { orders: [{ order_id: "3", email: "a@b.co", total: 20, status: "delivered", created_at: new Date().toISOString() }], refunds: [{ email: "a@b.co" }, { email: "a@b.co" }] }, request: { body: { order_id: 3 } }, response: { body: { status: "under_review" } }, noCalls: ["/payments"] },
-      { name: "asking twice refunds once", seed: { orders: [{ order_id: "4", email: "a@b.co", total: 40, charge_id: "ch_4", status: "delivered", created_at: new Date().toISOString() }] }, repeat: 2, request: { body: { order_id: 4 } }, response: { body: { status: "already_refunded" } }, callCount: { "/payments/refunds": 1 } },
-      { name: "an unknown order is a 404", request: { body: { order_id: 999 } }, response: { status: 404 }, noCalls: ["/payments"] },
+      { name: "a small recent order is refunded automatically", seed: { orders: [{ order_id: "1", email: "a@b.co", total: 40, charge_id: "ch_1", status: "delivered", created_at: new Date().toISOString() }] }, request: { body: { order_id: 1, reason: "Wrong size" } }, response: { body: { status: "refunded" } }, calls: [{ to: "stripe", path: "/v1/refunds", body: { charge: "ch_1", amount: 4000 } }], table: { orders: [{ order_id: "1", status: "refunded" }] } },
+      { name: "a large order goes to finance", seed: { orders: [{ order_id: "2", email: "a@b.co", total: 450, status: "delivered", created_at: new Date().toISOString() }] }, request: { body: { order_id: 2 } }, response: { body: { status: "under_review" } }, noCalls: ["stripe"], ran: ["Ask finance"] },
+      { name: "a third refund goes to finance", seed: { orders: [{ order_id: "3", email: "a@b.co", total: 20, status: "delivered", created_at: new Date().toISOString() }], refunds: [{ email: "a@b.co" }, { email: "a@b.co" }] }, request: { body: { order_id: 3 } }, response: { body: { status: "under_review" } }, noCalls: ["stripe"] },
+      { name: "asking twice refunds once", seed: { orders: [{ order_id: "4", email: "a@b.co", total: 40, charge_id: "ch_4", status: "delivered", created_at: new Date().toISOString() }] }, repeat: 2, request: { body: { order_id: 4 } }, response: { body: { status: "already_refunded" } }, callCount: { "stripe /v1/refunds": 1 } },
+      { name: "an unknown order is a 404", request: { body: { order_id: 999 } }, response: { status: 404 }, noCalls: ["stripe"] },
     ],
   }),
 
@@ -260,7 +264,6 @@ return [{ json: { channel: "#finance", level: "warn", text: "Refund request for 
     id: "renewal-reminder",
     name: "Subscriptions · Renewal reminders",
     summary: "Tells subscribers a week before an annual renewal, once, with the amount and the date, so the charge is never a surprise.",
-    integrations: ["Schedule", "Datastore", "Email"],
     nodes: [
       schedule("08:00 daily", "0 8 * * *"),
       db.find("Active subscriptions", "subscriptions", { status: "'active'", interval: "'year'" }),
@@ -289,7 +292,6 @@ return $input.all().map((i) => i.json).filter((s) => s.email && s.renews_at).fil
     id: "invoice-intake",
     name: "Finance · Supplier invoice intake",
     summary: "Reads a supplier invoice with a model, checks the arithmetic and the duplicate history itself, and files it or sends it for review.",
-    integrations: ["Webhook", "LLM", "Datastore", "Chat"],
     nodes: [
       webhook("Invoice received", "invoice-received", { respond: "immediately" }),
       code("Read the upload", `const b = $input.first().json.body ?? {};

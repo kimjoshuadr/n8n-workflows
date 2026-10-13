@@ -11,7 +11,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // WhenCalled                         executeWorkflowTrigger
 // FillTheTemplate                    code
 // ReadyToSend                        if
-// Send                               httpRequest                [retry]
+// Send                               sendGrid                   [creds] [retry]
 // Sent                               set
 // HeldBack                           set
 //
@@ -53,8 +53,7 @@ export class BlockTemplatedEmailWorkflow {
         content: `## Block · Templated email
 One place to send an email from: fills a template, refuses to send with a placeholder left unfilled.
 
-**Platforms:** none, this is logic only
-**Settings:** EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/notify\``,
     };
 
@@ -121,31 +120,25 @@ One place to send an email from: fills a template, refuses to send with a placeh
     @node({
         id: '094f1562-bd7c-4de6-ab93-a31f9c07baac',
         name: 'Send',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
         position: [780, 90],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     Send = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ to: $json.to, subject: $json.subject, text: $json.text }) }}',
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: '={{ $json.to }}',
+        subject: '={{ $json.subject }}',
+        dynamicTemplate: false,
+        contentType: 'text/plain',
+        contentValue: '={{ $json.text }}',
+        additionalFields: {},
     };
 
     @node({

@@ -9,7 +9,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
-// Write                              httpRequest                [onError→out(1)] [retry]
+// Write                              httpRequest                [onError→out(1)] [creds] [retry]
 // Written                            set
 // Wrap                               code
 // ParkIt                             executeWorkflow
@@ -51,8 +51,7 @@ export class BlockFailedCallToDeadLetterWorkflow {
         content: `## Block · Failed call to dead letter
 The pattern for any write that must not be lost: try, and if it still fails after retries, park the payload.
 
-**Platforms:** none, this is logic only
-**Settings:** CRM_API_KEY, CRM_BASE_URL
+**Platforms:** HubSpot
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/reliability\``,
     };
 
@@ -73,6 +72,7 @@ The pattern for any write that must not be lost: try, and if it still fails afte
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [260, 180],
+        credentials: { hubspotAppToken: { id: '__CRED:hubspot__', name: 'HubSpot' } },
         onError: 'continueErrorOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -80,22 +80,15 @@ The pattern for any write that must not be lost: try, and if it still fails afte
     })
     Write = {
         method: 'POST',
-        url: '={{ $env.CRM_BASE_URL }}/records',
+        url: "={{ 'https://api.hubapi.com/crm/v3/objects/contacts' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'hubspotAppToken',
+        sendBody: true,
+        specifyBody: 'json',
+        jsonBody: '={{ JSON.stringify({ properties: $json }) }}',
         options: {
             timeout: 15000,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CRM_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify($json) }}',
     };
 
     @node({
@@ -128,7 +121,7 @@ The pattern for any write that must not be lost: try, and if it still fails afte
         position: [520, 270],
     })
     Wrap = {
-        jsCode: 'return [{ json: { source: "block-error-to-dead-letter", reason: "CRM write failed after retries", payload: $("When called").first().json } }];',
+        jsCode: 'return [{ json: { source: "block-error-to-dead-letter", reason: "HubSpot write failed after retries", payload: $("When called").first().json } }];',
     };
 
     @node({

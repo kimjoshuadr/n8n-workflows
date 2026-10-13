@@ -12,13 +12,11 @@
 
 Takes an enquiry from any form, rejects junk, ignores repeats, has a model score the fit, then files it in the CRM and sends the right first reply.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | LLM, CRM, Email, Chat, Datastore |
-| Nodes | 21 |
-| Calls | `idempotency-guard`, `notify`, `dead-letter`, `error-handler` |
-| Files | [`lead-capture.json`](lead-capture.json) · [`lead-capture.workflow.ts`](lead-capture.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI &nbsp;·&nbsp; <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/hubspot.svg" width="16" height="16" alt=""> HubSpot &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 23
+- **Calls:** `idempotency-guard`, `notify`, `dead-letter`, `error-handler`
+- **Files:** [`lead-capture.json`](lead-capture.json) · [`lead-capture.workflow.ts`](lead-capture.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -30,15 +28,17 @@ flowchart LR
   nssd3oc[["Seen today?"]]
   ndk0vlv{"New enquiry?"}
   n1ntcjch["Ignore the repeat"]
-  n1yduzd9[/"Score the fit"/]
+  n1yduzd9[["Score the fit"]]
+  n11cnhan("Score the fit · GPT")
+  notjlnp("Score the fit · shape")
   n1riexmv["Read the verdict"]
-  nem5cfb[/"Save the lead"/]
+  nem5cfb["Save the lead"]
   n1ie8epc{"Which path?"}
-  nwklbsx[/"Create CRM contact"/]
-  n16viuuq[/"Send booking link"/]
+  nwklbsx["Create CRM contact"]
+  n16viuuq["Send booking link"]
   n7dloas[["Tell sales"]]
   naa7b4d[["Park for replay"]]
-  n142sp6y[/"Send nurture email"/]
+  n142sp6y["Send nurture email"]
   n3pnali[["Ask a person to look"]]
   nu9z030["Sales message"]
   n20moti["Review message"]
@@ -58,11 +58,13 @@ flowchart LR
   nwklbsx --> n16viuuq
   n16viuuq --> nu9z030
   nu9z030 --> n7dloas
-  nwklbsx -->|failed| n1x46bex
+  nwklbsx --> n1x46bex
   n1x46bex --> naa7b4d
   n1ie8epc -->|no| n142sp6y
   n1ie8epc -->|no| n20moti
   n20moti --> n3pnali
+  n11cnhan -.-> n1yduzd9
+  notjlnp -.-> n1yduzd9
 ```
 
 **How it runs**
@@ -88,24 +90,22 @@ flowchart LR
 
 Each morning, writes to qualified leads who have not booked. Three nudges, two days apart, then the lead is marked cold and left alone.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, Email |
-| Nodes | 8 |
-| Calls | `error-handler` |
-| Files | [`lead-follow-up.json`](lead-follow-up.json) · [`lead-follow-up.workflow.ts`](lead-follow-up.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 8
+- **Calls:** `error-handler`
+- **Files:** [`lead-follow-up.json`](lead-follow-up.json) · [`lead-follow-up.workflow.ts`](lead-follow-up.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1r5iigo(["Every morning"])
-  nfjzwzj[/"Unbooked leads"/]
+  nfjzwzj["Unbooked leads"]
   n1kk7fa0["Who is due?"]
   n1xhp9w7{"Nudges left?"}
-  nk5m1h7[/"Send the nudge"/]
-  nkmhosk[/"Record the nudge"/]
-  n1sx1sls[/"Mark cold"/]
-  nuc14dg[/"Check in"/]
+  nk5m1h7["Send the nudge"]
+  nkmhosk["Record the nudge"]
+  n1sx1sls["Mark cold"]
+  nuc14dg["Check in"]
   n1r5iigo --> nfjzwzj
   nfjzwzj --> n1kk7fa0
   n1kk7fa0 --> n1xhp9w7
@@ -133,13 +133,11 @@ flowchart LR
 
 When a call is booked, moves the lead forward everywhere at once: the lead record, the CRM deal and the sales channel.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Calendar, Datastore, CRM, Chat |
-| Nodes | 12 |
-| Calls | `idempotency-guard`, `notify`, `error-handler` |
-| Files | [`lead-booking-sync.json`](lead-booking-sync.json) · [`lead-booking-sync.workflow.ts`](lead-booking-sync.workflow.ts) |
+- **Starts from:** Calendly event
+- **Platforms:** <img src="../../assets/platforms/calendly.svg" width="16" height="16" alt=""> Calendly &nbsp;·&nbsp; <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/hubspot.svg" width="16" height="16" alt=""> HubSpot
+- **Nodes:** 12
+- **Calls:** `idempotency-guard`, `notify`, `error-handler`
+- **Files:** [`lead-booking-sync.json`](lead-booking-sync.json) · [`lead-booking-sync.workflow.ts`](lead-booking-sync.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -147,9 +145,9 @@ flowchart LR
   n1mrusef["Read the booking"]
   n1ja4syq[["Seen before?"]]
   nbp2ii5{"New booking?"}
-  n14sy1gg[/"Mark lead booked"/]
+  n14sy1gg["Mark lead booked"]
   no98tz3{"Known lead?"}
-  n2xndnh[/"Open CRM deal"/]
+  n2xndnh["Open CRM deal"]
   ncl9lau["Booked message"]
   n7dloas[["Tell sales"]]
   n5tuhwq["Unknown message"]
@@ -170,7 +168,7 @@ flowchart LR
 
 **How it runs**
 
-1. **The calendar reports a booking.** Calendar tools resend webhooks, so the booking id is checked first.
+1. **Calendly reports a booking.** Calendly resends webhooks, so the booking id is checked first.
 2. **The lead moves forward.** The lead is marked booked, which is also what stops the follow-up emails.
 3. **The CRM and the team catch up.** A deal opens at the right stage and sales sees it in the channel.
 4. **Strangers are flagged.** A booking from someone who never enquired still gets noticed.

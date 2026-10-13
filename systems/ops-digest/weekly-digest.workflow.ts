@@ -2,23 +2,24 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Ops digest · Weekly summary
-// Nodes   : 12  |  Connections: 10
+// Nodes   : 13  |  Connections: 10
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Monday0830                         scheduleTrigger
-// Leads                              httpRequest                [onError→regular] [alwaysOutput] [retry]
-// Orders                             httpRequest                [onError→regular] [alwaysOutput] [executeOnce] [retry]
-// Support                            httpRequest                [onError→regular] [alwaysOutput] [executeOnce] [retry]
-// SiteTraffic                        httpRequest                [onError→regular] [alwaysOutput] [executeOnce] [retry]
+// Leads                              supabase                   [onError→regular] [creds] [alwaysOutput] [retry]
+// Orders                             supabase                   [onError→regular] [creds] [alwaysOutput] [executeOnce] [retry]
+// Support                            supabase                   [onError→regular] [creds] [alwaysOutput] [executeOnce] [retry]
+// SiteTraffic                        httpRequest                [onError→regular] [creds] [alwaysOutput] [executeOnce] [retry]
 // WorkOutTheWeek                     code
-// WriteTheSummary                    httpRequest                [onError→regular] [retry]
+// WriteTheSummary                    agent                      [AI] [onError→regular]
+// WriteTheSummaryClaude              lmChatAnthropic            [creds] [ai_languageModel]
 // Compose                            code
-// PostToTheChannel                   httpRequest                [onError→regular] [retry]
-// EmailTheOwner                      httpRequest                [retry]
-// CheckIn                            httpRequest                [onError→regular] [retry]
+// PostToTheChannel                   slack                      [onError→regular] [creds] [retry]
+// EmailTheOwner                      sendGrid                   [creds] [retry]
+// CheckIn                            supabase                   [onError→regular] [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -33,6 +34,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //                  → PostToTheChannel
 //                    → EmailTheOwner
 //                      → CheckIn
+//
+// AI CONNECTIONS
+// WriteTheSummary.uses({ ai_languageModel: WriteTheSummaryClaude })
 // </workflow-map>
 
 // =====================================================================
@@ -63,8 +67,7 @@ export class OpsDigestWeeklySummaryWorkflow {
         content: `## Ops digest · Weekly summary
 Every Monday, gathers the week's numbers from sales, orders, support and the site, compares them with the week before, and sends one readable summary.
 
-**Platforms:** none, this is logic only
-**Settings:** ANALYTICS_API_KEY, ANALYTICS_BASE_URL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** Supabase, PostHog, Claude, Slack, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/ops-digest\``,
     };
 
@@ -73,7 +76,7 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
         name: 'Monday 08:30',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 90],
+        position: [0, 220],
     })
     Monday0830 = {
         rule: {
@@ -89,9 +92,10 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
     @node({
         id: '53f3aaa9-f418-4aa7-a424-a53ff11e08c4',
         name: 'Leads',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [260, 90],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [260, 220],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         onError: 'continueRegularOutput',
         alwaysOutputData: true,
         retryOnFail: true,
@@ -99,26 +103,18 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
         waitBetweenTries: 1000,
     })
     Leads = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/leads',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'leads',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'received_at',
-                    value: "={{ 'gte.' + $now.minus({ days: 14 }).toISO() }}",
+                    keyName: 'received_at',
+                    condition: 'gte',
+                    keyValue: '={{ $now.minus({ days: 14 }).toISO() }}',
                 },
             ],
         },
@@ -127,9 +123,10 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
     @node({
         id: '90762edf-a548-48b3-a5c2-564f1f34cd20',
         name: 'Orders',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [520, 90],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [520, 220],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         onError: 'continueRegularOutput',
         alwaysOutputData: true,
         executeOnce: true,
@@ -138,26 +135,18 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
         waitBetweenTries: 1000,
     })
     Orders = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/orders',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'orders',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'created_at',
-                    value: "={{ 'gte.' + $now.minus({ days: 14 }).toISO() }}",
+                    keyName: 'created_at',
+                    condition: 'gte',
+                    keyValue: '={{ $now.minus({ days: 14 }).toISO() }}',
                 },
             ],
         },
@@ -166,9 +155,10 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
     @node({
         id: '0ddb7501-5085-40cf-a518-95b7e31fab71',
         name: 'Support',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [780, 90],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [780, 220],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         onError: 'continueRegularOutput',
         alwaysOutputData: true,
         executeOnce: true,
@@ -177,26 +167,18 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
         waitBetweenTries: 1000,
     })
     Support = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/support_log',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'support_log',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'at',
-                    value: "={{ 'gte.' + $now.minus({ days: 14 }).toISO() }}",
+                    keyName: 'at',
+                    condition: 'gte',
+                    keyValue: '={{ $now.minus({ days: 14 }).toISO() }}',
                 },
             ],
         },
@@ -207,7 +189,8 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
         name: 'Site traffic',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1040, 90],
+        position: [1040, 220],
+        credentials: { postHogApi: { id: '__CRED:posthog__', name: 'PostHog' } },
         onError: 'continueRegularOutput',
         alwaysOutputData: true,
         executeOnce: true,
@@ -217,31 +200,24 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
     })
     SiteTraffic = {
         method: 'GET',
-        url: '={{ $env.ANALYTICS_BASE_URL }}/insights/trend',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.ANALYTICS_API_KEY }}",
-                },
-            ],
-        },
+        url: "={{ 'https://app.posthog.com/api/projects/@current/insights/trend/' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'postHogApi',
         sendQuery: true,
         queryParameters: {
             parameters: [
                 {
-                    name: 'event',
-                    value: "={{ '$pageview' }}",
+                    name: 'events',
+                    value: '={{ \'[{"id":"$pageview"}]\' }}',
                 },
                 {
                     name: 'date_from',
                     value: "={{ '-14d' }}",
                 },
             ],
+        },
+        options: {
+            timeout: 15000,
         },
     };
 
@@ -250,7 +226,7 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
         name: 'Work out the week',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1300, 90],
+        position: [1300, 220],
     })
     WorkOutTheWeek = {
         jsCode: `const weekAgo = Date.now() - 7 * 864e5;
@@ -283,39 +259,39 @@ return [{ json: { metrics: out, unavailable, table: lines.join("\\n"), week_of: 
     @node({
         id: 'b2f0ee23-8279-4608-ac96-f15e51b2cf10',
         name: 'Write the summary',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
         position: [1560, 90],
         onError: 'continueRegularOutput',
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
     })
     WriteTheSummary = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: "={{ $json.table + ($json.unavailable.length ? '\\nUnavailable this week: ' + $json.unavailable.join(', ') : '') }}",
+        hasOutputParser: false,
         options: {
-            timeout: 15000,
+            systemMessage:
+                "[task:summarise] Write a four-sentence summary of this week's numbers for a business owner. Say what moved most and what deserves attention. Use only the numbers given. Do not invent causes.",
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
+    };
+
+    @node({
+        id: 'f21b350b-142b-4211-a12a-d9a7f29a3280',
+        name: 'Write the summary · Claude',
+        type: '@n8n/n8n-nodes-langchain.lmChatAnthropic',
+        version: 1.3,
+        position: [1560, 310],
+        credentials: { anthropicApi: { id: '__CRED:anthropic__', name: 'Claude' } },
+    })
+    WriteTheSummaryClaude = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'claude-sonnet-4-5',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  messages: [
-    { role: "system", content: "[task:summarise] Write a four-sentence summary of this week's numbers for a business owner. Say what moved most and what deserves attention. Use only the numbers given. Do not invent causes." },
-    { role: "user", content: $json.table + ($json.unavailable.length ? '\\nUnavailable this week: ' + $json.unavailable.join(', ') : '') }
-  ]
-}) }}`,
+        options: {
+            temperature: 0.2,
+        },
     };
 
     @node({
@@ -323,11 +299,11 @@ return [{ json: { metrics: out, unavailable, table: lines.join("\\n"), week_of: 
         name: 'Compose',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1820, 90],
+        position: [1820, 220],
     })
     Compose = {
         jsCode: `const w = $("Work out the week").first().json;
-const summary = $input.first().json.choices?.[0]?.message?.content ?? "(The written summary is unavailable this week. The numbers are below.)";
+const summary = $input.first().json.output ?? "(The written summary is unavailable this week. The numbers are below.)";
 const note = w.unavailable.length ? "\\n\\nNot included, because the source did not answer: " + w.unavailable.join(", ") + "." : "";
 return [{ json: { subject: "Week of " + w.week_of, text: summary + "\\n\\n" + w.table + note } }];`,
     };
@@ -335,103 +311,90 @@ return [{ json: { subject: "Week of " + w.week_of, text: summary + "\\n\\n" + w.
     @node({
         id: '0043e746-634d-4b10-ad1a-0762ad46d5e4',
         name: 'Post to the channel',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2080, 90],
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
+        position: [2080, 220],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     PostToTheChannel = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '#weekly' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: "={{ '*' + $json.subject + '*\\n' + $json.text }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ channel: '#weekly', text: '*' + $json.subject + '*\\n' + $json.text }) }}",
     };
 
     @node({
         id: '3dc25152-556c-4195-a8f4-3cf8314a708e',
         name: 'Email the owner',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2340, 90],
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
+        position: [2340, 220],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     EmailTheOwner = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: 'owner@example.com', subject: $('Compose').first().json.subject, text: $('Compose').first().json.text }) }}",
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: "={{ 'owner@example.com' }}",
+        subject: "={{ $('Compose').first().json.subject }}",
+        dynamicTemplate: false,
+        contentType: 'text/plain',
+        contentValue: "={{ $('Compose').first().json.text }}",
+        additionalFields: {},
     };
 
     @node({
         id: '986b4855-5540-4b83-aa75-8c9939ef8d1f',
         name: 'Check in',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2600, 90],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [2600, 220],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     CheckIn = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/heartbeats',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'heartbeats',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'name',
+                    condition: 'eq',
+                    keyValue: "={{ 'weekly-digest' }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'name',
-                    value: "={{ 'eq.weekly-digest' }}",
+                    fieldId: 'last_seen',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ last_seen: $now.toISO() }) }}',
     };
 
     // =====================================================================
@@ -450,5 +413,9 @@ return [{ json: { subject: "Week of " + w.week_of, text: summary + "\\n\\n" + w.
         this.Compose.out(0).to(this.PostToTheChannel.in(0));
         this.PostToTheChannel.out(0).to(this.EmailTheOwner.in(0));
         this.EmailTheOwner.out(0).to(this.CheckIn.in(0));
+
+        this.WriteTheSummary.uses({
+            ai_languageModel: this.WriteTheSummaryClaude.output,
+        });
     }
 }

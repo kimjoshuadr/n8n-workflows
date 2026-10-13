@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Block · Wait for a person's yes\nRecords a pending decision and gives back approve and reject links. Nothing proceeds until one is pressed, and each link works once.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
+        "content": "## Block · Wait for a person's yes\nRecords a pending decision and gives back approve and reject links. Nothing proceeds until one is pressed, and each link works once.\n\n**Platforms:** Supabase\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
       }
     },
     {
@@ -53,44 +53,52 @@
         180
       ],
       "name": "Resolve if still pending",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/approvals",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "approvals",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "token",
-              "value": "={{ 'eq.' + $json.token }}"
+              "keyName": "token",
+              "condition": "eq",
+              "keyValue": "={{ $json.token }}"
             },
             {
-              "name": "status",
-              "value": "={{ 'eq.pending' }}"
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "={{ 'pending' }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: $json.decision, decided_at: $now.toISO() }) }}"
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.decision }}"
+            },
+            {
+              "fieldId": "decided_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "f0fed394-42c6-4876-a934-692bd767984d",

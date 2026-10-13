@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Payments · Event ledger\nRecords each payment, failure and refund from the processor exactly once, updates the invoice, and sends the receipt or the retry notice.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, PAYMENTS_WEBHOOK_SECRET\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
+        "content": "## Payments · Event ledger\nRecords each payment, failure and refund from the processor exactly once, updates the invoice, and sends the receipt or the retry notice.\n\n**Platforms:** Stripe, Supabase, SendGrid\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
       }
     },
     {
@@ -23,84 +23,40 @@
         360
       ],
       "name": "Payment event",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.stripeTrigger",
+      "typeVersion": 1,
       "parameters": {
-        "httpMethod": "POST",
-        "path": "payment-event",
-        "responseMode": "responseNode",
-        "options": {}
+        "events": [
+          "payment_intent.succeeded",
+          "payment_intent.payment_failed",
+          "charge.refunded"
+        ]
       },
-      "webhookId": "daf11e40-9a91-48af-af82-c2485782af2d"
-    },
-    {
-      "id": "b999fdca-a584-4416-a8ae-253d6192da13",
-      "position": [
-        260,
-        360
-      ],
-      "name": "Signed?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "3b98ad77-7366-49b1-a86c-8bdb20d41ed2",
-              "leftValue": "={{ $json.headers['x-webhook-secret'] === $env.PAYMENTS_WEBHOOK_SECRET }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "ddba1875-6030-497e-a8df-19bf02596182",
-      "position": [
-        520,
-        270
-      ],
-      "name": "Unauthorised",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ ok: false }) }}",
-        "options": {
-          "responseCode": 401
+      "webhookId": "d1431833-bf16-4589-adf9-cba3c692591e",
+      "credentials": {
+        "stripeApi": {
+          "id": "__CRED:stripe__",
+          "name": "Stripe"
         }
       }
     },
     {
       "id": "4539a812-c446-4942-a270-b7c15a47ff83",
       "position": [
-        520,
-        450
+        260,
+        360
       ],
       "name": "Read the event",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const e = $(\"Payment event\").first().json.body ?? {};\nconst o = e.data?.object ?? {};\nif (!e.id || !e.type) throw new Error(\"Event has no id or type\");\nreturn [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount ?? 0) / 100, currency: String(o.currency ?? \"usd\").toUpperCase(), invoice_id: o.metadata?.invoice_id ?? null, email: o.receipt_email ?? o.billing_details?.email ?? null, charge_id: o.id ?? null, scope: \"payment-event\", key: String(e.id) } }];"
+        "jsCode": "const e = $(\"Payment event\").first().json ?? {};\nconst o = e.data?.object ?? {};\nif (!e.id || !e.type) throw new Error(\"Event has no id or type\");\nreturn [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount ?? 0) / 100, currency: String(o.currency ?? \"usd\").toUpperCase(), invoice_id: o.metadata?.invoice_id ?? null, email: o.receipt_email ?? o.billing_details?.email ?? null, charge_id: o.id ?? null, scope: \"payment-event\", key: String(e.id) } }];"
       }
     },
     {
       "id": "ebc81471-1db2-4394-a815-bae534df600a",
       "position": [
-        780,
+        520,
         360
       ],
       "name": "Seen before?",
@@ -118,7 +74,7 @@
     {
       "id": "5c36a794-32fe-49a9-a724-5d7e589dd195",
       "position": [
-        1040,
+        780,
         360
       ],
       "name": "New event?",
@@ -152,24 +108,18 @@
     {
       "id": "6abd1e57-5047-411a-ac51-92fba181d15c",
       "position": [
-        1300,
+        1040,
         270
       ],
       "name": "Already recorded",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ ok: true, duplicate: true }) }}",
-        "options": {
-          "responseCode": 200
-        }
-      }
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
     },
     {
       "id": "1966f55f-e626-400b-ae31-bb0aa2206e22",
       "position": [
-        1300,
+        1040,
         450
       ],
       "name": "Which event?",
@@ -263,221 +213,299 @@
     {
       "id": "793f844b-66d0-474d-a389-030d836d2a3d",
       "position": [
-        1560,
+        1300,
         90
       ],
       "name": "Ledger: credit",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/ledger",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "ledger",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "event_id",
+              "fieldValue": "={{ $json.event_id }}"
+            },
+            {
+              "fieldId": "charge_id",
+              "fieldValue": "={{ $json.charge_id }}"
+            },
+            {
+              "fieldId": "kind",
+              "fieldValue": "={{ 'payment' }}"
+            },
+            {
+              "fieldId": "amount",
+              "fieldValue": "={{ $json.amount }}"
+            },
+            {
+              "fieldId": "currency",
+              "fieldValue": "={{ $json.currency }}"
+            },
+            {
+              "fieldId": "invoice_id",
+              "fieldValue": "={{ $json.invoice_id }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ event_id: $json.event_id, charge_id: $json.charge_id, kind: 'payment', amount: $json.amount, currency: $json.currency, invoice_id: $json.invoice_id, at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "f343455c-2f7f-4ea6-aaba-a32a138c091e",
       "position": [
-        1820,
+        1560,
         180
       ],
       "name": "Mark invoice paid",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/invoices",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "invoices",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('New event?').first().json.invoice_id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "id",
-              "value": "={{ 'eq.' + $('New event?').first().json.invoice_id }}"
+              "fieldId": "status",
+              "fieldValue": "={{ 'paid' }}"
+            },
+            {
+              "fieldId": "paid_at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'paid', paid_at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "a8298417-a3e1-4ed4-a69d-0b8b14778a60",
       "position": [
-        2080,
+        1820,
         270
       ],
       "name": "Send receipt",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ $('New event?').first().json.email }}",
+        "dynamicTemplate": true,
+        "templateId": "={{ 'd-receipt' }}",
+        "dynamicTemplateFields": {
+          "fields": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+              "key": "amount",
+              "value": "={{ $('New event?').first().json.amount }}"
+            },
+            {
+              "key": "currency",
+              "value": "={{ $('New event?').first().json.currency }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: $('New event?').first().json.email, subject: 'Receipt for your payment', template: 'receipt', data: { amount: $('New event?').first().json.amount, currency: $('New event?').first().json.currency } }) }}"
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "dbedd1fe-a271-4e26-a00e-8491961b1ca4",
       "position": [
-        1560,
+        1300,
         270
       ],
       "name": "Mark invoice failed",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/invoices",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "invoices",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.invoice_id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "id",
-              "value": "={{ 'eq.' + $json.invoice_id }}"
+              "fieldId": "status",
+              "fieldValue": "={{ 'payment_failed' }}"
+            },
+            {
+              "fieldId": "last_failure_at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'payment_failed', last_failure_at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "3f2ddc1e-027a-4dc4-a942-cdbf726e81b4",
       "position": [
-        1820,
+        1560,
         360
       ],
       "name": "Ask to update card",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ $('New event?').first().json.email }}",
+        "dynamicTemplate": true,
+        "templateId": "={{ 'd-payment-failed' }}",
+        "dynamicTemplateFields": {
+          "fields": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+              "key": "amount",
+              "value": "={{ $('New event?').first().json.amount }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: $('New event?').first().json.email, subject: 'Your payment did not go through', template: 'payment-failed', data: { amount: $('New event?').first().json.amount } }) }}"
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "e27e0fc7-9cbc-4f4a-a7a2-f777829d441b",
       "position": [
-        1560,
+        1300,
         450
       ],
       "name": "Ledger: debit",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/ledger",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "ledger",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "event_id",
+              "fieldValue": "={{ $json.event_id }}"
+            },
+            {
+              "fieldId": "charge_id",
+              "fieldValue": "={{ $json.charge_id }}"
+            },
+            {
+              "fieldId": "kind",
+              "fieldValue": "={{ 'refund' }}"
+            },
+            {
+              "fieldId": "amount",
+              "fieldValue": "={{ -$json.amount }}"
+            },
+            {
+              "fieldId": "currency",
+              "fieldValue": "={{ $json.currency }}"
+            },
+            {
+              "fieldId": "invoice_id",
+              "fieldValue": "={{ $json.invoice_id }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ event_id: $json.event_id, charge_id: $json.charge_id, kind: 'refund', amount: -$json.amount, currency: $json.currency, invoice_id: $json.invoice_id, at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "d01584a2-0199-4844-ad1c-2591a1bc229b",
       "position": [
-        1820,
+        1560,
         540
       ],
       "name": "Refund message",
@@ -490,7 +518,7 @@
     {
       "id": "881191cb-1b22-4e06-a381-ed5bf819a420",
       "position": [
-        2080,
+        1820,
         450
       ],
       "name": "Tell finance",
@@ -508,36 +536,24 @@
     {
       "id": "e8d852ed-f906-4f64-a6d1-ac42ab5b6e10",
       "position": [
-        2340,
+        2080,
         360
       ],
       "name": "Recorded",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
-        "options": {
-          "responseCode": 200
-        }
-      }
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
     },
     {
       "id": "ab6cbdf4-0e54-4b36-a3d6-e381a671e42a",
       "position": [
-        1560,
+        1300,
         630
       ],
       "name": "Not handled",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ ok: true, ignored: true }) }}",
-        "options": {
-          "responseCode": 200
-        }
-      }
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
     }
   ],
   "connections": {
@@ -545,25 +561,7 @@
       "main": [
         [
           {
-            "node": "Signed?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Signed?": {
-      "main": [
-        [
-          {
             "node": "Read the event",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Unauthorised",
             "type": "main",
             "index": 0
           }

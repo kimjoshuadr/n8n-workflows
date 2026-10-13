@@ -2,20 +2,21 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Community ops · Scheduled announcements
-// Nodes   : 12  |  Connections: 10
+// Nodes   : 13  |  Connections: 11
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Every5Minutes                      scheduleTrigger
-// DueAnnouncements                   httpRequest                [alwaysOutput] [retry]
+// DueAnnouncements                   supabase                   [creds] [alwaysOutput] [retry]
 // AnyDue                             if
-// ClaimIt                            httpRequest                [alwaysOutput] [retry]
+// ClaimIt                            supabase                   [creds] [alwaysOutput] [retry]
 // Claimed                            if
-// PostIt                             httpRequest                [onError→out(1)] [retry]
-// MarkSent                           httpRequest                [retry]
-// MarkFailed                         httpRequest                [retry]
+// PostIt                             discord                    [onError→regular] [creds] [retry]
+// Posted                             if
+// MarkSent                           supabase                   [creds] [retry]
+// MarkFailed                         supabase                   [creds] [retry]
 // FailureMessage                     code
 // TellTheTeam                        executeWorkflow
 // NothingDue                         noOp
@@ -28,10 +29,11 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //        → ClaimIt
 //          → Claimed
 //            → PostIt
-//              → MarkSent
-//             .out(1) → MarkFailed
-//                → FailureMessage
-//                  → TellTheTeam
+//              → Posted
+//                → MarkSent
+//               .out(1) → MarkFailed
+//                  → FailureMessage
+//                    → TellTheTeam
 //       .out(1) → NothingDue
 // </workflow-map>
 
@@ -63,8 +65,7 @@ export class CommunityOpsScheduledAnnouncementsWorkflow {
         content: `## Community ops · Scheduled announcements
 Posts announcements at the time they were scheduled for, once, and reports any that could not be posted.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL
+**Platforms:** Supabase, Discord
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/community-ops\``,
     };
 
@@ -89,39 +90,33 @@ Posts announcements at the time they were scheduled for, once, and reports any t
     @node({
         id: 'e18b8fd2-19a7-472a-abf3-226d8e12a57f',
         name: 'Due announcements',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     DueAnnouncements = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/announcements',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'announcements',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'status',
-                    value: "={{ 'eq.scheduled' }}",
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'scheduled' }}",
                 },
                 {
-                    name: 'send_at',
-                    value: "={{ 'lte.' + $now.toISO() }}",
+                    keyName: 'send_at',
+                    condition: 'lte',
+                    keyValue: '={{ $now.toISO() }}',
                 },
             ],
         },
@@ -162,45 +157,44 @@ Posts announcements at the time they were scheduled for, once, and reports any t
     @node({
         id: '827d27d6-4baa-4653-ab50-756f07e67c05',
         name: 'Claim it',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [780, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ClaimIt = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/announcements',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'announcements',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.id }}',
+                },
+                {
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'scheduled' }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $json.id }}",
-                },
-                {
-                    name: 'status',
-                    value: "={{ 'eq.scheduled' }}",
+                    fieldId: 'status',
+                    fieldValue: "={{ 'sending' }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ status: 'sending' }) }}",
     };
 
     @node({
@@ -238,111 +232,141 @@ Posts announcements at the time they were scheduled for, once, and reports any t
     @node({
         id: '15c59722-fa30-44b8-a0f1-5313b8358198',
         name: 'Post it',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.discord',
+        version: 2,
         position: [1300, 180],
-        onError: 'continueErrorOutput',
+        credentials: { discordBotApi: { id: '__CRED:discord__', name: 'Discord' } },
+        onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     PostIt = {
-        method: 'POST',
-        url: '={{ $env.DISCORD_BASE_URL }}/channels/announcements/messages',
-        options: {
-            timeout: 15000,
+        authentication: 'botToken',
+        resource: 'message',
+        operation: 'send',
+        guildId: {
+            __rl: true,
+            mode: 'id',
+            value: "={{ '100000000000000001' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        channelId: {
+            __rl: true,
+            mode: 'id',
+            value: '={{ $json.channel_id }}',
+        },
+        content: '={{ $json.content }}',
+        options: {},
+    };
+
+    @node({
+        id: '656b5821-8b52-44cf-a645-659353213818',
+        name: 'Posted?',
+        type: 'n8n-nodes-base.if',
+        version: 2.2,
+        position: [1560, 180],
+    })
+    Posted = {
+        conditions: {
+            options: {
+                caseSensitive: true,
+                leftValue: '',
+                typeValidation: 'loose',
+                version: 2,
+            },
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DISCORD_API_KEY }}",
+                    id: '959be091-4f39-4086-a411-1b3fb6712f34',
+                    leftValue: '={{ !!$json.id && !$json.error }}',
+                    rightValue: '',
+                    operator: {
+                        type: 'boolean',
+                        operation: 'true',
+                        singleValue: true,
+                    },
                 },
             ],
+            combinator: 'and',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            '={{ JSON.stringify({ channel: $json.channel, content: $json.content, mention_everyone: $json.mention_everyone === true }) }}',
+        options: {},
     };
 
     @node({
         id: '8c10dae4-67df-420a-a827-914fff88de0d',
         name: 'Mark sent',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1560, 90],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [1820, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkSent = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/announcements',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'announcements',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Claimed?').item.json.id }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $('Claimed?').item.json.id }}",
+                    fieldId: 'status',
+                    fieldValue: "={{ 'sent' }}",
+                },
+                {
+                    fieldId: 'sent_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ status: 'sent', sent_at: $now.toISO() }) }}",
     };
 
     @node({
         id: 'bd231682-82ba-4c0d-a09f-a46fcc86076d',
         name: 'Mark failed',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1560, 270],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [1820, 270],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkFailed = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/announcements',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'announcements',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Claimed?').item.json.id }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $('Claimed?').item.json.id }}",
+                    fieldId: 'status',
+                    fieldValue: "={{ 'failed' }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ status: 'failed' }) }}",
     };
 
     @node({
@@ -350,7 +374,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Failure message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1820, 180],
+        position: [2080, 180],
     })
     FailureMessage = {
         jsCode: 'return $input.all().map((i) => ({ json: { channel: "#mods", level: "warn", text: "An announcement could not be posted and was marked failed: \\"" + String(i.json.content ?? "").slice(0, 120) + "\\"" } }));',
@@ -361,7 +385,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Tell the team',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2080, 180],
+        position: [2340, 180],
     })
     TellTheTeam = {
         workflowId: {
@@ -393,8 +417,9 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         this.AnyDue.out(1).to(this.NothingDue.in(0));
         this.ClaimIt.out(0).to(this.Claimed.in(0));
         this.Claimed.out(0).to(this.PostIt.in(0));
-        this.PostIt.out(0).to(this.MarkSent.in(0));
-        this.PostIt.out(1).to(this.MarkFailed.in(0));
+        this.PostIt.out(0).to(this.Posted.in(0));
+        this.Posted.out(0).to(this.MarkSent.in(0));
+        this.Posted.out(1).to(this.MarkFailed.in(0));
         this.MarkFailed.out(0).to(this.FailureMessage.in(0));
         this.FailureMessage.out(0).to(this.TellTheTeam.in(0));
     }

@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## SEO · Keyword rank tracker\nRecords where the site ranks for each tracked keyword every day, and alerts when one falls five places or drops off the first page.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, SEARCH_API_KEY, SEARCH_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
+        "content": "## SEO · Keyword rank tracker\nRecords where the site ranks for each tracked keyword every day, and alerts when one falls five places or drops off the first page.\n\n**Platforms:** Supabase, SerpAPI\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
       }
     },
     {
@@ -43,28 +43,24 @@
         180
       ],
       "name": "Tracked keywords",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/keywords",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        }
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "keywords",
+        "returnAll": true
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "46728195-3a4d-41e7-a6a9-fb7b6af5d707",
@@ -76,28 +72,37 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.SEARCH_BASE_URL }}/serp",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
+        "method": "GET",
+        "url": "={{ 'https://serpapi.com/search.json' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "serpApi",
+        "sendQuery": true,
+        "queryParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.SEARCH_API_KEY }}"
+              "name": "q",
+              "value": "={{ $json.keyword }}"
+            },
+            {
+              "name": "num",
+              "value": "={{ '10' }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ query: $json.keyword, num: 30 }) }}"
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "serpApi": {
+          "id": "__CRED:serpapi__",
+          "name": "SerpAPI"
+        }
+      }
     },
     {
       "id": "16c88ff0-1d72-41d0-a1d8-08d2967004cb",
@@ -109,7 +114,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const kws = $(\"Tracked keywords\").all();\nreturn $input.all().map((item, i) => {\n  const k = kws[i]?.json;\n  if (!k?.keyword) return null;\n  const results = item.json.results;\n  if (!Array.isArray(results)) return { json: { ...k, position: null, checked: false } };\n  const idx = results.findIndex((r) => String(r.url ?? \"\").includes(k.domain));\n  const position = idx === -1 ? null : idx + 1;\n  const before = k.last_position ?? null;\n  const fell = before !== null && (position === null || position - before >= 5);\n  const offFirstPage = before !== null && before <= 10 && (position === null || position > 10);\n  return { json: { ...k, position, before, checked: true, alert: fell || offFirstPage } };\n}).filter(Boolean);"
+        "jsCode": "const kws = $(\"Tracked keywords\").all();\nreturn $input.all().map((item, i) => {\n  const k = kws[i]?.json;\n  if (!k?.keyword) return null;\n  const results = item.json.organic_results;\n  if (!Array.isArray(results)) return { json: { ...k, position: null, checked: false } };\n  const idx = results.findIndex((r) => String(r.link ?? \"\").includes(k.domain));\n  const position = idx === -1 ? null : idx + 1;\n  const before = k.last_position ?? null;\n  const fell = before !== null && (position === null || position - before >= 5);\n  const offFirstPage = before !== null && before <= 10 && (position === null || position > 10);\n  return { json: { ...k, position, before, checked: true, alert: fell || offFirstPage } };\n}).filter(Boolean);"
       }
     },
     {
@@ -153,30 +158,39 @@
         90
       ],
       "name": "Record today",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/rank_history",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "rank_history",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "keyword",
+              "fieldValue": "={{ $json.keyword }}"
+            },
+            {
+              "fieldId": "position",
+              "fieldValue": "={{ $json.position }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ keyword: $json.keyword, position: $json.position, at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "e47b9f1c-9133-4c51-aef5-2819eb56261b",
@@ -185,39 +199,46 @@
         180
       ],
       "name": "Update the keyword",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/keywords",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "keywords",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "keyword",
+              "condition": "eq",
+              "keyValue": "={{ $('Got a result?').item.json.keyword }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "keyword",
-              "value": "={{ 'eq.' + $('Got a result?').item.json.keyword }}"
+              "fieldId": "last_position",
+              "fieldValue": "={{ $('Got a result?').item.json.position }}"
+            },
+            {
+              "fieldId": "checked_at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ last_position: $('Got a result?').item.json.position, checked_at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "db1a4d9a-0c7c-4beb-a80e-dc9f3c0f0c54",

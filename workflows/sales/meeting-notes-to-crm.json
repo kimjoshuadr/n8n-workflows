@@ -13,14 +13,14 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## CRM · Meeting notes and next steps\nTurns a call transcript into a CRM note and dated follow-up tasks, and asks a person when it cannot tell who owns a task.\n\n**Platforms:** none, this is logic only\n**Settings:** CRM_API_KEY, CRM_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
+        "content": "## CRM · Meeting notes and next steps\nTurns a call transcript into a CRM note and dated follow-up tasks, and asks a person when it cannot tell who owns a task.\n\n**Platforms:** OpenAI, HubSpot\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
       }
     },
     {
       "id": "89d5d99b-d1a8-4be2-acb3-2a0c5160c8f2",
       "position": [
         0,
-        180
+        310
       ],
       "name": "Transcript ready",
       "type": "n8n-nodes-base.webhook",
@@ -37,7 +37,7 @@
       "id": "4ed514a7-68d5-4a4e-aba2-eb3705ee0a9b",
       "position": [
         260,
-        180
+        310
       ],
       "name": "Read the transcript",
       "type": "n8n-nodes-base.code",
@@ -50,7 +50,7 @@
       "id": "38b511b8-9151-4494-afdb-05daa8bbed60",
       "position": [
         520,
-        180
+        310
       ],
       "name": "Enough to summarise?",
       "type": "n8n-nodes-base.if",
@@ -83,53 +83,81 @@
     {
       "id": "b7667011-3f07-4670-a9b3-91645c7912fa",
       "position": [
-        780,
+        880,
         90
       ],
       "name": "Extract",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "promptType": "define",
+        "text": "={{ $json.transcript }}",
+        "hasOutputParser": true,
         "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: \"[task:meeting-notes] From this call transcript reply with JSON: { summary: string (max 120 words), decisions: string[], actions: [{ task: string, owner: string|null, due: 'YYYY-MM-DD'|null }] }. Only include what was actually said.\" },\n    { role: \"user\", content: $json.transcript }\n  ]\n}) }}"
+          "systemMessage": "[task:meeting-notes] From this call transcript reply with JSON: { summary: string (max 120 words), decisions: string[], actions: [{ task: string, owner: string, due: 'YYYY-MM-DD' }] }. Use an empty string for an owner or a date nobody stated. Only include what was actually said.",
+          "maxIterations": 2
+        }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "73cd5fe2-50ee-4445-a191-6aab300b8cb8",
+      "position": [
+        780,
+        310
+      ],
+      "name": "Extract · GPT",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "4eb68d22-fc12-4985-a54e-48cd5231e577",
+      "position": [
+        980,
+        310
+      ],
+      "name": "Extract · shape",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"summary\": \"What was agreed.\",\n  \"decisions\": [\n    \"A decision\"\n  ],\n  \"actions\": [\n    {\n      \"task\": \"A task\",\n      \"owner\": \"kim\",\n      \"due\": \"2026-11-01\"\n    }\n  ]\n}"
+      }
     },
     {
       "id": "a31fe1e3-10bc-4f72-a5ab-0a5bd295c83a",
       "position": [
-        1040,
-        180
+        1240,
+        310
       ],
       "name": "Read the notes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const before = $(\"Read the transcript\").all();\nconst out = [];\nfor (const [i, item] of $input.all().entries()) {\n  let reply = {\"summary\":\"\",\"decisions\":[],\"actions\":[]};\n  let parse_error = false;\n  try {\n    reply = JSON.parse(item.json.choices[0].message.content);\n  } catch (e) {\n    parse_error = true;\n  }\n  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });\n}\nreturn out;"
+        "jsCode": "const before = $(\"Read the transcript\").all();\nconst out = [];\nfor (const [i, item] of $input.all().entries()) {\n  const answer = item.json.output;\n  const ok = answer && typeof answer === \"object\" && !Array.isArray(answer);\n  out.push({ json: { ...(before[i]?.json ?? {}), ...(ok ? answer : {\"summary\":\"\",\"decisions\":[],\"actions\":[]}), parse_error: !ok } });\n}\nreturn out;"
       }
     },
     {
       "id": "60ceff31-c889-4a0c-af71-0b80b800d015",
       "position": [
-        1300,
-        180
+        1500,
+        310
       ],
       "name": "Readable?",
       "type": "n8n-nodes-base.if",
@@ -162,40 +190,43 @@
     {
       "id": "d39c264b-f7d0-43a8-a2e1-01ab7848ca1c",
       "position": [
-        1560,
-        90
+        1760,
+        220
       ],
       "name": "Add the CRM note",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CRM_BASE_URL }}/crm/v3/objects/notes",
-        "options": {
-          "timeout": 15000
+        "authentication": "appToken",
+        "resource": "engagement",
+        "operation": "create",
+        "type": "task",
+        "metadata": {
+          "subject": "={{ $json.summary + '\\n\\nDecisions:\\n' + ($json.decisions ?? []).map(d => '- ' + d).join('\\n') }}",
+          "body": "={{ $json.summary + '\\n\\nDecisions:\\n' + ($json.decisions ?? []).map(d => '- ' + d).join('\\n') }}",
+          "status": "COMPLETED"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ deal_id: $json.deal_id, body: $json.summary + '\\n\\nDecisions:\\n' + ($json.decisions ?? []).map(d => '- ' + d).join('\\n') }) }}"
+        "additionalFields": {
+          "associations": {
+            "dealIds": "={{ $json.deal_id }}"
+          }
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
     },
     {
       "id": "349fdf55-f0a1-4531-a182-fcc3961c229d",
       "position": [
-        1820,
-        90
+        2020,
+        220
       ],
       "name": "One item per action",
       "type": "n8n-nodes-base.code",
@@ -207,8 +238,8 @@
     {
       "id": "f0d17471-7e3f-4050-a0b2-0fa9abdfacc6",
       "position": [
-        2080,
-        180
+        2280,
+        310
       ],
       "name": "Has an owner?",
       "type": "n8n-nodes-base.if",
@@ -241,40 +272,43 @@
     {
       "id": "755e768e-965a-4deb-a5ff-f00904cf9125",
       "position": [
-        2340,
-        90
+        2540,
+        220
       ],
       "name": "Create the task",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CRM_BASE_URL }}/crm/v3/objects/tasks",
-        "options": {
-          "timeout": 15000
+        "authentication": "appToken",
+        "resource": "engagement",
+        "operation": "create",
+        "type": "task",
+        "metadata": {
+          "subject": "={{ $json.task }}",
+          "body": "={{ 'Owner: ' + $json.owner + ($json.due ? ', due ' + $json.due : '') }}",
+          "status": "NOT_STARTED"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ deal_id: $json.deal_id, subject: $json.task, owner: $json.owner, due: $json.due }) }}"
+        "additionalFields": {
+          "associations": {
+            "dealIds": "={{ $json.deal_id }}"
+          }
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
     },
     {
       "id": "ac3c0469-71fd-410e-ae46-f48a618093f7",
       "position": [
-        2340,
-        270
+        2540,
+        400
       ],
       "name": "Unowned message",
       "type": "n8n-nodes-base.code",
@@ -286,8 +320,8 @@
     {
       "id": "fc89948a-14d3-421d-abb9-e40604311a8d",
       "position": [
-        2600,
-        180
+        2800,
+        310
       ],
       "name": "Ask who owns them",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -304,8 +338,8 @@
     {
       "id": "6061f6ba-43ec-4201-a4ce-aadc9ed24909",
       "position": [
-        1560,
-        270
+        1760,
+        400
       ],
       "name": "Unreadable message",
       "type": "n8n-nodes-base.code",
@@ -317,8 +351,8 @@
     {
       "id": "3ef2c099-2440-4a09-aa9b-d9cb64bcd115",
       "position": [
-        1820,
-        270
+        2020,
+        400
       ],
       "name": "Flag for a manual read",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -335,8 +369,8 @@
     {
       "id": "379a765f-8821-40df-a491-92e8e494382f",
       "position": [
-        780,
-        270
+        880,
+        530
       ],
       "name": "Too short to summarise",
       "type": "n8n-nodes-base.noOp",
@@ -482,6 +516,28 @@
           {
             "node": "Ask who owns them",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract · GPT": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract · shape": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extract",
+            "type": "ai_outputParser",
             "index": 0
           }
         ]

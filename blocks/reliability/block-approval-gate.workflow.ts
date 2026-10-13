@@ -10,7 +10,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // DecisionLink                       webhook
 // ReadTheLink                        code
-// ResolveIfStillPending              httpRequest                [alwaysOutput] [retry]
+// ResolveIfStillPending              supabase                   [creds] [alwaysOutput] [retry]
 // ResolvedNow                        if
 // Thanks                             respondToWebhook
 // LinkNoLongerValid                  respondToWebhook
@@ -53,8 +53,7 @@ export class BlockWaitForAPersonSYesWorkflow {
         content: `## Block · Wait for a person's yes
 Records a pending decision and gives back approve and reject links. Nothing proceeds until one is pressed, and each link works once.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/reliability\``,
     };
 
@@ -88,45 +87,48 @@ return [{ json: { token: String(q.token ?? ""), decision: q.decision === "approv
     @node({
         id: '03f464db-fa1d-4ce5-a2a2-a68afaa8c184',
         name: 'Resolve if still pending',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [520, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ResolveIfStillPending = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/approvals',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'approvals',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'token',
+                    condition: 'eq',
+                    keyValue: '={{ $json.token }}',
+                },
+                {
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'pending' }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'token',
-                    value: "={{ 'eq.' + $json.token }}",
+                    fieldId: 'status',
+                    fieldValue: '={{ $json.decision }}',
                 },
                 {
-                    name: 'status',
-                    value: "={{ 'eq.pending' }}",
+                    fieldId: 'decided_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ status: $json.decision, decided_at: $now.toISO() }) }}',
     };
 
     @node({

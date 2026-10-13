@@ -2,14 +2,15 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Block · A model reply you can rely on
-// Nodes   : 8  |  Connections: 7
+// Nodes   : 9  |  Connections: 7
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
-// Ask                                httpRequest                [onError→regular] [retry]
+// Ask                                agent                      [AI] [onError→regular]
+// AskGpt                             lmChatOpenAi               [creds] [ai_languageModel]
 // CheckTheReply                      code
 // Good                               if
 // TryOnceMore                        if
@@ -26,6 +27,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //         .out(1) → TryOnceMore
 //            → Ask (↩ loop)
 //           .out(1) → NotUsable
+//
+// AI CONNECTIONS
+// Ask.uses({ ai_languageModel: AskGpt })
 // </workflow-map>
 
 // =====================================================================
@@ -56,8 +60,7 @@ export class BlockAModelReplyYouCanRelyOnWorkflow {
         content: `## Block · A model reply you can rely on
 Asks a model for JSON, checks the reply has the fields you need, asks once more if it does not, and then gives up honestly.
 
-**Platforms:** none, this is logic only
-**Settings:** LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** OpenAI
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/ai\``,
     };
 
@@ -66,7 +69,7 @@ Asks a model for JSON, checks the reply has the fields you need, asks once more 
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 180],
+        position: [0, 220],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -75,40 +78,38 @@ Asks a model for JSON, checks the reply has the fields you need, asks once more 
     @node({
         id: '2f1630bb-4649-4948-a2c3-dd5716b04e48',
         name: 'Ask',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [260, 180],
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
+        position: [260, 90],
         onError: 'continueRegularOutput',
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
     })
     Ask = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: '={{ $json.prompt }}',
+        hasOutputParser: false,
         options: {
-            timeout: 15000,
+            systemMessage: '[task:guarded] Reply with JSON only.',
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
+    };
+
+    @node({
+        id: 'b4b82c7f-e67f-404e-a86b-747d3d67b12e',
+        name: 'Ask · GPT',
+        type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+        version: 1.2,
+        position: [260, 310],
+        credentials: { openAiApi: { id: '__CRED:openai__', name: 'OpenAI' } },
+    })
+    AskGpt = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'gpt-4o-mini',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  response_format: { type: "json_object" },
-  messages: [
-    { role: "system", content: "[task:guarded] Reply with JSON only." },
-    { role: "user", content: $json.prompt }
-  ]
-}) }}`,
+        options: {
+            temperature: 0,
+        },
     };
 
     @node({
@@ -116,13 +117,13 @@ Asks a model for JSON, checks the reply has the fields you need, asks once more 
         name: 'Check the reply',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [520, 180],
+        position: [520, 220],
     })
     CheckTheReply = {
         jsCode: `const req = $("When called").first().json;
 const required = req.required ?? [];
 let data = null;
-try { data = JSON.parse($input.first().json.choices[0].message.content); } catch (e) {}
+try { data = JSON.parse($input.first().json.output); } catch (e) {}
 const missing = data ? required.filter((k) => data[k] === undefined || data[k] === null) : required;
 return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $runIndex + 1, prompt: req.prompt + (missing.length ? "\\n\\nYour last reply was missing: " + missing.join(", ") + ". Reply again with every field." : "") } }];`,
     };
@@ -132,7 +133,7 @@ return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $r
         name: 'Good?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [780, 180],
+        position: [780, 220],
     })
     Good = {
         conditions: {
@@ -164,7 +165,7 @@ return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $r
         name: 'Try once more?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1040, 90],
+        position: [1040, 130],
     })
     TryOnceMore = {
         conditions: {
@@ -196,7 +197,7 @@ return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $r
         name: 'Usable',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [1040, 270],
+        position: [1040, 310],
     })
     Usable = {
         assignments: {
@@ -224,7 +225,7 @@ return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $r
         name: 'Not usable',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [1300, 180],
+        position: [1300, 220],
     })
     NotUsable = {
         assignments: {
@@ -260,5 +261,9 @@ return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $r
         this.Good.out(1).to(this.TryOnceMore.in(0));
         this.TryOnceMore.out(0).to(this.Ask.in(0));
         this.TryOnceMore.out(1).to(this.NotUsable.in(0));
+
+        this.Ask.uses({
+            ai_languageModel: this.AskGpt.output,
+        });
     }
 }

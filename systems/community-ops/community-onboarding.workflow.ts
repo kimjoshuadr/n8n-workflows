@@ -13,12 +13,12 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // APerson                            if
 // SeenBefore                         executeWorkflow
 // FirstJoin                          if
-// SaveTheMember                      httpRequest                [retry]
+// SaveTheMember                      supabase                   [creds] [retry]
 // BrandNewAccount                    if
 // ReviewMessage                      code
 // AskAModerator                      executeWorkflow
-// GiveStarterRole                    httpRequest                [retry]
-// WelcomeThem                        httpRequest                [onError→regular] [retry]
+// GiveStarterRole                    discord                    [creds] [retry]
+// WelcomeThem                        discord                    [onError→regular] [creds] [retry]
 // IgnoreBots                         noOp
 // Rejoined                           noOp
 //
@@ -67,8 +67,7 @@ export class CommunityOpsMemberOnboardingWorkflow {
         content: `## Community ops · Member onboarding
 Welcomes a new member, gives them the starter role, records them, and flags accounts created minutes ago for a moderator to look at.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL
+**Platforms:** Supabase, Discord
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/community-ops\``,
     };
 
@@ -184,32 +183,43 @@ return [{ json: { user_id: String(m.user?.id), username: m.user?.username ?? "ne
     @node({
         id: '536eb07d-1ee8-4cbd-a0a3-203e85d5e5c5',
         name: 'Save the member',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1300, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SaveTheMember = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/members',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'members',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'user_id',
+                    fieldValue: '={{ $json.user_id }}',
+                },
+                {
+                    fieldId: 'username',
+                    fieldValue: '={{ $json.username }}',
+                },
+                {
+                    fieldId: 'guild_id',
+                    fieldValue: '={{ $json.guild_id }}',
+                },
+                {
+                    fieldId: 'joined_at',
+                    fieldValue: '={{ $now.toISO() }}',
+                },
+                {
+                    fieldId: 'suspicious',
+                    fieldValue: '={{ $json.suspicious }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            '={{ JSON.stringify({ user_id: $json.user_id, username: $json.username, guild_id: $json.guild_id, joined_at: $now.toISO(), suspicious: $json.suspicious }) }}',
     };
 
     @node({
@@ -275,64 +285,60 @@ return [{ json: { channel: "#mods", level: "warn", text: m.username + " joined w
     @node({
         id: '4c0f6157-2935-4fea-ac74-bebd537606a0',
         name: 'Give starter role',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.discord',
+        version: 2,
         position: [1820, 270],
+        credentials: { discordBotApi: { id: '__CRED:discord__', name: 'Discord' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     GiveStarterRole = {
-        method: 'POST',
-        url: '={{ $env.DISCORD_BASE_URL }}/guilds/roles/assign',
-        options: {
-            timeout: 15000,
+        authentication: 'botToken',
+        resource: 'member',
+        operation: 'roleAdd',
+        guildId: {
+            __rl: true,
+            mode: 'id',
+            value: "={{ '100000000000000001' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DISCORD_API_KEY }}",
-                },
-            ],
+        userId: {
+            __rl: true,
+            mode: 'id',
+            value: "={{ $('First join?').first().json.user_id }}",
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ guild_id: $('First join?').first().json.guild_id, user_id: $('First join?').first().json.user_id, role: 'member' }) }}",
+        role: ['100000000000000010'],
     };
 
     @node({
         id: '99234657-a229-41b2-a4fa-81f0ea228f12',
         name: 'Welcome them',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.discord',
+        version: 2,
         position: [2080, 270],
+        credentials: { discordBotApi: { id: '__CRED:discord__', name: 'Discord' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     WelcomeThem = {
-        method: 'POST',
-        url: '={{ $env.DISCORD_BASE_URL }}/channels/welcome/messages',
-        options: {
-            timeout: 15000,
+        authentication: 'botToken',
+        resource: 'message',
+        operation: 'send',
+        guildId: {
+            __rl: true,
+            mode: 'id',
+            value: "={{ '100000000000000001' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DISCORD_API_KEY }}",
-                },
-            ],
+        channelId: {
+            __rl: true,
+            mode: 'id',
+            value: "={{ '100000000000000002' }}",
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ content: 'Welcome <@' + $('First join?').first().json.user_id + '>! Start in #introductions, and read #rules before posting.' }) }}",
+        content:
+            "={{ 'Welcome <@' + $('First join?').first().json.user_id + '>! Start in #introductions, and read #rules before posting.' }}",
+        options: {},
     };
 
     @node({

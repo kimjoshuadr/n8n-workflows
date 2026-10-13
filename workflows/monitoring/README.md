@@ -6,21 +6,19 @@
 
 Checks each site every five minutes, alerts after two failures in a row, and reports how long it was down once it recovers.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, Chat |
-| Nodes | 7 |
-| Calls | `notify`, `error-handler` |
-| Files | [`uptime-monitor.json`](uptime-monitor.json) · [`uptime-monitor.workflow.ts`](uptime-monitor.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase
+- **Nodes:** 7
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`uptime-monitor.json`](uptime-monitor.json) · [`uptime-monitor.workflow.ts`](uptime-monitor.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1pdql2g(["Every 5 minutes"])
-  nimdh7p[/"Sites to watch"/]
+  nimdh7p["Sites to watch"]
   ncjfou[/"Request the site"/]
   n11duh75["Decide the state"]
-  nr01iqu[/"Save the state"/]
+  nr01iqu["Save the state"]
   nw4ttje["Alerts for changes"]
   n4d13md[["Alert"]]
   n1pdql2g --> nimdh7p
@@ -48,20 +46,18 @@ flowchart LR
 
 Checks every morning that last night's backup exists, is recent and is not suspiciously small. A backup nobody checks is a hope, not a backup.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Backup, Chat, Datastore |
-| Nodes | 8 |
-| Calls | `notify`, `error-handler` |
-| Files | [`backup-verify.json`](backup-verify.json) · [`backup-verify.workflow.ts`](backup-verify.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase
+- **Nodes:** 8
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`backup-verify.json`](backup-verify.json) · [`backup-verify.workflow.ts`](backup-verify.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1nakw4l(["07:00 daily"])
   n1e9s8ms[/"Latest backup"/]
   n1vc1kvv["Judge it"]
-  nkg7o35[/"Record the check"/]
+  nkg7o35["Record the check"]
   n1lmthex{"Healthy?"}
   n1f9vz3z["Problem message"]
   n4d13md[["Alert"]]

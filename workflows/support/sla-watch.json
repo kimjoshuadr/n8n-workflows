@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Support · SLA breach watch\nEvery ten minutes, finds tickets about to miss their first-response time, warns the owner, and escalates the ones that already have. Each ticket is raised once per stage.\n\n**Platforms:** none, this is logic only\n**Settings:** HELPDESK_API_KEY, HELPDESK_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/support`"
+        "content": "## Support · SLA breach watch\nEvery ten minutes, finds tickets about to miss their first-response time, warns the owner, and escalates the ones that already have. Each ticket is raised once per stage.\n\n**Platforms:** Zendesk\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/support`"
       }
     },
     {
@@ -43,40 +43,26 @@
         90
       ],
       "name": "Unanswered tickets",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.zendesk",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.HELPDESK_BASE_URL }}/tickets/search",
+        "resource": "ticket",
+        "operation": "getAll",
+        "returnAll": true,
         "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "status",
-              "value": "={{ 'open' }}"
-            },
-            {
-              "name": "first_response",
-              "value": "={{ 'none' }}"
-            }
-          ]
+          "query": "={{ 'status:open' }}"
         }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "zendeskApi": {
+          "id": "__CRED:zendesk__",
+          "name": "Zendesk"
+        }
+      }
     },
     {
       "id": "c8cab437-7298-4c7b-a1bd-266a9d1b14db",
@@ -88,7 +74,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const SLA = { urgent: 30, high: 120, normal: 480, low: 1440 }; // minutes to first response\nconst now = Date.now();\nreturn ($input.first().json.tickets ?? []).map((t) => {\n  const limit = SLA[t.priority] ?? SLA.normal;\n  const waited = Math.floor((now - new Date(t.created_at).getTime()) / 60000);\n  const stage = waited >= limit ? \"breached\" : waited >= limit * 0.75 ? \"at_risk\" : \"ok\";\n  return { id: String(t.id), subject: t.subject, owner: t.owner ?? \"unassigned\", priority: t.priority ?? \"normal\", waited, limit, stage, last: t.sla_stage ?? \"ok\" };\n}).filter((t) => t.stage !== \"ok\" && t.stage !== t.last).map((json) => ({ json }));"
+        "jsCode": "const SLA = { urgent: 30, high: 120, normal: 480, low: 1440 }; // minutes to first response\nconst now = Date.now();\nreturn $input.all().map((i) => i.json).filter((t) => t.id && t.created_at).map((t) => {\n  const limit = SLA[t.priority] ?? SLA.normal;\n  const waited = Math.floor((now - new Date(t.created_at).getTime()) / 60000);\n  const stage = waited >= limit ? \"breached\" : waited >= limit * 0.75 ? \"at_risk\" : \"ok\";\n  return { id: String(t.id), subject: t.subject, owner: t.owner ?? \"unassigned\", priority: t.priority ?? \"normal\", waited, limit, stage, last: (t.tags ?? []).includes(\"sla-breached\") ? \"breached\" : (t.tags ?? []).includes(\"sla-at-risk\") ? \"at_risk\" : \"ok\" };\n}).filter((t) => t.stage !== \"ok\" && t.stage !== t.last).map((json) => ({ json }));"
       }
     },
     {
@@ -98,30 +84,27 @@
         90
       ],
       "name": "Remember the stage",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.zendesk",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.HELPDESK_BASE_URL }}/tickets/update",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}"
-            }
+        "resource": "ticket",
+        "operation": "update",
+        "id": "={{ $json.id }}",
+        "updateFields": {
+          "tags": [
+            "={{ $json.stage === 'breached' ? 'sla-breached' : 'sla-at-risk' }}"
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ ticket_id: $json.id, sla_stage: $json.stage }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "zendeskApi": {
+          "id": "__CRED:zendesk__",
+          "name": "Zendesk"
+        }
+      }
     },
     {
       "id": "e07c273e-d6c5-47c7-a6ff-92ab0d12bd38",

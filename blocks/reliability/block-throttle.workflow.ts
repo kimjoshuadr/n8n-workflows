@@ -10,9 +10,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
 // ThisHourSBucket                    code
-// ReadTheCount                       httpRequest                [alwaysOutput] [retry]
+// ReadTheCount                       supabase                   [creds] [alwaysOutput] [retry]
 // Decide                             code
-// CountTheAttempt                    httpRequest                [retry]
+// CountTheAttempt                    httpRequest                [creds] [retry]
 // Answer                             set
 //
 // ROUTING MAP
@@ -53,8 +53,7 @@ export class BlockLimitActionsPerKeyPerHourWorkflow {
         content: `## Block · Limit actions per key per hour
 Answers whether a key (a user, an IP, a customer) is still under its hourly limit, and counts the attempt.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/reliability\``,
     };
 
@@ -83,35 +82,28 @@ Answers whether a key (a user, an IP, a customer) is still under its hourly limi
     @node({
         id: '5589a8f5-8015-481b-af5e-180d6874f8d5',
         name: 'Read the count',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [520, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ReadTheCount = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/throttle',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'throttle',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'bucket',
-                    value: "={{ 'eq.' + $json.bucket }}",
+                    keyName: 'bucket',
+                    condition: 'eq',
+                    keyValue: '={{ $json.bucket }}',
                 },
             ],
         },
@@ -136,26 +128,22 @@ return [{ json: { ...req, count: count + 1, allowed: count < req.limit } }];`,
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [1040, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     CountTheAttempt = {
         method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/throttle',
-        options: {
-            timeout: 15000,
-        },
+        url: "={{ 'https://acme.supabase.co/rest/v1/throttle' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'supabaseApi',
         sendHeaders: true,
         headerParameters: {
             parameters: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-                {
                     name: 'Prefer',
-                    value: 'resolution=merge-duplicates',
+                    value: "={{ 'resolution=merge-duplicates,return=representation' }}",
                 },
             ],
         },
@@ -171,6 +159,9 @@ return [{ json: { ...req, count: count + 1, allowed: count < req.limit } }];`,
         sendBody: true,
         specifyBody: 'json',
         jsonBody: '={{ JSON.stringify({ bucket: $json.bucket, count: $json.count }) }}',
+        options: {
+            timeout: 15000,
+        },
     };
 
     @node({

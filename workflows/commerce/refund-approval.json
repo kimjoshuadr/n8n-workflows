@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Payments · Refund requests\nRefunds small amounts on recent orders automatically, and sends anything larger, older or repeated to a person with the facts attached.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, PAYMENTS_API_KEY, PAYMENTS_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
+        "content": "## Payments · Refund requests\nRefunds small amounts on recent orders automatically, and sends anything larger, older or repeated to a person with the facts attached.\n\n**Platforms:** Supabase, Stripe\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
       }
     },
     {
@@ -104,29 +104,21 @@
         360
       ],
       "name": "Load the order",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/orders",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "orders",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "order_id",
-              "value": "={{ 'eq.' + $json.order_id }}"
+              "keyName": "order_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.order_id }}"
             }
           ]
         }
@@ -134,7 +126,13 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "962f37e7-43a1-417e-afc0-7a1dc7ff8c10",
@@ -194,29 +192,21 @@
         360
       ],
       "name": "Past refunds",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/refunds",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "refunds",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "email",
-              "value": "={{ 'eq.' + $json.email }}"
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.email }}"
             }
           ]
         }
@@ -224,7 +214,13 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "f7db93bf-aaff-413f-acb0-714c5ee658d5",
@@ -326,27 +322,22 @@
       }
     },
     {
-      "id": "08dc9c47-152b-436c-ae18-e450884688a8",
+      "id": "7225295a-239b-48f6-a6fa-32653e6a7b49",
       "position": [
         2080,
         270
       ],
-      "name": "Refund at the processor",
+      "name": "Refund in Stripe",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.PAYMENTS_BASE_URL }}/refunds",
-        "options": {
-          "timeout": 15000
-        },
+        "url": "={{ 'https://api.stripe.com/v1/refunds' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.PAYMENTS_API_KEY }}"
-            },
             {
               "name": "Idempotency-Key",
               "value": "={{ 'refund-' + $json.order_id }}"
@@ -355,11 +346,20 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ charge: $json.charge_id, amount: Math.round($json.amount * 100) }) }}"
+        "jsonBody": "={{ JSON.stringify({ charge: $json.charge_id, amount: Math.round($json.amount * 100) }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "stripeApi": {
+          "id": "__CRED:stripe__",
+          "name": "Stripe"
+        }
+      }
     },
     {
       "id": "96cf1058-4f1e-43e4-a62b-b17d9a28d5fd",
@@ -368,30 +368,47 @@
         180
       ],
       "name": "Record the refund",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/refunds",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "refunds",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "order_id",
+              "fieldValue": "={{ $('Decision').first().json.order_id }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Decision').first().json.email }}"
+            },
+            {
+              "fieldId": "amount",
+              "fieldValue": "={{ $('Decision').first().json.amount }}"
+            },
+            {
+              "fieldId": "auto",
+              "fieldValue": "={{ true }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ order_id: $('Decision').first().json.order_id, email: $('Decision').first().json.email, amount: $('Decision').first().json.amount, auto: true, at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "aa509920-8bdf-4c3c-ac51-af0894d62c6b",
@@ -400,39 +417,42 @@
         180
       ],
       "name": "Mark the order",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/orders",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "orders",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "order_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Decision').first().json.order_id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "order_id",
-              "value": "={{ 'eq.' + $('Decision').first().json.order_id }}"
+              "fieldId": "status",
+              "fieldValue": "={{ 'refunded' }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'refunded' }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "9a0c31a9-5445-4e24-a40d-cd0aa479ad31",
@@ -603,7 +623,7 @@
         ],
         [
           {
-            "node": "Refund at the processor",
+            "node": "Refund in Stripe",
             "type": "main",
             "index": 0
           }
@@ -617,7 +637,7 @@
         ]
       ]
     },
-    "Refund at the processor": {
+    "Refund in Stripe": {
       "main": [
         [
           {

@@ -2,14 +2,16 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Block · Classify, then route
-// Nodes   : 8  |  Connections: 6
+// Nodes   : 10  |  Connections: 6
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
-// Classify                           httpRequest                [onError→regular] [retry]
+// Classify                           agent                      [AI] [onError→regular]
+// ClassifyGpt                        lmChatOpenAi               [creds] [ai_languageModel]
+// ClassifyShape                      outputParserStructured     [ai_outputParser]
 // ReadTheLabel                       code
 // ByLabel                            switch
 // Billing                            set
@@ -25,6 +27,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //          → Billing
 //         .out(1) → Technical
 //         .out(2) → General
+//
+// AI CONNECTIONS
+// Classify.uses({ ai_languageModel: ClassifyGpt, ai_outputParser: ClassifyShape })
 // </workflow-map>
 
 // =====================================================================
@@ -55,8 +60,7 @@ export class BlockClassifyThenRouteWorkflow {
         content: `## Block · Classify, then route
 Has a model put a message into one of a fixed set of labels and routes on it, with a default route for anything unexpected.
 
-**Platforms:** none, this is logic only
-**Settings:** LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** OpenAI
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/ai\``,
     };
 
@@ -74,40 +78,55 @@ Has a model put a message into one of a fixed set of labels and routes on it, wi
     @node({
         id: '7f5afb55-e7b6-4364-a31c-89186973d9b6',
         name: 'Classify',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [260, 270],
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
+        position: [360, 140],
         onError: 'continueRegularOutput',
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
     })
     Classify = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: '={{ $json.text }}',
+        hasOutputParser: true,
         options: {
-            timeout: 15000,
+            systemMessage:
+                "[task:classify] Classify the message. Reply with JSON: { label: 'billing'|'technical'|'general' }.",
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
+    };
+
+    @node({
+        id: '2b196688-2df7-44e2-a30a-33184243a659',
+        name: 'Classify · GPT',
+        type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+        version: 1.2,
+        position: [260, 360],
+        credentials: { openAiApi: { id: '__CRED:openai__', name: 'OpenAI' } },
+    })
+    ClassifyGpt = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'gpt-4o-mini',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  response_format: { type: "json_object" },
-  messages: [
-    { role: "system", content: "[task:classify] Classify the message. Reply with JSON: { label: 'billing'|'technical'|'general' }." },
-    { role: "user", content: $json.text }
-  ]
-}) }}`,
+        options: {
+            temperature: 0,
+        },
+    };
+
+    @node({
+        id: 'ab4c059e-45fe-4d18-ad73-3ab6d80feab9',
+        name: 'Classify · shape',
+        type: '@n8n/n8n-nodes-langchain.outputParserStructured',
+        version: 1.3,
+        position: [460, 360],
+    })
+    ClassifyShape = {
+        schemaType: 'fromJson',
+        jsonSchemaExample: `{
+  "label": "billing",
+  "urgent": false,
+  "sentiment": "neutral"
+}`,
     };
 
     @node({
@@ -115,11 +134,11 @@ Has a model put a message into one of a fixed set of labels and routes on it, wi
         name: 'Read the label',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [520, 270],
+        position: [720, 270],
     })
     ReadTheLabel = {
         jsCode: `let label = "general";
-try { const l = JSON.parse($input.first().json.choices[0].message.content).label; if (["billing", "technical", "general"].includes(l)) label = l; } catch (e) {}
+try { const out = $input.first().json.output; const l = (typeof out === "string" ? JSON.parse(out) : out).label; if (["billing", "technical", "general"].includes(l)) label = l; } catch (e) {}
 return [{ json: { ...$("When called").first().json, label } }];`,
     };
 
@@ -128,7 +147,7 @@ return [{ json: { ...$("When called").first().json, label } }];`,
         name: 'By label',
         type: 'n8n-nodes-base.switch',
         version: 3.2,
-        position: [780, 270],
+        position: [980, 270],
     })
     ByLabel = {
         rules: {
@@ -195,7 +214,7 @@ return [{ json: { ...$("When called").first().json, label } }];`,
         name: 'Billing',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [1040, 90],
+        position: [1240, 90],
     })
     Billing = {
         assignments: {
@@ -217,7 +236,7 @@ return [{ json: { ...$("When called").first().json, label } }];`,
         name: 'Technical',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [1040, 270],
+        position: [1240, 270],
     })
     Technical = {
         assignments: {
@@ -239,7 +258,7 @@ return [{ json: { ...$("When called").first().json, label } }];`,
         name: 'General',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [1040, 450],
+        position: [1240, 450],
     })
     General = {
         assignments: {
@@ -268,5 +287,10 @@ return [{ json: { ...$("When called").first().json, label } }];`,
         this.ByLabel.out(0).to(this.Billing.in(0));
         this.ByLabel.out(1).to(this.Technical.in(0));
         this.ByLabel.out(2).to(this.General.in(0));
+
+        this.Classify.uses({
+            ai_languageModel: this.ClassifyGpt.output,
+            ai_outputParser: this.ClassifyShape.output,
+        });
     }
 }

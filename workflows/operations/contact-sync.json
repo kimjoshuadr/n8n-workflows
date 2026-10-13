@@ -13,14 +13,14 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Data · CRM to email list sync\nCopies contacts changed since the last run from the CRM to the email platform, page by page, and only moves its bookmark forward when a run finishes.\n\n**Platforms:** none, this is logic only\n**Settings:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
+        "content": "## Data · CRM to email list sync\nCopies contacts changed since the last run from the CRM to the email platform, page by page, and only moves its bookmark forward when a run finishes.\n\n**Platforms:** Supabase, HubSpot, Mailchimp\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
       }
     },
     {
       "id": "31cf76fa-79f6-4a1a-a75a-bd45f2507f43",
       "position": [
         0,
-        90
+        180
       ],
       "name": "Every 15 minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -40,32 +40,24 @@
       "id": "5211d1f3-4653-42dc-a18a-68cafffa7f2a",
       "position": [
         260,
-        90
+        180
       ],
       "name": "Read the bookmark",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/sync_cursors",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "sync_cursors",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "name",
-              "value": "={{ 'eq.crm-to-email' }}"
+              "keyName": "name",
+              "condition": "eq",
+              "keyValue": "={{ 'crm-to-email' }}"
             }
           ]
         }
@@ -73,13 +65,19 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "a55fb70f-c8e8-4d21-a637-f6933b556ef2",
       "position": [
         520,
-        90
+        180
       ],
       "name": "Start from",
       "type": "n8n-nodes-base.code",
@@ -92,52 +90,51 @@
       "id": "fd0e52ca-6250-41aa-ac4c-2337ef587b59",
       "position": [
         780,
-        90
+        180
       ],
       "name": "Changed contacts",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.CRM_BASE_URL }}/crm/v3/objects/contacts/search",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
-            }
-          ]
-        },
+        "url": "={{ 'https://api.hubapi.com/crm/v3/objects/contacts/search' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ modified_since: $json.since, limit: 200 }) }}"
+        "jsonBody": "={{ JSON.stringify({ filterGroups: [{ filters: [{ propertyName: 'lastmodifieddate', operator: 'GTE', value: $json.since }] }], properties: ['email', 'firstname', 'lifecyclestage', 'hs_email_optout'], limit: 100 }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
     },
     {
       "id": "6f78b527-4253-4050-acd8-0779ebb82370",
       "position": [
         1040,
-        90
+        180
       ],
       "name": "Shape for the list",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const rows = ($input.first().json.results ?? []).filter((c) => c.email);\nreturn [{ json: { count: rows.length, contacts: rows.map((c) => ({ email: String(c.email).toLowerCase(), first_name: c.firstname ?? \"\", tags: [c.lifecyclestage].filter(Boolean), unsubscribed: c.unsubscribed === true })) } }];"
+        "jsCode": "const rows = ($input.first().json.results ?? []).map((c) => c.properties ?? {}).filter((c) => c.email);\n// An opt-out in HubSpot travels with the contact, so Mailchimp never mails someone the CRM says not to.\nreturn [{ json: { count: rows.length, members: rows.map((c) => ({ email_address: String(c.email).toLowerCase(), status: String(c.hs_email_optout) === \"true\" ? \"unsubscribed\" : \"subscribed\", merge_fields: { FNAME: c.firstname ?? \"\" }, tags: [c.lifecyclestage].filter(Boolean) })) } }];"
       }
     },
     {
       "id": "711c4171-b7c0-448b-a51c-2b72b72e96d6",
       "position": [
         1300,
-        90
+        180
       ],
       "name": "Anything changed?",
       "type": "n8n-nodes-base.if",
@@ -171,78 +168,159 @@
       "id": "fb8ea85e-2e1a-499b-a923-117a3a52782c",
       "position": [
         1560,
-        90
+        180
       ],
       "name": "Upsert to the list",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/audiences/contacts/batch",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
-            }
-          ]
-        },
+        "url": "={{ 'https://us1.api.mailchimp.com/3.0/lists/main-list' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "mailchimpApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ contacts: $json.contacts }) }}"
+        "jsonBody": "={{ JSON.stringify({ members: $json.members, update_existing: true }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "mailchimpApi": {
+          "id": "__CRED:mailchimp__",
+          "name": "Mailchimp"
+        }
+      }
     },
     {
       "id": "47dc46b7-b811-4c01-a5b9-df2020ad4bf9",
       "position": [
         1820,
-        90
+        180
       ],
       "name": "Move the bookmark",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/sync_cursors",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "sync_cursors",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            },
-            {
-              "name": "Prefer",
-              "value": "resolution=merge-duplicates"
+              "keyName": "name",
+              "condition": "eq",
+              "keyValue": "={{ 'crm-to-email' }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "on_conflict",
-              "value": "={{ 'name' }}"
+              "fieldId": "value",
+              "fieldValue": "={{ $('Start from').first().json.started_at }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ name: 'crm-to-email', value: $('Start from').first().json.started_at }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "5c0a4934-d20a-4101-a9a1-379e3cc2471c",
+      "position": [
+        2080,
+        180
+      ],
+      "name": "Had a bookmark?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0053a14e-c2ea-45a0-af15-03a51e486e70",
+              "leftValue": "={{ !!$json.name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c5686ce7-6581-4732-a3c6-96b9385a041e",
+      "position": [
+        2340,
+        90
+      ],
+      "name": "Start the bookmark",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "sync_cursors",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ 'crm-to-email' }}"
+            },
+            {
+              "fieldId": "value",
+              "fieldValue": "={{ $('Start from').first().json.started_at }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "3baa9c25-5c30-476a-a699-97b4553b388c",
+      "position": [
+        2340,
+        270
+      ],
+      "name": "Bookmark moved",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
     }
   ],
   "connections": {
@@ -324,6 +402,35 @@
         [
           {
             "node": "Move the bookmark",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move the bookmark": {
+      "main": [
+        [
+          {
+            "node": "Had a bookmark?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Had a bookmark?": {
+      "main": [
+        [
+          {
+            "node": "Bookmark moved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Start the bookmark",
             "type": "main",
             "index": 0
           }

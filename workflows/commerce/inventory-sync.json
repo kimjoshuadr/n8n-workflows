@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Inventory · Supplier stock sync\nPulls the supplier's stock feed every two hours and updates the store only for products whose quantity changed, refusing a feed that looks wrong.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL, SUPPLIER_API_KEY, SUPPLIER_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
+        "content": "## Inventory · Supplier stock sync\nPulls the supplier's stock feed every two hours and updates the store only for products whose quantity changed, refusing a feed that looks wrong.\n\n**Platforms:** Supabase, Shopify\n**Settings:** SUPPLIER_API_KEY, SUPPLIER_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
       }
     },
     {
@@ -72,29 +72,25 @@
         180
       ],
       "name": "Last known stock",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/stock_snapshot",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        }
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "stock_snapshot",
+        "returnAll": true
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
       "alwaysOutputData": true,
-      "executeOnce": true
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "3de44985-b2c5-4819-a7cb-cebef1a8d8be",
@@ -167,27 +163,26 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SHOP_BASE_URL }}/inventory_levels/set",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.SHOP_API_KEY }}"
-            }
-          ]
-        },
+        "url": "={{ 'https://acme-store.myshopify.com/admin/api/2025-01' + '/inventory_levels/set.json' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "shopifyAccessTokenApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ sku: $json.sku, available: $json.quantity }) }}"
+        "jsonBody": "={{ JSON.stringify({ sku: $json.sku, available: $json.quantity }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "shopifyAccessTokenApi": {
+          "id": "__CRED:shopify__",
+          "name": "Shopify"
+        }
+      }
     },
     {
       "id": "652c313e-7013-4265-acb5-944180336c23",
@@ -196,43 +191,133 @@
         180
       ],
       "name": "Update the snapshot",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/stock_snapshot",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "stock_snapshot",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "sku",
+              "condition": "eq",
+              "keyValue": "={{ $('One item per change').item.json.sku }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "quantity",
+              "fieldValue": "={{ $('One item per change').item.json.quantity }}"
             },
             {
-              "name": "Prefer",
-              "value": "resolution=merge-duplicates"
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "on_conflict",
-              "value": "={{ 'sku' }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ sku: $('One item per change').item.json.sku, quantity: $('One item per change').item.json.quantity, at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "bcf9d72a-4126-4b3c-a0fc-e733c78becd5",
+      "position": [
+        2080,
+        180
+      ],
+      "name": "Known product?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1f2ca40c-8a12-46a0-a9e6-cc665b09acd8",
+              "leftValue": "={{ !!$json.sku }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "9d90f585-e7f8-4b1e-a0ad-49b89af7b4a8",
+      "position": [
+        2340,
+        90
+      ],
+      "name": "Add to the snapshot",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "stock_snapshot",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "sku",
+              "fieldValue": "={{ $('One item per change').item.json.sku }}"
+            },
+            {
+              "fieldId": "quantity",
+              "fieldValue": "={{ $('One item per change').item.json.quantity }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "5a651431-6965-434a-a5be-860f5e7d2798",
+      "position": [
+        2340,
+        270
+      ],
+      "name": "Snapshot updated",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {}
     },
     {
       "id": "e8a82eec-5026-487f-aa42-b3d9e3f8fb35",
@@ -345,6 +430,35 @@
         [
           {
             "node": "Update the snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update the snapshot": {
+      "main": [
+        [
+          {
+            "node": "Known product?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Known product?": {
+      "main": [
+        [
+          {
+            "node": "Snapshot updated",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add to the snapshot",
             "type": "main",
             "index": 0
           }

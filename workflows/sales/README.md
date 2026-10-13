@@ -6,20 +6,19 @@
 
 Fills in company, role and size for a new CRM contact from an enrichment service, and never overwrites what a person already typed.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Enrichment, CRM |
-| Nodes | 10 |
-| Calls | `error-handler` |
-| Files | [`contact-enrichment.json`](contact-enrichment.json) · [`contact-enrichment.workflow.ts`](contact-enrichment.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/clearbit.svg" width="16" height="16" alt=""> Clearbit &nbsp;·&nbsp; <img src="../../assets/platforms/hubspot.svg" width="16" height="16" alt=""> HubSpot
+- **Nodes:** 11
+- **Calls:** `error-handler`
+- **Files:** [`contact-enrichment.json`](contact-enrichment.json) · [`contact-enrichment.workflow.ts`](contact-enrichment.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1qydrs1(["Contact created"])
   n2eqsr2["Read the contact"]
   nyhsxhn{"Work email?"}
-  n1txkk79[/"Look them up"/]
+  n1txkk79["Look them up"]
+  nadeu4e{"Found them?"}
   n1cq5gb["Only the blanks"]
   nvd6z7w{"Anything to add?"}
   nbg2io1[/"Update the contact"/]
@@ -29,11 +28,12 @@ flowchart LR
   n1qydrs1 --> n2eqsr2
   n2eqsr2 --> nyhsxhn
   nyhsxhn -->|yes| n1txkk79
-  n1txkk79 --> n1cq5gb
+  n1txkk79 --> nadeu4e
+  nadeu4e -->|yes| n1cq5gb
   n1cq5gb --> nvd6z7w
   nvd6z7w -->|yes| nbg2io1
   nyhsxhn -->|no| n66qtbt
-  n1txkk79 -->|failed| nv50xcf
+  nadeu4e -->|no| nv50xcf
   nvd6z7w -->|no| nnsftqe
 ```
 
@@ -53,26 +53,26 @@ flowchart LR
 
 Turns a call transcript into a CRM note and dated follow-up tasks, and asks a person when it cannot tell who owns a task.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | LLM, CRM, Chat |
-| Nodes | 15 |
-| Calls | `notify`, `error-handler` |
-| Files | [`meeting-notes-to-crm.json`](meeting-notes-to-crm.json) · [`meeting-notes-to-crm.workflow.ts`](meeting-notes-to-crm.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI &nbsp;·&nbsp; <img src="../../assets/platforms/hubspot.svg" width="16" height="16" alt=""> HubSpot
+- **Nodes:** 17
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`meeting-notes-to-crm.json`](meeting-notes-to-crm.json) · [`meeting-notes-to-crm.workflow.ts`](meeting-notes-to-crm.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1610stc(["Transcript ready"])
   nb9sirs["Read the transcript"]
   n1d0070z{"Enough to summarise?"}
-  n1tn3m9m[/"Extract"/]
+  n1tn3m9m[["Extract"]]
+  n1rjzzb0("Extract · GPT")
+  n1q0cy1e("Extract · shape")
   nrffov["Read the notes"]
   n1r13jew{"Readable?"}
-  nbha9ex[/"Add the CRM note"/]
+  nbha9ex["Add the CRM note"]
   nre2kxx["One item per action"]
   n1jzfx4i{"Has an owner?"}
-  n1s5o8s1[/"Create the task"/]
+  n1s5o8s1["Create the task"]
   n11m6dn0["Unowned message"]
   najd3xb[["Ask who owns them"]]
   n1qct5g7["Unreadable message"]
@@ -92,6 +92,8 @@ flowchart LR
   n1qct5g7 --> n1ak1nrh
   n1jzfx4i -->|no| n11m6dn0
   n11m6dn0 --> najd3xb
+  n1rjzzb0 -.-> n1tn3m9m
+  n1q0cy1e -.-> n1tn3m9m
 ```
 
 **How it runs**
@@ -111,23 +113,21 @@ flowchart LR
 
 A week after an order is delivered, asks for a review once. Customers with an open support conversation are not asked.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, Email |
-| Nodes | 7 |
-| Calls | `error-handler` |
-| Files | [`review-request.json`](review-request.json) · [`review-request.workflow.ts`](review-request.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 7
+- **Calls:** `error-handler`
+- **Files:** [`review-request.json`](review-request.json) · [`review-request.workflow.ts`](review-request.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1gbpr4d(["10:00 daily"])
-  nf6ajoo[/"Delivered orders"/]
+  nf6ajoo["Delivered orders"]
   n1dockn3["Delivered a week ago"]
-  n1hlg6ct[/"Open conversation?"/]
+  n1hlg6ct["Open conversation?"]
   ne9gbr2["Happy customers only"]
-  n1i35a70[/"Ask for a review"/]
-  nnkd1kc[/"Mark asked"/]
+  n1i35a70["Ask for a review"]
+  nnkd1kc["Mark asked"]
   n1gbpr4d --> nf6ajoo
   nf6ajoo --> n1dockn3
   n1dockn3 --> n1hlg6ct
@@ -152,24 +152,22 @@ flowchart LR
 
 Sends each survey score where it is useful: unhappy customers to a person today, happy ones to a review request, and every score to the record.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Datastore, Helpdesk, Email, Chat |
-| Nodes | 9 |
-| Calls | `notify`, `error-handler` |
-| Files | [`nps-router.json`](nps-router.json) · [`nps-router.workflow.ts`](nps-router.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/zendesk.svg" width="16" height="16" alt=""> Zendesk &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 9
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`nps-router.json`](nps-router.json) · [`nps-router.workflow.ts`](nps-router.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1srs3j0(["Survey answered"])
   ntyneo["Read the score"]
-  nqtm42b[/"Record it"/]
+  nqtm42b["Record it"]
   n1cjieui{"Which group?"}
-  nb970my[/"Open a ticket"/]
+  nb970my["Open a ticket"]
   n4hupti["Detractor message"]
   nzg2gll[["Tell customer success"]]
-  n16i6jb4[/"Invite a public review"/]
+  n16i6jb4["Invite a public review"]
   nie2dsl["Recorded only"]
   n1srs3j0 --> ntyneo
   ntyneo --> nqtm42b
@@ -199,13 +197,11 @@ flowchart LR
 
 Registers someone for a webinar, sends the calendar invite, and reminds them a day and an hour before. Full sessions get a waitlist reply.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Datastore, Email |
-| Nodes | 14 |
-| Calls | `error-handler` |
-| Files | [`webinar-registration.json`](webinar-registration.json) · [`webinar-registration.workflow.ts`](webinar-registration.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 15
+- **Calls:** `error-handler`
+- **Files:** [`webinar-registration.json`](webinar-registration.json) · [`webinar-registration.workflow.ts`](webinar-registration.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -213,29 +209,31 @@ flowchart LR
   ng25lee["Read the form"]
   n2xqlyi{"Valid?"}
   n1clxfxs(["Invalid"])
-  nmrvbfs[/"Load the webinar"/]
+  nmrvbfs["Load the webinar"]
   n82pjwf{"Seats left?"}
-  n1sj7y6i[/"Register"/]
-  neds8qr{"Newly registered?"}
-  n1vflg6k[/"Count the seat"/]
-  n1i4bpk9[/"Send the invite"/]
+  n1sj7y6i["Register"]
+  n9nggn2{"Registered already?"}
+  n1mqinas(["Try again"])
+  n1vflg6k["Count the seat"]
+  n1i4bpk9["Send the invite"]
   n1w4hf6g(["Confirmed"])
   n1zwu5t(["Already registered"])
-  nmv87ma[/"Add to waitlist"/]
+  nmv87ma["Add to waitlist"]
   n15xdlg9(["Waitlisted"])
   nhg7o80 --> ng25lee
   ng25lee --> n2xqlyi
   n2xqlyi -->|yes| nmrvbfs
   nmrvbfs --> n82pjwf
   n82pjwf -->|yes| n1sj7y6i
-  n1sj7y6i --> neds8qr
-  neds8qr -->|yes| n1vflg6k
+  n1sj7y6i --> n1vflg6k
   n1vflg6k --> n1i4bpk9
   n1i4bpk9 --> n1w4hf6g
   n2xqlyi -->|no| n1clxfxs
   n82pjwf -->|no| nmv87ma
   nmv87ma --> n15xdlg9
-  neds8qr -->|no| n1zwu5t
+  n1sj7y6i --> n9nggn2
+  n9nggn2 -->|yes| n1zwu5t
+  n9nggn2 -->|no| n1mqinas
 ```
 
 **How it runs**

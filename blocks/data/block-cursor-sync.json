@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Block · Incremental sync with a bookmark\nThe skeleton of every reliable sync: read the bookmark, fetch what is newer, write it, and only then move the bookmark.\n\n**Platforms:** none, this is logic only\n**Settings:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+        "content": "## Block · Incremental sync with a bookmark\nThe skeleton of every reliable sync: read the bookmark, fetch what is newer, write it, and only then move the bookmark.\n\n**Platforms:** Supabase, HubSpot\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
       }
     },
     {
@@ -34,29 +34,21 @@
         180
       ],
       "name": "Read bookmark",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/sync_cursors",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "sync_cursors",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "name",
-              "value": "={{ 'eq.block-sync' }}"
+              "keyName": "name",
+              "condition": "eq",
+              "keyValue": "={{ 'block-sync' }}"
             }
           ]
         }
@@ -64,7 +56,13 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "f960397b-b671-4a21-a236-1af63390f3d5",
@@ -77,32 +75,35 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.CRM_BASE_URL }}/changes",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
-            }
-          ]
-        },
+        "url": "={{ 'https://api.hubapi.com/crm/v3/objects/contacts' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
             {
-              "name": "since",
+              "name": "after",
               "value": "={{ $json.value ?? '0' }}"
+            },
+            {
+              "name": "limit",
+              "value": "={{ '100' }}"
             }
           ]
+        },
+        "options": {
+          "timeout": 15000
         }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
     },
     {
       "id": "69153129-555f-48c3-a271-e3794d2630a2",
@@ -162,26 +163,43 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/synced",
-        "options": {
-          "timeout": 15000
-        },
+        "url": "={{ 'https://acme.supabase.co/rest/v1/synced' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "name": "Prefer",
+              "value": "={{ 'resolution=merge-duplicates,return=representation' }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "={{ 'id' }}"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.rows) }}"
+        "jsonBody": "={{ JSON.stringify($json.rows.map((r) => ({ id: String(r.id), email: r.properties?.email ?? null }))) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "6129f980-4786-4109-a7e0-76b4286ca43f",
@@ -194,20 +212,15 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/sync_cursors",
-        "options": {
-          "timeout": 15000
-        },
+        "url": "={{ 'https://acme.supabase.co/rest/v1/sync_cursors' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            },
-            {
               "name": "Prefer",
-              "value": "resolution=merge-duplicates"
+              "value": "={{ 'resolution=merge-duplicates,return=representation' }}"
             }
           ]
         },
@@ -222,11 +235,20 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ name: 'block-sync', value: $('Newest id').first().json.newest }) }}"
+        "jsonBody": "={{ JSON.stringify({ name: 'block-sync', value: $('Newest id').first().json.newest }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "5a6a3488-b574-404b-ae2c-acbd61dbb79b",

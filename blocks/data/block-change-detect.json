@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Block · Has this changed since last time?\nCompares a record with the copy stored last run and reports which fields changed, so downstream work only happens on a real change.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+        "content": "## Block · Has this changed since last time?\nCompares a record with the copy stored last run and reports which fields changed, so downstream work only happens on a real change.\n\n**Platforms:** Supabase\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
       }
     },
     {
@@ -36,29 +36,21 @@
         90
       ],
       "name": "Last copy",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/snapshots",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "snapshots",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "key",
-              "value": "={{ 'eq.' + $json.key }}"
+              "keyName": "key",
+              "condition": "eq",
+              "keyValue": "={{ $json.key }}"
             }
           ]
         }
@@ -66,7 +58,13 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "692aaa04-53ea-44f6-ac2d-d448361b6deb",
@@ -92,20 +90,15 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/snapshots",
-        "options": {
-          "timeout": 15000
-        },
+        "url": "={{ 'https://acme.supabase.co/rest/v1/snapshots' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            },
-            {
               "name": "Prefer",
-              "value": "resolution=merge-duplicates"
+              "value": "={{ 'resolution=merge-duplicates,return=representation' }}"
             }
           ]
         },
@@ -120,11 +113,20 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ key: $json.key, data: $json.data }) }}"
+        "jsonBody": "={{ JSON.stringify({ key: $json.key, data: $json.data }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "4672e0d3-5b8e-4b68-abb9-3ed657a11084",

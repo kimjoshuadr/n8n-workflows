@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Block · Upsert in chunks\nGroups a long list into chunks of 100 and upserts each chunk in one request.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/lists`"
+        "content": "## Block · Upsert in chunks\nGroups a long list into chunks of 100 and upserts each chunk in one request.\n\n**Platforms:** Supabase\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/lists`"
       }
     },
     {
@@ -53,20 +53,15 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/records",
-        "options": {
-          "timeout": 15000
-        },
+        "url": "={{ 'https://acme.supabase.co/rest/v1/records' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            },
-            {
               "name": "Prefer",
-              "value": "resolution=merge-duplicates"
+              "value": "={{ 'resolution=merge-duplicates,return=representation' }}"
             }
           ]
         },
@@ -81,11 +76,20 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.rows) }}"
+        "jsonBody": "={{ JSON.stringify($json.rows) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     }
   ],
   "connections": {

@@ -1,8 +1,273 @@
 {
   "n8n": "2.42.7",
-  "passed": 201,
+  "passed": 254,
   "failed": 0,
   "cases": [
+    {
+      "id": "ai-back-office",
+      "name": "a clean invoice is read, checked, coded and filed as a QuickBooks bill",
+      "ok": true
+    },
+    {
+      "id": "ai-back-office",
+      "name": "an invoice whose own numbers do not add up never reaches QuickBooks",
+      "ok": true
+    },
+    {
+      "id": "ai-back-office",
+      "name": "a known vendor with a new bank account is stopped and marked critical",
+      "ok": true
+    },
+    {
+      "id": "ai-back-office",
+      "name": "an invoice number this vendor already sent is not filed twice",
+      "ok": true
+    },
+    {
+      "id": "ai-back-office",
+      "name": "an account that is not in the chart is refused",
+      "ok": true
+    },
+    {
+      "id": "ai-back-office",
+      "name": "the same email delivered twice is processed once",
+      "ok": true
+    },
+    {
+      "id": "ai-back-office",
+      "name": "bank lines are matched exactly in code, and an agent's proposal needs equal amounts",
+      "ok": true
+    },
+    {
+      "id": "ai-back-office",
+      "name": "an invoice ten times a vendor's usual amount is flagged by rule and explained",
+      "ok": true
+    },
+    {
+      "id": "ai-back-office",
+      "name": "an ordinary day raises nothing and calls no model",
+      "ok": true
+    },
+    {
+      "id": "ai-back-office",
+      "name": "a finance question is answered from the ledger, with its working",
+      "ok": true
+    },
+    {
+      "id": "ai-back-office",
+      "name": "someone outside finance is refused before any model is called",
+      "ok": true
+    },
+    {
+      "id": "ai-back-office",
+      "name": "an answer with no ledger rows behind it is not given",
+      "ok": true
+    },
+    {
+      "id": "ai-back-office",
+      "name": "month end totals each account against the month before and fills the pack",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "a topic is researched, written, fact-checked, optimised and put to a person",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "a point that cites a source that does not exist is dropped before writing",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "an unsupported claim is edited out, and the draft says it was edited",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "when the edit leaves the claim in, the topic goes back and nothing is saved",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "a citation to a source that does not exist is caught even when the checker passes it",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "with too few sources the topic is returned without a model call",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "an empty queue does nothing",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "an approved draft is published, illustrated, voiced and shared to three networks",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "approving twice publishes once",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "a rejection publishes nothing and keeps the reason",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "sharing still happens with a plain post when the social model is down",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "a malformed decision is a 400",
+      "ok": true
+    },
+    {
+      "id": "ai-content-studio",
+      "name": "Friday's topics build on what was read and never repeat a title",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "a good lead is researched, scored, added to HubSpot and started on a sequence",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "a personal email address is never qualified, whatever the model scored",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "when the research model is down, a person is asked and nothing is guessed",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "the same lead submitting twice starts one sequence",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "an email is written with a proof point, reviewed by a second model, sent and recorded",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "a rejected draft is rewritten once with the reviewer's notes, then sent",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "a promise the business does not make is caught in code even when both models approve",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "a sequence that has had its four emails is closed without a model call",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "an interested reply gets three calendar times and opens a deal",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "'unsubscribe' stops the sequence even when the classifier read it as interest",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "an objection the documents do not cover goes to a person, unanswered",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "mail from someone who is not a lead is left alone",
+      "ok": true
+    },
+    {
+      "id": "ai-sales-team",
+      "name": "the weekly report counts the funnel in code",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "an order question is looked up in Shopify, judged and answered",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "legal language goes straight to a person and no specialist is asked",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "a small refund inside the policy is made in Stripe and added to the reply",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "a refund over the limit is never made by the agents",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "an answer the judge rejects is handed over with the unsent draft",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "a promise is caught in code even when the judge passes it",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "a technical question is answered from the knowledge base",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "with the models down, the ticket still reaches a person",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "the same ticket delivered twice is answered once",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "the nightly audit grades every refunded answer and names the poor ones",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "Monday's gaps are grouped and posted",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "a week with no handovers posts an all clear without a model call",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "an unhappy survey opens a follow-up with a draft for a person",
+      "ok": true
+    },
+    {
+      "id": "ai-support-desk",
+      "name": "a happy survey is only recorded",
+      "ok": true
+    },
     {
       "id": "block-webhook-to-table",
       "name": "stores named fields and drops the rest",
@@ -185,7 +450,7 @@
     },
     {
       "id": "block-file-to-storage",
-      "name": "the same address is copied once",
+      "name": "the same file is archived once",
       "ok": true
     },
     {
@@ -236,11 +501,6 @@
     {
       "id": "order-intake",
       "name": "a resent order does not take stock twice",
-      "ok": true
-    },
-    {
-      "id": "order-intake",
-      "name": "a request without the secret is refused",
       "ok": true
     },
     {
@@ -520,12 +780,7 @@
     },
     {
       "id": "payment-events",
-      "name": "an unsigned request is refused",
-      "ok": true
-    },
-    {
-      "id": "payment-events",
-      "name": "an event we do not act on is acknowledged",
+      "name": "an event we do not act on is left alone",
       "ok": true
     },
     {
@@ -894,6 +1149,11 @@
       "ok": true
     },
     {
+      "id": "error-handler",
+      "name": "an alert still goes when the log is down",
+      "ok": true
+    },
+    {
       "id": "idempotency-guard",
       "name": "a first event is not a duplicate",
       "ok": true
@@ -904,18 +1164,23 @@
       "ok": true
     },
     {
-      "id": "notify",
-      "name": "posts to chat",
+      "id": "idempotency-guard",
+      "name": "a database outage stops the caller and is not read as a duplicate",
       "ok": true
     },
     {
       "id": "notify",
-      "name": "falls back to email when chat stays down",
+      "name": "posts to Slack",
       "ok": true
     },
     {
       "id": "notify",
-      "name": "recovers when chat fails once",
+      "name": "falls back to email when Slack stays down",
+      "ok": true
+    },
+    {
+      "id": "notify",
+      "name": "recovers when Slack fails once",
       "ok": true
     },
     {
@@ -925,7 +1190,7 @@
     },
     {
       "id": "dead-letter",
-      "name": "still parks when the alert cannot be sent",
+      "name": "still parks when Slack cannot be reached",
       "ok": true
     },
     {

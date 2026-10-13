@@ -2,7 +2,7 @@
   "repo": "https://github.com/kimjoshuadr/n8n-workflows",
   "tested": {
     "n8n": "2.42.7",
-    "passed": 201,
+    "passed": 254,
     "failed": 0
   },
   "tiers": {
@@ -14,175 +14,175 @@
     "slack": {
       "name": "Slack",
       "job": "Team chat and alerts",
-      "icon": "slack",
-      "workflows": 9
+      "icon": "slack.svg",
+      "workflows": 18
     },
     "hubspot": {
       "name": "HubSpot",
       "job": "CRM",
-      "icon": "hubspot",
-      "workflows": 1
+      "icon": "hubspot.svg",
+      "workflows": 9
     },
     "sendgrid": {
       "name": "SendGrid",
       "job": "Customer email",
-      "icon": "sendgrid",
-      "workflows": 2
+      "icon": "sendgrid.svg",
+      "workflows": 21
     },
     "gmail": {
       "name": "Gmail",
       "job": "Shared inbox",
-      "icon": "gmail",
-      "workflows": 2
+      "icon": "gmail.svg",
+      "workflows": 3
     },
     "supabase": {
       "name": "Supabase",
       "job": "Records and state",
-      "icon": "supabase",
-      "workflows": 9
+      "icon": "supabase.svg",
+      "workflows": 53
     },
     "calendly": {
       "name": "Calendly",
       "job": "Booking",
-      "icon": "calendly",
-      "workflows": 0
+      "icon": "calendly.svg",
+      "workflows": 1
     },
     "googleCalendar": {
       "name": "Google Calendar",
       "job": "Calendar",
-      "icon": "googlecalendar",
-      "workflows": 1
+      "icon": "googleCalendar.svg",
+      "workflows": 3
     },
     "zendesk": {
       "name": "Zendesk",
       "job": "Helpdesk",
-      "icon": "zendesk",
-      "workflows": 1
+      "icon": "zendesk.svg",
+      "workflows": 6
     },
     "wordpress": {
       "name": "WordPress",
       "job": "Website and CMS",
-      "icon": "wordpress",
-      "workflows": 1
+      "icon": "wordpress.svg",
+      "workflows": 2
     },
     "linkedin": {
       "name": "LinkedIn",
       "job": "Social",
-      "icon": "linkedin",
-      "workflows": 1
+      "icon": "linkedin.svg",
+      "workflows": 2
     },
     "x": {
       "name": "X",
       "job": "Social",
-      "icon": "x",
-      "workflows": 1
+      "icon": "x.svg",
+      "workflows": 2
     },
     "facebook": {
       "name": "Facebook",
       "job": "Social",
-      "icon": "facebook",
-      "workflows": 1
+      "icon": "facebook.svg",
+      "workflows": 2
     },
     "shopify": {
       "name": "Shopify",
       "job": "Store",
-      "icon": "shopify",
-      "workflows": 1
+      "icon": "shopify.svg",
+      "workflows": 3
     },
     "stripe": {
       "name": "Stripe",
       "job": "Payments",
-      "icon": "stripe",
-      "workflows": 1
+      "icon": "stripe.svg",
+      "workflows": 5
     },
     "quickbooks": {
       "name": "QuickBooks",
       "job": "Accounting",
-      "icon": "quickbooks",
+      "icon": "quickbooks.svg",
       "workflows": 1
     },
     "discord": {
       "name": "Discord",
       "job": "Community",
-      "icon": "discord",
-      "workflows": 0
+      "icon": "discord.svg",
+      "workflows": 3
     },
     "typeform": {
       "name": "Typeform",
       "job": "Forms",
-      "icon": "typeform",
+      "icon": "typeform.svg",
       "workflows": 2
     },
     "mailchimp": {
       "name": "Mailchimp",
       "job": "Email marketing",
-      "icon": "mailchimp",
-      "workflows": 1
+      "icon": "mailchimp.svg",
+      "workflows": 2
     },
     "twilio": {
       "name": "Twilio",
       "job": "SMS",
-      "icon": "twilio",
-      "workflows": 0
+      "icon": "twilio.svg",
+      "workflows": 1
     },
     "googleDrive": {
       "name": "Google Drive",
       "job": "Files",
-      "icon": "googledrive",
-      "workflows": 0
+      "icon": "googleDrive.svg",
+      "workflows": 1
     },
     "googleSheets": {
       "name": "Google Sheets",
       "job": "Sheets",
-      "icon": "googlesheets",
+      "icon": "googleSheets.svg",
       "workflows": 1
     },
     "clearbit": {
       "name": "Clearbit",
       "job": "Enrichment",
-      "icon": "clearbit",
-      "workflows": 1
+      "icon": "clearbit.svg",
+      "workflows": 2
     },
     "serpapi": {
       "name": "SerpAPI",
       "job": "Web search",
-      "icon": "google",
-      "workflows": 2
+      "icon": "serpapi.svg",
+      "workflows": 5
     },
     "bamboohr": {
       "name": "BambooHR",
       "job": "HR",
-      "icon": "bamboohr",
-      "workflows": 0
+      "icon": "bamboohr.png",
+      "workflows": 1
     },
     "posthog": {
       "name": "PostHog",
       "job": "Product analytics",
-      "icon": "posthog",
-      "workflows": 1
+      "icon": "posthog.svg",
+      "workflows": 2
     },
     "anthropic": {
       "name": "Claude",
       "job": "AI reasoning and writing",
-      "icon": "anthropic",
-      "workflows": 4
+      "icon": "anthropic.svg",
+      "workflows": 8
     },
     "openai": {
       "name": "OpenAI",
       "job": "AI classification and embeddings",
-      "icon": "openai",
-      "workflows": 4
+      "icon": "openai.svg",
+      "workflows": 16
     },
     "pinecone": {
       "name": "Pinecone",
       "job": "AI knowledge base",
-      "icon": "pinecone",
+      "icon": "pinecone.svg",
       "workflows": 4
     },
     "elevenlabs": {
       "name": "ElevenLabs",
       "job": "AI voice",
-      "icon": "elevenlabs",
+      "icon": "elevenlabs.svg",
       "workflows": 1
     }
   },
@@ -349,21 +349,6 @@
       "summary": "Seven agents run outbound end to end: research each new lead, score it, write and review every email, read the replies, propose meeting times and answer objections from the case studies. A person is asked whenever an agent is unsure.",
       "source": "reference",
       "trigger": "typeformTrigger",
-      "integrations": [
-        "Typeform",
-        "Clearbit",
-        "SerpAPI",
-        "Claude",
-        "OpenAI",
-        "HubSpot",
-        "Supabase",
-        "Mailchimp",
-        "Pinecone",
-        "SendGrid",
-        "Gmail",
-        "Google Calendar",
-        "Slack"
-      ],
       "platforms": [
         "typeform",
         "clearbit",
@@ -1946,17 +1931,6 @@
       "summary": "A triage agent routes each Zendesk ticket to a specialist agent that can read Shopify, Stripe or the knowledge base. A separate judge checks every answer before it is sent, refunds are decided by a written policy in code, and anything uncertain reaches a person with the facts already gathered.",
       "source": "reference",
       "trigger": "zendeskTrigger",
-      "integrations": [
-        "Zendesk",
-        "OpenAI",
-        "Claude",
-        "Shopify",
-        "Supabase",
-        "Stripe",
-        "Pinecone",
-        "Slack",
-        "Typeform"
-      ],
       "platforms": [
         "zendesk",
         "openai",
@@ -3405,20 +3379,6 @@
       "summary": "Seven agents take a topic from research to a fact-checked, optimised draft. A person approves it in Slack, then it is published to WordPress with a cover image and an ElevenLabs voice-over, shared to LinkedIn, X and Facebook, and its results in PostHog become next week's topics.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Supabase",
-        "SerpAPI",
-        "Claude",
-        "Pinecone",
-        "OpenAI",
-        "Slack",
-        "WordPress",
-        "ElevenLabs",
-        "LinkedIn",
-        "X",
-        "Facebook",
-        "PostHog"
-      ],
       "platforms": [
         "supabase",
         "serpapi",
@@ -4708,16 +4668,6 @@
       "summary": "Agents read supplier invoices from Gmail, code them against the chart of accounts and file them in QuickBooks. Bank lines are matched every morning, the ledger is scanned for anomalies, finance can ask questions in Slack, and the month closes into a Google Sheets pack. Every figure is checked or computed in code.",
       "source": "reference",
       "trigger": "gmailTrigger",
-      "integrations": [
-        "Gmail",
-        "OpenAI",
-        "Supabase",
-        "Claude",
-        "Pinecone",
-        "QuickBooks",
-        "Slack",
-        "Google Sheets"
-      ],
       "platforms": [
         "gmail",
         "openai",
@@ -5823,26 +5773,13 @@
       "summary": "Takes an enquiry from any form, rejects junk, ignores repeats, has a model score the fit, then files it in the CRM and sends the right first reply.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "LLM",
-        "CRM",
-        "Email",
-        "Chat",
-        "Datastore"
+      "platforms": [
+        "openai",
+        "supabase",
+        "hubspot",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "CRM_API_KEY",
-        "CRM_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL"
-      ],
+      "env": [],
       "calls": [
         "idempotency-guard",
         "notify",
@@ -5850,7 +5787,7 @@
         "error-handler"
       ],
       "folder": "systems/lead-intake",
-      "nodeCount": 21,
+      "nodeCount": 23,
       "tests": [
         "a good enquiry reaches the CRM and gets a booking link",
         "a poor fit gets the nurture email and no CRM record",
@@ -5925,127 +5862,144 @@
             "id": "Enquiry form",
             "kind": "trigger",
             "x": 0,
-            "y": 270
+            "y": 310
           },
           {
             "id": "Validate and normalise",
             "kind": "code",
             "x": 260,
-            "y": 270
+            "y": 310
           },
           {
             "id": "Valid?",
             "kind": "branch",
             "x": 520,
-            "y": 270
+            "y": 310
           },
           {
             "id": "Reject",
             "kind": "respond",
             "x": 780,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Accept",
             "kind": "respond",
             "x": 780,
-            "y": 360
+            "y": 400
           },
           {
             "id": "Seen today?",
             "kind": "call",
             "x": 1040,
-            "y": 270
+            "y": 310
           },
           {
             "id": "New enquiry?",
             "kind": "branch",
             "x": 1300,
-            "y": 270
+            "y": 310
           },
           {
             "id": "Ignore the repeat",
             "kind": "end",
-            "x": 1560,
-            "y": 180
+            "x": 1660,
+            "y": 90
           },
           {
             "id": "Score the fit",
-            "kind": "http",
+            "kind": "agent",
+            "x": 1660,
+            "y": 270
+          },
+          {
+            "id": "Score the fit · GPT",
+            "kind": "part",
+            "platform": "openai",
             "x": 1560,
-            "y": 360
+            "y": 490
+          },
+          {
+            "id": "Score the fit · shape",
+            "kind": "part",
+            "x": 1760,
+            "y": 490
           },
           {
             "id": "Read the verdict",
             "kind": "code",
-            "x": 1820,
-            "y": 270
+            "x": 2020,
+            "y": 310
           },
           {
             "id": "Save the lead",
-            "kind": "http",
-            "x": 2080,
-            "y": 270
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2280,
+            "y": 310
           },
           {
             "id": "Which path?",
             "kind": "branch",
-            "x": 2340,
-            "y": 270
+            "x": 2540,
+            "y": 310
           },
           {
             "id": "Create CRM contact",
-            "kind": "http",
-            "x": 2600,
-            "y": 90
+            "kind": "app",
+            "platform": "hubspot",
+            "x": 2800,
+            "y": 130
           },
           {
             "id": "Send booking link",
-            "kind": "http",
-            "x": 2860,
-            "y": 90
+            "kind": "app",
+            "platform": "sendgrid",
+            "x": 3060,
+            "y": 130
           },
           {
             "id": "Tell sales",
             "kind": "call",
-            "x": 3380,
-            "y": 270
+            "x": 3580,
+            "y": 310
           },
           {
             "id": "Park for replay",
             "kind": "call",
-            "x": 3120,
-            "y": 180
+            "x": 3320,
+            "y": 220
           },
           {
             "id": "Send nurture email",
-            "kind": "http",
-            "x": 2600,
-            "y": 270
+            "kind": "app",
+            "platform": "sendgrid",
+            "x": 2800,
+            "y": 310
           },
           {
             "id": "Ask a person to look",
             "kind": "call",
-            "x": 2860,
-            "y": 270
+            "x": 3060,
+            "y": 310
           },
           {
             "id": "Sales message",
             "kind": "code",
-            "x": 3120,
-            "y": 360
+            "x": 3320,
+            "y": 400
           },
           {
             "id": "Review message",
             "kind": "code",
-            "x": 2600,
-            "y": 450
+            "x": 2800,
+            "y": 490
           },
           {
             "id": "Dead letter payload",
             "kind": "code",
-            "x": 2860,
-            "y": 450
+            "x": 3060,
+            "y": 490
           }
         ],
         "edges": [
@@ -6148,6 +6102,18 @@
             "from": "Review message",
             "to": "Ask a person to look",
             "out": 0
+          },
+          {
+            "from": "Score the fit · GPT",
+            "to": "Score the fit",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Score the fit · shape",
+            "to": "Score the fit",
+            "out": 0,
+            "part": "outputParser"
           }
         ],
         "sections": []
@@ -6163,18 +6129,11 @@
       "summary": "Each morning, writes to qualified leads who have not booked. Three nudges, two days apart, then the lead is marked cold and left alone.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Email"
+      "platforms": [
+        "supabase",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -6230,7 +6189,8 @@
           },
           {
             "id": "Unbooked leads",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 90
           },
@@ -6248,25 +6208,29 @@
           },
           {
             "id": "Send the nudge",
-            "kind": "http",
+            "kind": "app",
+            "platform": "sendgrid",
             "x": 1040,
             "y": 90
           },
           {
             "id": "Record the nudge",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1300,
             "y": 180
           },
           {
             "id": "Mark cold",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1040,
             "y": 270
           },
           {
             "id": "Check in",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 270
           }
@@ -6320,21 +6284,13 @@
       "kind": null,
       "summary": "When a call is booked, moves the lead forward everywhere at once: the lead record, the CRM deal and the sales channel.",
       "source": "reference",
-      "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Calendar",
-        "Datastore",
-        "CRM",
-        "Chat"
+      "trigger": "calendlyTrigger",
+      "platforms": [
+        "calendly",
+        "supabase",
+        "hubspot"
       ],
-      "platforms": [],
-      "env": [
-        "CRM_API_KEY",
-        "CRM_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "idempotency-guard",
         "notify",
@@ -6349,8 +6305,8 @@
       ],
       "story": [
         {
-          "title": "The calendar reports a booking",
-          "copy": "Calendar tools resend webhooks, so the booking id is checked first.",
+          "title": "Calendly reports a booking",
+          "copy": "Calendly resends webhooks, so the booking id is checked first.",
           "nodes": [
             "Booking created",
             "Read the booking",
@@ -6390,6 +6346,7 @@
           {
             "id": "Booking created",
             "kind": "trigger",
+            "platform": "calendly",
             "x": 0,
             "y": 180
           },
@@ -6413,7 +6370,8 @@
           },
           {
             "id": "Mark lead booked",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1040,
             "y": 90
           },
@@ -6425,7 +6383,8 @@
           },
           {
             "id": "Open CRM deal",
-            "kind": "http",
+            "kind": "app",
+            "platform": "hubspot",
             "x": 1560,
             "y": 90
           },
@@ -6530,29 +6489,18 @@
       "summary": "Answers a customer's message from the help centre when it is confident, and hands the conversation to a person with a summary when it is not.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Helpdesk",
-        "LLM",
-        "Datastore",
-        "Chat"
+      "platforms": [
+        "zendesk",
+        "openai",
+        "supabase"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "HELPDESK_API_KEY",
-        "HELPDESK_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL"
-      ],
+      "env": [],
       "calls": [
         "idempotency-guard",
         "error-handler"
       ],
       "folder": "systems/support-agent",
-      "nodeCount": 16,
+      "nodeCount": 18,
       "tests": [
         "answers a covered question",
         "hands over what the help centre does not cover",
@@ -6563,7 +6511,7 @@
       "story": [
         {
           "title": "A customer writes in",
-          "copy": "The helpdesk sends every message here. The agent's own replies and repeats are dropped.",
+          "copy": "Zendesk sends every message here. The agent's own replies and repeats are dropped.",
           "nodes": [
             "Message received",
             "Read the message",
@@ -6574,7 +6522,7 @@
         },
         {
           "title": "It looks things up first",
-          "copy": "The help centre is searched and the best four articles become the only thing the model may answer from.",
+          "copy": "The Zendesk help centre is searched and the best four articles become the only thing the model may answer from.",
           "nodes": [
             "Search the help centre",
             "Build the context"
@@ -6620,97 +6568,115 @@
             "id": "Message received",
             "kind": "trigger",
             "x": 0,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Read the message",
             "kind": "code",
             "x": 260,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Seen before?",
             "kind": "call",
             "x": 520,
-            "y": 180
+            "y": 220
           },
           {
             "id": "New message?",
             "kind": "branch",
             "x": 780,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Search the help centre",
             "kind": "http",
+            "platform": "zendesk",
             "x": 1040,
-            "y": 90
+            "y": 130
           },
           {
             "id": "Build the context",
             "kind": "code",
             "x": 1300,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Draft an answer",
-            "kind": "http",
+            "kind": "agent",
+            "x": 1660,
+            "y": 90
+          },
+          {
+            "id": "Draft an answer · GPT",
+            "kind": "part",
+            "platform": "openai",
             "x": 1560,
-            "y": 180
+            "y": 310
+          },
+          {
+            "id": "Draft an answer · shape",
+            "kind": "part",
+            "x": 1760,
+            "y": 310
           },
           {
             "id": "Read the draft",
             "kind": "code",
-            "x": 1820,
-            "y": 180
+            "x": 2020,
+            "y": 220
           },
           {
             "id": "Confident?",
             "kind": "branch",
-            "x": 2080,
-            "y": 180
+            "x": 2280,
+            "y": 220
           },
           {
             "id": "Send the reply",
-            "kind": "http",
-            "x": 2340,
-            "y": 90
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 2540,
+            "y": 130
           },
           {
             "id": "Hand to a person",
-            "kind": "http",
-            "x": 2340,
-            "y": 270
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 2540,
+            "y": 310
           },
           {
             "id": "Leave a private note",
-            "kind": "http",
-            "x": 2600,
-            "y": 90
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 2800,
+            "y": 130
           },
           {
             "id": "Answered",
             "kind": "code",
-            "x": 2600,
-            "y": 270
+            "x": 2800,
+            "y": 310
           },
           {
             "id": "Handed over",
             "kind": "code",
-            "x": 2860,
-            "y": 180
+            "x": 3060,
+            "y": 220
           },
           {
             "id": "Log the outcome",
-            "kind": "http",
-            "x": 3120,
-            "y": 180
+            "kind": "app",
+            "platform": "supabase",
+            "x": 3320,
+            "y": 220
           },
           {
             "id": "Ignore the repeat",
             "kind": "end",
             "x": 1040,
-            "y": 270
+            "y": 310
           }
         ],
         "edges": [
@@ -6793,6 +6759,18 @@
             "from": "Handed over",
             "to": "Log the outcome",
             "out": 0
+          },
+          {
+            "from": "Draft an answer · GPT",
+            "to": "Draft an answer",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Draft an answer · shape",
+            "to": "Draft an answer",
+            "out": 0,
+            "part": "outputParser"
           }
         ],
         "sections": []
@@ -6808,26 +6786,17 @@
       "summary": "Labels each new ticket by topic and urgency, routes it to the right team, and pages someone only when it is urgent.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "LLM",
-        "Helpdesk",
-        "Chat"
+      "platforms": [
+        "openai",
+        "zendesk"
       ],
-      "platforms": [],
-      "env": [
-        "HELPDESK_API_KEY",
-        "HELPDESK_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
       ],
       "folder": "systems/support-agent",
-      "nodeCount": 12,
+      "nodeCount": 14,
       "tests": [
         "a billing ticket goes to billing without paging",
         "an urgent outage pages on-call",
@@ -6888,62 +6857,79 @@
           },
           {
             "id": "Classify",
-            "kind": "http",
+            "kind": "agent",
+            "x": 620,
+            "y": 230
+          },
+          {
+            "id": "Classify · GPT",
+            "kind": "part",
+            "platform": "openai",
             "x": 520,
-            "y": 360
+            "y": 450
+          },
+          {
+            "id": "Classify · shape",
+            "kind": "part",
+            "x": 720,
+            "y": 450
           },
           {
             "id": "Read the labels",
             "kind": "code",
-            "x": 780,
+            "x": 980,
             "y": 360
           },
           {
             "id": "By topic",
             "kind": "branch",
-            "x": 1040,
+            "x": 1240,
             "y": 360
           },
           {
             "id": "Close as spam",
-            "kind": "http",
-            "x": 1300,
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 1500,
             "y": 90
           },
           {
             "id": "Send to billing",
-            "kind": "http",
-            "x": 1300,
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 1500,
             "y": 270
           },
           {
             "id": "Send to engineering",
-            "kind": "http",
-            "x": 1300,
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 1500,
             "y": 450
           },
           {
             "id": "Send to general queue",
-            "kind": "http",
-            "x": 1300,
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 1500,
             "y": 630
           },
           {
             "id": "Urgent?",
             "kind": "branch",
-            "x": 1560,
+            "x": 1760,
             "y": 360
           },
           {
             "id": "Page message",
             "kind": "code",
-            "x": 1820,
+            "x": 2020,
             "y": 360
           },
           {
             "id": "Page on-call",
             "kind": "call",
-            "x": 2080,
+            "x": 2280,
             "y": 360
           }
         ],
@@ -7012,6 +6998,18 @@
             "from": "Page message",
             "to": "Page on-call",
             "out": 0
+          },
+          {
+            "from": "Classify · GPT",
+            "to": "Classify",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Classify · shape",
+            "to": "Classify",
+            "out": 0,
+            "part": "outputParser"
           }
         ],
         "sections": []
@@ -7027,27 +7025,17 @@
       "summary": "Every Monday, reads what the agent could not answer last week and tells the team which help articles are missing.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "LLM",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "anthropic",
+        "slack"
       ],
-      "platforms": [],
-      "env": [
-        "CHAT_API_KEY",
-        "CHAT_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
       "folder": "systems/support-agent",
-      "nodeCount": 7,
+      "nodeCount": 8,
       "tests": [
         "reports the gaps",
         "says all clear when nothing was handed over"
@@ -7085,43 +7073,53 @@
             "id": "Monday 08:00",
             "kind": "trigger",
             "x": 0,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Unanswered last week",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Gather the questions",
             "kind": "code",
             "x": 520,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Any gaps?",
             "kind": "branch",
             "x": 780,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Group into topics",
-            "kind": "http",
+            "kind": "agent",
             "x": 1040,
             "y": 90
           },
           {
+            "id": "Group into topics · Claude",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 1040,
+            "y": 310
+          },
+          {
             "id": "Post the report",
-            "kind": "http",
+            "kind": "app",
+            "platform": "slack",
             "x": 1300,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Post all clear",
-            "kind": "http",
+            "kind": "app",
+            "platform": "slack",
             "x": 1040,
-            "y": 270
+            "y": 530
           }
         ],
         "edges": [
@@ -7154,6 +7152,12 @@
             "from": "Any gaps?",
             "to": "Post all clear",
             "out": 1
+          },
+          {
+            "from": "Group into topics · Claude",
+            "to": "Group into topics",
+            "out": 0,
+            "part": "languageModel"
           }
         ],
         "sections": []
@@ -7169,30 +7173,19 @@
       "summary": "Takes the next topic off the list, researches it, drafts the article, and asks a person to approve it. Nothing is published from here.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Search",
-        "LLM",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "serpapi",
+        "openai",
+        "anthropic",
+        "slack"
       ],
-      "platforms": [],
-      "env": [
-        "CHAT_API_KEY",
-        "CHAT_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL",
-        "SEARCH_API_KEY",
-        "SEARCH_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
       "folder": "systems/content-pipeline",
-      "nodeCount": 14,
+      "nodeCount": 17,
       "tests": [
         "drafts the queued topic and asks for approval",
         "does nothing when the queue is empty",
@@ -7250,85 +7243,111 @@
             "id": "Weekdays 07:00",
             "kind": "trigger",
             "x": 0,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Next topic",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Is there one?",
             "kind": "branch",
             "x": 520,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Claim the topic",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 780,
-            "y": 90
+            "y": 220
           },
           {
             "id": "Research",
             "kind": "http",
+            "platform": "serpapi",
             "x": 1040,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Collect sources",
             "kind": "code",
             "x": 1300,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Outline",
-            "kind": "http",
-            "x": 1560,
+            "kind": "agent",
+            "x": 1660,
             "y": 180
+          },
+          {
+            "id": "Outline · GPT",
+            "kind": "part",
+            "platform": "openai",
+            "x": 1560,
+            "y": 400
+          },
+          {
+            "id": "Outline · shape",
+            "kind": "part",
+            "x": 1760,
+            "y": 400
           },
           {
             "id": "Read the outline",
             "kind": "code",
-            "x": 1820,
-            "y": 180
+            "x": 2020,
+            "y": 310
           },
           {
             "id": "Usable outline?",
             "kind": "branch",
-            "x": 2080,
-            "y": 180
+            "x": 2280,
+            "y": 310
           },
           {
             "id": "Write the draft",
-            "kind": "http",
-            "x": 2340,
+            "kind": "agent",
+            "x": 2540,
             "y": 90
           },
           {
+            "id": "Write the draft · Claude",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 2540,
+            "y": 310
+          },
+          {
             "id": "Save the draft",
-            "kind": "http",
-            "x": 2600,
-            "y": 180
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2800,
+            "y": 310
           },
           {
             "id": "Ask for approval",
-            "kind": "http",
-            "x": 2860,
-            "y": 180
+            "kind": "app",
+            "platform": "slack",
+            "x": 3060,
+            "y": 310
           },
           {
             "id": "Return the topic",
-            "kind": "http",
-            "x": 2340,
-            "y": 270
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2540,
+            "y": 530
           },
           {
             "id": "Queue is empty",
             "kind": "end",
             "x": 780,
-            "y": 270
+            "y": 400
           }
         ],
         "edges": [
@@ -7396,6 +7415,24 @@
             "from": "Usable outline?",
             "to": "Return the topic",
             "out": 1
+          },
+          {
+            "from": "Outline · GPT",
+            "to": "Outline",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Outline · shape",
+            "to": "Outline",
+            "out": 0,
+            "part": "outputParser"
+          },
+          {
+            "from": "Write the draft · Claude",
+            "to": "Write the draft",
+            "out": 0,
+            "part": "languageModel"
           }
         ],
         "sections": []
@@ -7411,19 +7448,11 @@
       "summary": "Receives a person's decision on a draft. Approved drafts are published to the CMS once and queued for sharing; rejected ones go back with the reason.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Datastore",
-        "CMS",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "wordpress"
       ],
-      "platforms": [],
-      "env": [
-        "CMS_API_KEY",
-        "CMS_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -7461,7 +7490,7 @@
           "copy": "The article goes to the CMS and the draft records who approved it and when.",
           "nodes": [
             "Approved?",
-            "Publish to CMS",
+            "Publish to WordPress",
             "Mark published",
             "Published"
           ]
@@ -7503,7 +7532,8 @@
           },
           {
             "id": "Load the draft",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 780,
             "y": 270
           },
@@ -7526,14 +7556,16 @@
             "y": 270
           },
           {
-            "id": "Publish to CMS",
-            "kind": "http",
+            "id": "Publish to WordPress",
+            "kind": "app",
+            "platform": "wordpress",
             "x": 1560,
             "y": 90
           },
           {
             "id": "Mark published",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1820,
             "y": 90
           },
@@ -7545,7 +7577,8 @@
           },
           {
             "id": "Mark rejected",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1560,
             "y": 270
           },
@@ -7584,11 +7617,11 @@
           },
           {
             "from": "Approved?",
-            "to": "Publish to CMS",
+            "to": "Publish to WordPress",
             "out": 0
           },
           {
-            "from": "Publish to CMS",
+            "from": "Publish to WordPress",
             "to": "Mark published",
             "out": 0
           },
@@ -7631,27 +7664,19 @@
       "summary": "Every hour, writes a post per network for anything newly published and schedules it. One network failing does not stop the others.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "LLM",
-        "Social"
+      "platforms": [
+        "supabase",
+        "openai",
+        "linkedin",
+        "x",
+        "facebook"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL",
-        "SOCIAL_API_KEY",
-        "SOCIAL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
       "folder": "systems/content-pipeline",
-      "nodeCount": 10,
+      "nodeCount": 14,
       "tests": [
         "schedules three posts and marks the article shared",
         "uses a plain post when the model is down",
@@ -7674,14 +7699,16 @@
           "nodes": [
             "Each article",
             "Write the posts",
-            "One item per network"
+            "Cut each post to length"
           ]
         },
         {
           "title": "Scheduled, then marked",
-          "copy": "Each network is scheduled on its own, so one outage costs one post and not all three.",
+          "copy": "LinkedIn, X and Facebook are posted one after another, so one outage costs one post and not all three.",
           "nodes": [
-            "Schedule the post",
+            "Post to LinkedIn",
+            "Post to X",
+            "Post to Facebook",
             "Mark shared",
             "Done"
           ]
@@ -7693,61 +7720,91 @@
             "id": "Hourly",
             "kind": "trigger",
             "x": 0,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Published, not shared",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Anything new?",
             "kind": "branch",
             "x": 520,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Each article",
             "kind": "loop",
             "x": 780,
-            "y": 90
+            "y": 220
           },
           {
             "id": "Write the posts",
-            "kind": "http",
-            "x": 1040,
+            "kind": "agent",
+            "x": 1140,
             "y": 90
           },
           {
-            "id": "One item per network",
-            "kind": "code",
-            "x": 1300,
-            "y": 180
+            "id": "Write the posts · GPT",
+            "kind": "part",
+            "platform": "openai",
+            "x": 1040,
+            "y": 310
           },
           {
-            "id": "Schedule the post",
-            "kind": "http",
-            "x": 1560,
-            "y": 180
+            "id": "Write the posts · shape",
+            "kind": "part",
+            "x": 1240,
+            "y": 310
+          },
+          {
+            "id": "Cut each post to length",
+            "kind": "code",
+            "x": 1500,
+            "y": 310
+          },
+          {
+            "id": "Post to LinkedIn",
+            "kind": "app",
+            "platform": "linkedin",
+            "x": 1760,
+            "y": 310
+          },
+          {
+            "id": "Post to X",
+            "kind": "app",
+            "platform": "x",
+            "x": 2020,
+            "y": 310
+          },
+          {
+            "id": "Post to Facebook",
+            "kind": "app",
+            "platform": "facebook",
+            "x": 2280,
+            "y": 310
           },
           {
             "id": "Mark shared",
-            "kind": "http",
-            "x": 1820,
-            "y": 180
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2540,
+            "y": 310
           },
           {
             "id": "Nothing new",
             "kind": "end",
             "x": 780,
-            "y": 270
+            "y": 400
           },
           {
             "id": "Done",
             "kind": "end",
-            "x": 1040,
-            "y": 270
+            "x": 1140,
+            "y": 530
           }
         ],
         "edges": [
@@ -7783,16 +7840,26 @@
           },
           {
             "from": "Write the posts",
-            "to": "One item per network",
+            "to": "Cut each post to length",
             "out": 0
           },
           {
-            "from": "One item per network",
-            "to": "Schedule the post",
+            "from": "Cut each post to length",
+            "to": "Post to LinkedIn",
             "out": 0
           },
           {
-            "from": "Schedule the post",
+            "from": "Post to LinkedIn",
+            "to": "Post to X",
+            "out": 0
+          },
+          {
+            "from": "Post to X",
+            "to": "Post to Facebook",
+            "out": 0
+          },
+          {
+            "from": "Post to Facebook",
             "to": "Mark shared",
             "out": 0
           },
@@ -7800,6 +7867,18 @@
             "from": "Mark shared",
             "to": "Each article",
             "out": 0
+          },
+          {
+            "from": "Write the posts · GPT",
+            "to": "Write the posts",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Write the posts · shape",
+            "to": "Write the posts",
+            "out": 0,
+            "part": "outputParser"
           }
         ],
         "sections": []
@@ -7814,23 +7893,13 @@
       "kind": null,
       "summary": "Takes a new order from the store, records it once, takes its items out of stock, confirms to the customer, and warns the team about anything running low.",
       "source": "reference",
-      "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Shop",
-        "Datastore",
-        "Email",
-        "Chat"
+      "trigger": "shopifyTrigger",
+      "platforms": [
+        "shopify",
+        "supabase",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL",
-        "SHOP_API_KEY",
-        "SHOP_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "idempotency-guard",
         "notify",
@@ -7838,23 +7907,19 @@
         "error-handler"
       ],
       "folder": "systems/order-ops",
-      "nodeCount": 17,
+      "nodeCount": 14,
       "tests": [
         "a new order is saved, confirmed and taken from stock",
         "low stock warns the team",
         "a resent order does not take stock twice",
-        "a request without the secret is refused",
         "a stock outage parks the order"
       ],
       "story": [
         {
-          "title": "The store reports an order",
-          "copy": "The request must carry the shared secret. Anything else gets a 401 and goes no further.",
+          "title": "Shopify reports an order",
+          "copy": "The Shopify trigger checks the signature on every delivery, so nothing unsigned gets this far.",
           "nodes": [
-            "Order created",
-            "From the store?",
-            "Unauthorised",
-            "Received"
+            "Order created"
           ]
         },
         {
@@ -7906,119 +7971,95 @@
           {
             "id": "Order created",
             "kind": "trigger",
+            "platform": "shopify",
             "x": 0,
             "y": 180
           },
           {
-            "id": "From the store?",
-            "kind": "branch",
-            "x": 260,
-            "y": 180
-          },
-          {
-            "id": "Unauthorised",
-            "kind": "respond",
-            "x": 520,
-            "y": 90
-          },
-          {
-            "id": "Received",
-            "kind": "respond",
-            "x": 520,
-            "y": 270
-          },
-          {
             "id": "Read the order",
             "kind": "code",
-            "x": 780,
+            "x": 260,
             "y": 180
           },
           {
             "id": "Seen before?",
             "kind": "call",
-            "x": 1040,
+            "x": 520,
             "y": 180
           },
           {
             "id": "New order?",
             "kind": "branch",
-            "x": 1300,
+            "x": 780,
             "y": 180
           },
           {
             "id": "Already handled",
             "kind": "end",
-            "x": 1560,
+            "x": 1040,
             "y": 90
           },
           {
             "id": "Save the order",
-            "kind": "http",
-            "x": 1560,
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1040,
             "y": 270
           },
           {
             "id": "One item per line",
             "kind": "code",
-            "x": 1820,
+            "x": 1300,
             "y": 90
           },
           {
             "id": "Take from stock",
             "kind": "http",
-            "x": 2080,
+            "platform": "shopify",
+            "x": 1560,
             "y": 180
           },
           {
             "id": "What is running low?",
             "kind": "code",
-            "x": 2340,
+            "x": 1820,
             "y": 90
           },
           {
             "id": "Anything low?",
             "kind": "branch",
-            "x": 2600,
+            "x": 2080,
             "y": 90
           },
           {
             "id": "Warn the team",
             "kind": "call",
-            "x": 2860,
+            "x": 2340,
             "y": 180
           },
           {
             "id": "Confirm to customer",
-            "kind": "http",
-            "x": 1820,
+            "kind": "app",
+            "platform": "sendgrid",
+            "x": 1300,
             "y": 270
           },
           {
             "id": "Stock failure payload",
             "kind": "code",
-            "x": 2340,
+            "x": 1820,
             "y": 270
           },
           {
             "id": "Park for replay",
             "kind": "call",
-            "x": 2600,
+            "x": 2080,
             "y": 270
           }
         ],
         "edges": [
           {
             "from": "Order created",
-            "to": "From the store?",
-            "out": 0
-          },
-          {
-            "from": "From the store?",
-            "to": "Received",
-            "out": 0
-          },
-          {
-            "from": "Received",
             "to": "Read the order",
             "out": 0
           },
@@ -8063,11 +8104,6 @@
             "out": 0
           },
           {
-            "from": "From the store?",
-            "to": "Unauthorised",
-            "out": 1
-          },
-          {
             "from": "New order?",
             "to": "Already handled",
             "out": 1
@@ -8101,19 +8137,11 @@
       "summary": "Turns a courier status into the right message for the customer, and tells a person when a parcel fails delivery.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Datastore",
-        "Email",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
@@ -8185,7 +8213,8 @@
           },
           {
             "id": "Update the order",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 780,
             "y": 90
           },
@@ -8203,7 +8232,8 @@
           },
           {
             "id": "Email the customer",
-            "kind": "http",
+            "kind": "app",
+            "platform": "sendgrid",
             "x": 1560,
             "y": 90
           },
@@ -8297,18 +8327,11 @@
       "summary": "Every half hour, writes once to people who left a cart over an hour ago and have not ordered since.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Email"
+      "platforms": [
+        "supabase",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -8362,7 +8385,8 @@
           },
           {
             "id": "Open carts",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 90
           },
@@ -8374,7 +8398,8 @@
           },
           {
             "id": "Ordered since?",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 780,
             "y": 90
           },
@@ -8386,13 +8411,15 @@
           },
           {
             "id": "Send the reminder",
-            "kind": "http",
+            "kind": "app",
+            "platform": "sendgrid",
             "x": 1300,
             "y": 90
           },
           {
             "id": "Mark reminded",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1560,
             "y": 90
           }
@@ -8441,44 +8468,33 @@
       "kind": null,
       "summary": "Records each payment, failure and refund from the processor exactly once, updates the invoice, and sends the receipt or the retry notice.",
       "source": "reference",
-      "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Datastore",
-        "Email",
-        "Chat"
+      "trigger": "stripeTrigger",
+      "platforms": [
+        "stripe",
+        "supabase",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL",
-        "PAYMENTS_WEBHOOK_SECRET"
-      ],
+      "env": [],
       "calls": [
         "idempotency-guard",
         "notify",
         "error-handler"
       ],
       "folder": "systems/payments",
-      "nodeCount": 18,
+      "nodeCount": 16,
       "tests": [
         "a payment is credited, the invoice paid and a receipt sent",
         "the same event twice is one ledger line",
         "a refund is a negative line and finance is told",
         "a failed payment marks the invoice and asks for a new card",
-        "an unsigned request is refused",
-        "an event we do not act on is acknowledged"
+        "an event we do not act on is left alone"
       ],
       "story": [
         {
-          "title": "The processor reports an event",
-          "copy": "Unsigned requests are refused. The reply is only sent once the event is safely recorded, so the processor retries anything that was not.",
+          "title": "Stripe reports an event",
+          "copy": "The Stripe trigger verifies each event's signature before the workflow sees it.",
           "nodes": [
             "Payment event",
-            "Signed?",
-            "Unauthorised",
             "Read the event"
           ]
         },
@@ -8519,8 +8535,8 @@
           ]
         },
         {
-          "title": "The processor gets its answer",
-          "copy": "Events the business does not act on are acknowledged and ignored.",
+          "title": "Everything else is left alone",
+          "copy": "Events the business does not act on end here, recorded as seen.",
           "nodes": [
             "Recorded",
             "Not handled"
@@ -8532,120 +8548,110 @@
           {
             "id": "Payment event",
             "kind": "trigger",
+            "platform": "stripe",
             "x": 0,
             "y": 360
           },
           {
-            "id": "Signed?",
-            "kind": "branch",
+            "id": "Read the event",
+            "kind": "code",
             "x": 260,
             "y": 360
           },
           {
-            "id": "Unauthorised",
-            "kind": "respond",
-            "x": 520,
-            "y": 270
-          },
-          {
-            "id": "Read the event",
-            "kind": "code",
-            "x": 520,
-            "y": 450
-          },
-          {
             "id": "Seen before?",
             "kind": "call",
-            "x": 780,
+            "x": 520,
             "y": 360
           },
           {
             "id": "New event?",
             "kind": "branch",
-            "x": 1040,
+            "x": 780,
             "y": 360
           },
           {
             "id": "Already recorded",
-            "kind": "respond",
-            "x": 1300,
+            "kind": "end",
+            "x": 1040,
             "y": 270
           },
           {
             "id": "Which event?",
             "kind": "branch",
-            "x": 1300,
+            "x": 1040,
             "y": 450
           },
           {
             "id": "Ledger: credit",
-            "kind": "http",
-            "x": 1560,
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1300,
             "y": 90
           },
           {
             "id": "Mark invoice paid",
-            "kind": "http",
-            "x": 1820,
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1560,
             "y": 180
           },
           {
             "id": "Send receipt",
-            "kind": "http",
-            "x": 2080,
+            "kind": "app",
+            "platform": "sendgrid",
+            "x": 1820,
             "y": 270
           },
           {
             "id": "Mark invoice failed",
-            "kind": "http",
-            "x": 1560,
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1300,
             "y": 270
           },
           {
             "id": "Ask to update card",
-            "kind": "http",
-            "x": 1820,
+            "kind": "app",
+            "platform": "sendgrid",
+            "x": 1560,
             "y": 360
           },
           {
             "id": "Ledger: debit",
-            "kind": "http",
-            "x": 1560,
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1300,
             "y": 450
           },
           {
             "id": "Refund message",
             "kind": "code",
-            "x": 1820,
+            "x": 1560,
             "y": 540
           },
           {
             "id": "Tell finance",
             "kind": "call",
-            "x": 2080,
+            "x": 1820,
             "y": 450
           },
           {
             "id": "Recorded",
-            "kind": "respond",
-            "x": 2340,
+            "kind": "end",
+            "x": 2080,
             "y": 360
           },
           {
             "id": "Not handled",
-            "kind": "respond",
-            "x": 1560,
+            "kind": "end",
+            "x": 1300,
             "y": 630
           }
         ],
         "edges": [
           {
             "from": "Payment event",
-            "to": "Signed?",
-            "out": 0
-          },
-          {
-            "from": "Signed?",
             "to": "Read the event",
             "out": 0
           },
@@ -8663,11 +8669,6 @@
             "from": "New event?",
             "to": "Which event?",
             "out": 0
-          },
-          {
-            "from": "Signed?",
-            "to": "Unauthorised",
-            "out": 1
           },
           {
             "from": "New event?",
@@ -8748,21 +8749,12 @@
       "summary": "Each morning, compares yesterday's charges at the processor with the ledger and reports anything on one side and not the other.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Payments",
-        "Datastore",
-        "Chat"
+      "platforms": [
+        "stripe",
+        "supabase",
+        "slack"
       ],
-      "platforms": [],
-      "env": [
-        "CHAT_API_KEY",
-        "CHAT_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "PAYMENTS_API_KEY",
-        "PAYMENTS_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
@@ -8829,12 +8821,14 @@
           {
             "id": "Processor charges",
             "kind": "http",
+            "platform": "stripe",
             "x": 260,
             "y": 180
           },
           {
             "id": "Ledger lines",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 520,
             "y": 180
           },
@@ -8852,7 +8846,8 @@
           },
           {
             "id": "Post all clear",
-            "kind": "http",
+            "kind": "app",
+            "platform": "slack",
             "x": 1300,
             "y": 90
           },
@@ -8864,7 +8859,8 @@
           },
           {
             "id": "Record the issue",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1560,
             "y": 180
           },
@@ -8882,7 +8878,8 @@
           },
           {
             "id": "Check in",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 2340,
             "y": 180
           }
@@ -8957,19 +8954,11 @@
       "summary": "Each morning, reminds customers with overdue invoices at 3, 7 and 14 days, then hands the invoice to a person at 21.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Email",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
@@ -9027,7 +9016,8 @@
           },
           {
             "id": "Open invoices",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 180
           },
@@ -9045,13 +9035,15 @@
           },
           {
             "id": "Send the reminder",
-            "kind": "http",
+            "kind": "app",
+            "platform": "sendgrid",
             "x": 1040,
             "y": 90
           },
           {
             "id": "Record the step",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1300,
             "y": 90
           },
@@ -9069,7 +9061,8 @@
           },
           {
             "id": "Mark escalated",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1560,
             "y": 180
           }
@@ -9129,19 +9122,11 @@
       "summary": "Welcomes a new member, gives them the starter role, records them, and flags accounts created minutes ago for a moderator to look at.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Discord",
-        "Datastore",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "discord"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "DISCORD_API_KEY",
-        "DISCORD_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "idempotency-guard",
         "notify",
@@ -9228,7 +9213,8 @@
           },
           {
             "id": "Save the member",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1300,
             "y": 90
           },
@@ -9252,13 +9238,15 @@
           },
           {
             "id": "Give starter role",
-            "kind": "http",
+            "kind": "app",
+            "platform": "discord",
             "x": 1820,
             "y": 270
           },
           {
             "id": "Welcome them",
-            "kind": "http",
+            "kind": "app",
+            "platform": "discord",
             "x": 2080,
             "y": 270
           },
@@ -9350,29 +9338,18 @@
       "summary": "Checks each message, removes clear scams, sends borderline ones to moderators, and never removes anything when the model is unavailable.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "LLM",
-        "Discord",
-        "Datastore",
-        "Chat"
+      "platforms": [
+        "openai",
+        "discord",
+        "supabase"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "DISCORD_API_KEY",
-        "DISCORD_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
       ],
       "folder": "systems/community-ops",
-      "nodeCount": 12,
+      "nodeCount": 14,
       "tests": [
         "a scam link is removed, logged and reported",
         "an insult goes to moderators and is not deleted",
@@ -9440,62 +9417,78 @@
           },
           {
             "id": "Judge it",
-            "kind": "http",
+            "kind": "agent",
+            "x": 620,
+            "y": 140
+          },
+          {
+            "id": "Judge it · GPT",
+            "kind": "part",
+            "platform": "openai",
             "x": 520,
-            "y": 270
+            "y": 360
+          },
+          {
+            "id": "Judge it · shape",
+            "kind": "part",
+            "x": 720,
+            "y": 360
           },
           {
             "id": "Read the verdict",
             "kind": "code",
-            "x": 780,
+            "x": 980,
             "y": 270
           },
           {
             "id": "What to do?",
             "kind": "branch",
-            "x": 1040,
+            "x": 1240,
             "y": 270
           },
           {
             "id": "Delete the message",
-            "kind": "http",
-            "x": 1300,
+            "kind": "app",
+            "platform": "discord",
+            "x": 1500,
             "y": 90
           },
           {
             "id": "Time the author out",
             "kind": "http",
-            "x": 1560,
+            "platform": "discord",
+            "x": 1760,
             "y": 270
           },
           {
             "id": "Log the action",
-            "kind": "http",
-            "x": 1820,
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2020,
             "y": 270
           },
           {
             "id": "Removed message",
             "kind": "code",
-            "x": 2080,
+            "x": 2280,
             "y": 270
           },
           {
             "id": "Review message",
             "kind": "code",
-            "x": 1300,
+            "x": 1500,
             "y": 270
           },
           {
             "id": "Tell moderators",
             "kind": "call",
-            "x": 2340,
+            "x": 2540,
             "y": 270
           },
           {
             "id": "Leave it",
             "kind": "end",
-            "x": 1300,
+            "x": 1500,
             "y": 450
           }
         ],
@@ -9559,6 +9552,18 @@
             "from": "What to do?",
             "to": "Leave it",
             "out": 2
+          },
+          {
+            "from": "Judge it · GPT",
+            "to": "Judge it",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Judge it · shape",
+            "to": "Judge it",
+            "out": 0,
+            "part": "outputParser"
           }
         ],
         "sections": []
@@ -9574,25 +9579,17 @@
       "summary": "Posts announcements at the time they were scheduled for, once, and reports any that could not be posted.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Discord",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "discord"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "DISCORD_API_KEY",
-        "DISCORD_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
       ],
       "folder": "systems/community-ops",
-      "nodeCount": 11,
+      "nodeCount": 12,
       "tests": [
         "a due announcement is posted once and marked sent",
         "a future announcement waits",
@@ -9622,6 +9619,7 @@
           "copy": "Sent announcements keep the time they actually went out.",
           "nodes": [
             "Post it",
+            "Posted?",
             "Mark sent"
           ]
         },
@@ -9645,7 +9643,8 @@
           },
           {
             "id": "Due announcements",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 180
           },
@@ -9657,7 +9656,8 @@
           },
           {
             "id": "Claim it",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 780,
             "y": 90
           },
@@ -9669,32 +9669,41 @@
           },
           {
             "id": "Post it",
-            "kind": "http",
+            "kind": "app",
+            "platform": "discord",
             "x": 1300,
             "y": 180
           },
           {
-            "id": "Mark sent",
-            "kind": "http",
+            "id": "Posted?",
+            "kind": "branch",
             "x": 1560,
+            "y": 180
+          },
+          {
+            "id": "Mark sent",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1820,
             "y": 90
           },
           {
             "id": "Mark failed",
-            "kind": "http",
-            "x": 1560,
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1820,
             "y": 270
           },
           {
             "id": "Failure message",
             "kind": "code",
-            "x": 1820,
+            "x": 2080,
             "y": 180
           },
           {
             "id": "Tell the team",
             "kind": "call",
-            "x": 2080,
+            "x": 2340,
             "y": 180
           },
           {
@@ -9732,6 +9741,11 @@
           },
           {
             "from": "Post it",
+            "to": "Posted?",
+            "out": 0
+          },
+          {
+            "from": "Posted?",
             "to": "Mark sent",
             "out": 0
           },
@@ -9741,7 +9755,7 @@
             "out": 1
           },
           {
-            "from": "Post it",
+            "from": "Posted?",
             "to": "Mark failed",
             "out": 1
           },
@@ -9769,33 +9783,19 @@
       "summary": "Every Monday, gathers the week's numbers from sales, orders, support and the site, compares them with the week before, and sends one readable summary.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Analytics",
-        "LLM",
-        "Chat",
-        "Email"
+      "platforms": [
+        "supabase",
+        "posthog",
+        "anthropic",
+        "slack",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "ANALYTICS_API_KEY",
-        "ANALYTICS_BASE_URL",
-        "CHAT_API_KEY",
-        "CHAT_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
       "folder": "systems/ops-digest",
-      "nodeCount": 11,
+      "nodeCount": 12,
       "tests": [
         "compares this week with last and sends both ways",
         "names a source that did not answer and still sends",
@@ -9851,67 +9851,81 @@
             "id": "Monday 08:30",
             "kind": "trigger",
             "x": 0,
-            "y": 90
+            "y": 220
           },
           {
             "id": "Leads",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
-            "y": 90
+            "y": 220
           },
           {
             "id": "Orders",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 520,
-            "y": 90
+            "y": 220
           },
           {
             "id": "Support",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 780,
-            "y": 90
+            "y": 220
           },
           {
             "id": "Site traffic",
             "kind": "http",
+            "platform": "posthog",
             "x": 1040,
-            "y": 90
+            "y": 220
           },
           {
             "id": "Work out the week",
             "kind": "code",
             "x": 1300,
-            "y": 90
+            "y": 220
           },
           {
             "id": "Write the summary",
-            "kind": "http",
+            "kind": "agent",
             "x": 1560,
             "y": 90
+          },
+          {
+            "id": "Write the summary · Claude",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 1560,
+            "y": 310
           },
           {
             "id": "Compose",
             "kind": "code",
             "x": 1820,
-            "y": 90
+            "y": 220
           },
           {
             "id": "Post to the channel",
-            "kind": "http",
+            "kind": "app",
+            "platform": "slack",
             "x": 2080,
-            "y": 90
+            "y": 220
           },
           {
             "id": "Email the owner",
-            "kind": "http",
+            "kind": "app",
+            "platform": "sendgrid",
             "x": 2340,
-            "y": 90
+            "y": 220
           },
           {
             "id": "Check in",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 2600,
-            "y": 90
+            "y": 220
           }
         ],
         "edges": [
@@ -9964,6 +9978,12 @@
             "from": "Email the owner",
             "to": "Check in",
             "out": 0
+          },
+          {
+            "from": "Write the summary · Claude",
+            "to": "Write the summary",
+            "out": 0,
+            "part": "languageModel"
           }
         ],
         "sections": []
@@ -9979,16 +9999,10 @@
       "summary": "Checks each watched number hourly and alerts when it crosses its line, and again when it recovers. It does not repeat itself in between.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Chat"
+      "platforms": [
+        "supabase"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
@@ -10036,7 +10050,8 @@
           },
           {
             "id": "Watched metrics",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 90
           },
@@ -10048,7 +10063,8 @@
           },
           {
             "id": "Remember the state",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 780,
             "y": 90
           },
@@ -10105,10 +10121,6 @@
       "summary": "Catches a failure in any workflow, logs it to Supabase, and alerts Slack once per distinct error per hour so a broken loop cannot flood the channel.",
       "source": "reference",
       "trigger": "errorTrigger",
-      "integrations": [
-        "Supabase",
-        "Slack"
-      ],
       "platforms": [
         "supabase",
         "slack"
@@ -10242,9 +10254,6 @@
       "summary": "Answers one question for a caller: has this event been handled before? Webhooks are delivered more than once; a unique key in Supabase is what makes that safe.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "Supabase"
-      ],
       "platforms": [
         "supabase"
       ],
@@ -10377,10 +10386,6 @@
       "summary": "The one place alerts leave from. Posts to Slack, and falls back to a SendGrid email when Slack is down, so an outage cannot hide its own alert.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "Slack",
-        "SendGrid"
-      ],
       "platforms": [
         "slack",
         "sendgrid"
@@ -10503,10 +10508,6 @@
       "summary": "Keeps the payload of work that could not be finished in Supabase, with the reason, so nothing is lost when a platform is down.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "Supabase",
-        "Slack"
-      ],
       "platforms": [
         "supabase",
         "slack"
@@ -10604,10 +10605,6 @@
       "summary": "Every fifteen minutes, sends parked work back to where it came from. Gives up after five attempts and tells Slack.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Supabase",
-        "Slack"
-      ],
       "platforms": [
         "supabase",
         "slack"
@@ -10819,10 +10816,6 @@
       "summary": "Notices the failure nobody reports: a scheduled workflow that silently stopped running. Each one checks in to Supabase, and this alerts Slack when a check-in is overdue.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Supabase",
-        "Slack"
-      ],
       "platforms": [
         "supabase",
         "slack"
@@ -10920,27 +10913,17 @@
       "summary": "Each Friday, reads the feeds you follow, drops what was already sent, and emails a short digest of what is new.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "LLM",
-        "Email"
+      "platforms": [
+        "supabase",
+        "anthropic",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
       "folder": "workflows/content",
-      "nodeCount": 10,
+      "nodeCount": 13,
       "tests": [
         "sends only items not seen before",
         "sends nothing in a quiet week",
@@ -10959,12 +10942,14 @@
         },
         {
           "title": "Seen once, sent once",
-          "copy": "Each link is claimed in the datastore. Only links that were new this run go forward.",
+          "copy": "The links already sent are read from Supabase. Only the ones that are new go forward, and they are remembered before the digest is written.",
           "nodes": [
-            "Claim as seen",
+            "Already seen",
             "Only the new ones",
             "Anything new?",
-            "Quiet week"
+            "Quiet week",
+            "One row per item",
+            "Remember them"
           ]
         },
         {
@@ -10982,61 +10967,84 @@
             "id": "Friday 15:00",
             "kind": "trigger",
             "x": 0,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Feeds to read",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Fetch the feed",
             "kind": "http",
             "x": 520,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Collect the items",
             "kind": "code",
             "x": 780,
-            "y": 180
+            "y": 220
           },
           {
-            "id": "Claim as seen",
-            "kind": "http",
+            "id": "Already seen",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1040,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Only the new ones",
             "kind": "code",
             "x": 1300,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Anything new?",
             "kind": "branch",
             "x": 1560,
-            "y": 180
+            "y": 220
+          },
+          {
+            "id": "One row per item",
+            "kind": "code",
+            "x": 1820,
+            "y": 130
+          },
+          {
+            "id": "Remember them",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2080,
+            "y": 220
           },
           {
             "id": "Write the digest",
-            "kind": "http",
-            "x": 1820,
+            "kind": "agent",
+            "x": 2340,
             "y": 90
           },
           {
+            "id": "Write the digest · Claude",
+            "kind": "part",
+            "platform": "anthropic",
+            "x": 2340,
+            "y": 310
+          },
+          {
             "id": "Send the digest",
-            "kind": "http",
-            "x": 2080,
-            "y": 180
+            "kind": "app",
+            "platform": "sendgrid",
+            "x": 2600,
+            "y": 220
           },
           {
             "id": "Quiet week",
             "kind": "end",
             "x": 1820,
-            "y": 270
+            "y": 310
           }
         ],
         "edges": [
@@ -11057,11 +11065,11 @@
           },
           {
             "from": "Collect the items",
-            "to": "Claim as seen",
+            "to": "Already seen",
             "out": 0
           },
           {
-            "from": "Claim as seen",
+            "from": "Already seen",
             "to": "Only the new ones",
             "out": 0
           },
@@ -11072,6 +11080,16 @@
           },
           {
             "from": "Anything new?",
+            "to": "One row per item",
+            "out": 0
+          },
+          {
+            "from": "One row per item",
+            "to": "Remember them",
+            "out": 0
+          },
+          {
+            "from": "Remember them",
             "to": "Write the digest",
             "out": 0
           },
@@ -11084,6 +11102,12 @@
             "from": "Anything new?",
             "to": "Quiet week",
             "out": 1
+          },
+          {
+            "from": "Write the digest · Claude",
+            "to": "Write the digest",
+            "out": 0,
+            "part": "languageModel"
           }
         ],
         "sections": []
@@ -11099,18 +11123,11 @@
       "summary": "Every Sunday night, visits each page in the sitemap list and reports the ones that no longer load, with the status each returned.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "slack"
       ],
-      "platforms": [],
-      "env": [
-        "CHAT_API_KEY",
-        "CHAT_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -11157,7 +11174,8 @@
           },
           {
             "id": "Pages to check",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 90
           },
@@ -11181,13 +11199,15 @@
           },
           {
             "id": "Report them",
-            "kind": "http",
+            "kind": "app",
+            "platform": "slack",
             "x": 1300,
             "y": 90
           },
           {
             "id": "Save the run",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1560,
             "y": 90
           }
@@ -11242,19 +11262,11 @@
       "summary": "Records where the site ranks for each tracked keyword every day, and alerts when one falls five places or drops off the first page.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Search",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "serpapi"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "SEARCH_API_KEY",
-        "SEARCH_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
@@ -11312,13 +11324,15 @@
           },
           {
             "id": "Tracked keywords",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 180
           },
           {
             "id": "Search for it",
             "kind": "http",
+            "platform": "serpapi",
             "x": 520,
             "y": 180
           },
@@ -11336,13 +11350,15 @@
           },
           {
             "id": "Record today",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1300,
             "y": 90
           },
           {
             "id": "Update the keyword",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1560,
             "y": 180
           },
@@ -11425,29 +11441,18 @@
       "summary": "Checks hourly for new mentions of the brand, and raises the negative ones straight away with the text and the link.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Search",
-        "Datastore",
-        "LLM",
-        "Chat"
+      "platforms": [
+        "serpapi",
+        "supabase",
+        "openai"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL",
-        "SEARCH_API_KEY",
-        "SEARCH_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
       ],
       "folder": "workflows/content",
-      "nodeCount": 10,
+      "nodeCount": 14,
       "tests": [
         "raises a negative mention once",
         "a mention it cannot classify is raised too"
@@ -11455,12 +11460,14 @@
       "story": [
         {
           "title": "New mentions, hourly",
-          "copy": "The search window overlaps the last run on purpose, and each link is claimed so overlap costs nothing.",
+          "copy": "The search overlaps the last run on purpose. Links already seen are read from Supabase and dropped, so overlap costs nothing.",
           "nodes": [
             "Hourly",
             "Search for mentions",
             "One item per mention",
-            "Claim as seen",
+            "Already seen",
+            "Keep the unseen",
+            "Remember it",
             "New mention?"
           ]
         },
@@ -11475,7 +11482,7 @@
         },
         {
           "title": "Negative ones are raised with the link",
-          "copy": "Positive and neutral mentions are kept in the datastore and nobody is interrupted.",
+          "copy": "Positive and neutral mentions are kept in Supabase and nobody is interrupted.",
           "nodes": [
             "Write the alert",
             "Raise it"
@@ -11488,61 +11495,89 @@
             "id": "Hourly",
             "kind": "trigger",
             "x": 0,
-            "y": 90
+            "y": 220
           },
           {
             "id": "Search for mentions",
             "kind": "http",
+            "platform": "serpapi",
             "x": 260,
-            "y": 90
+            "y": 220
           },
           {
             "id": "One item per mention",
             "kind": "code",
             "x": 520,
-            "y": 90
+            "y": 220
           },
           {
-            "id": "Claim as seen",
-            "kind": "http",
+            "id": "Already seen",
+            "kind": "app",
+            "platform": "supabase",
             "x": 780,
-            "y": 90
+            "y": 220
+          },
+          {
+            "id": "Keep the unseen",
+            "kind": "code",
+            "x": 1040,
+            "y": 220
+          },
+          {
+            "id": "Remember it",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1300,
+            "y": 220
           },
           {
             "id": "New mention?",
             "kind": "branch",
-            "x": 1040,
-            "y": 90
+            "x": 1560,
+            "y": 220
           },
           {
             "id": "Read the tone",
-            "kind": "http",
-            "x": 1300,
+            "kind": "agent",
+            "x": 1920,
             "y": 90
+          },
+          {
+            "id": "Read the tone · GPT",
+            "kind": "part",
+            "platform": "openai",
+            "x": 1820,
+            "y": 310
+          },
+          {
+            "id": "Read the tone · shape",
+            "kind": "part",
+            "x": 2020,
+            "y": 310
           },
           {
             "id": "Read the verdict",
             "kind": "code",
-            "x": 1560,
-            "y": 90
+            "x": 2280,
+            "y": 220
           },
           {
             "id": "Needs attention?",
             "kind": "branch",
-            "x": 1820,
-            "y": 90
+            "x": 2540,
+            "y": 220
           },
           {
             "id": "Write the alert",
             "kind": "code",
-            "x": 2080,
-            "y": 90
+            "x": 2800,
+            "y": 220
           },
           {
             "id": "Raise it",
             "kind": "call",
-            "x": 2340,
-            "y": 90
+            "x": 3060,
+            "y": 220
           }
         ],
         "edges": [
@@ -11558,11 +11593,21 @@
           },
           {
             "from": "One item per mention",
-            "to": "Claim as seen",
+            "to": "Already seen",
             "out": 0
           },
           {
-            "from": "Claim as seen",
+            "from": "Already seen",
+            "to": "Keep the unseen",
+            "out": 0
+          },
+          {
+            "from": "Keep the unseen",
+            "to": "Remember it",
+            "out": 0
+          },
+          {
+            "from": "Remember it",
             "to": "New mention?",
             "out": 0
           },
@@ -11590,6 +11635,18 @@
             "from": "Write the alert",
             "to": "Raise it",
             "out": 0
+          },
+          {
+            "from": "Read the tone · GPT",
+            "to": "Read the tone",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Read the tone · shape",
+            "to": "Read the tone",
+            "out": 0,
+            "part": "outputParser"
           }
         ],
         "sections": []
@@ -11605,19 +11662,11 @@
       "summary": "Pulls the supplier's stock feed every two hours and updates the store only for products whose quantity changed, refusing a feed that looks wrong.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Supplier",
-        "Datastore",
-        "Shop",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "shopify"
       ],
-      "platforms": [],
       "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "SHOP_API_KEY",
-        "SHOP_BASE_URL",
         "SUPPLIER_API_KEY",
         "SUPPLIER_BASE_URL"
       ],
@@ -11626,7 +11675,7 @@
         "error-handler"
       ],
       "folder": "workflows/commerce",
-      "nodeCount": 10,
+      "nodeCount": 13,
       "tests": [
         "updates only what changed",
         "refuses an empty feed",
@@ -11658,7 +11707,10 @@
           "nodes": [
             "One item per change",
             "Update the store",
-            "Update the snapshot"
+            "Update the snapshot",
+            "Known product?",
+            "Add to the snapshot",
+            "Snapshot updated"
           ]
         }
       ],
@@ -11678,7 +11730,8 @@
           },
           {
             "id": "Last known stock",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 520,
             "y": 180
           },
@@ -11703,14 +11756,35 @@
           {
             "id": "Update the store",
             "kind": "http",
+            "platform": "shopify",
             "x": 1560,
             "y": 90
           },
           {
             "id": "Update the snapshot",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1820,
             "y": 180
+          },
+          {
+            "id": "Known product?",
+            "kind": "branch",
+            "x": 2080,
+            "y": 180
+          },
+          {
+            "id": "Add to the snapshot",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2340,
+            "y": 90
+          },
+          {
+            "id": "Snapshot updated",
+            "kind": "end",
+            "x": 2340,
+            "y": 270
           },
           {
             "id": "Refused message",
@@ -11762,6 +11836,21 @@
             "out": 0
           },
           {
+            "from": "Update the snapshot",
+            "to": "Known product?",
+            "out": 0
+          },
+          {
+            "from": "Known product?",
+            "to": "Snapshot updated",
+            "out": 0
+          },
+          {
+            "from": "Known product?",
+            "to": "Add to the snapshot",
+            "out": 1
+          },
+          {
             "from": "Feed looks sane?",
             "to": "Refused message",
             "out": 1
@@ -11785,20 +11874,11 @@
       "summary": "Refunds small amounts on recent orders automatically, and sends anything larger, older or repeated to a person with the facts attached.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Datastore",
-        "Payments",
-        "Email",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "stripe"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "PAYMENTS_API_KEY",
-        "PAYMENTS_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
@@ -11840,7 +11920,7 @@
           "title": "Inside the policy: refunded now",
           "copy": "The processor call carries an idempotency key, so a retry can never refund twice.",
           "nodes": [
-            "Refund at the processor",
+            "Refund in Stripe",
             "Record the refund",
             "Mark the order",
             "Refunded"
@@ -11884,7 +11964,8 @@
           },
           {
             "id": "Load the order",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 780,
             "y": 360
           },
@@ -11902,7 +11983,8 @@
           },
           {
             "id": "Past refunds",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1300,
             "y": 360
           },
@@ -11925,20 +12007,23 @@
             "y": 90
           },
           {
-            "id": "Refund at the processor",
+            "id": "Refund in Stripe",
             "kind": "http",
+            "platform": "stripe",
             "x": 2080,
             "y": 270
           },
           {
             "id": "Record the refund",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 2340,
             "y": 180
           },
           {
             "id": "Mark the order",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 2600,
             "y": 180
           },
@@ -12020,11 +12105,11 @@
           },
           {
             "from": "Decision",
-            "to": "Refund at the processor",
+            "to": "Refund in Stripe",
             "out": 1
           },
           {
-            "from": "Refund at the processor",
+            "from": "Refund in Stripe",
             "to": "Record the refund",
             "out": 0
           },
@@ -12067,18 +12152,11 @@
       "summary": "Tells subscribers a week before an annual renewal, once, with the amount and the date, so the charge is never a surprise.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Email"
+      "platforms": [
+        "supabase",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -12123,7 +12201,8 @@
           },
           {
             "id": "Active subscriptions",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 90
           },
@@ -12135,13 +12214,15 @@
           },
           {
             "id": "Send the notice",
-            "kind": "http",
+            "kind": "app",
+            "platform": "sendgrid",
             "x": 780,
             "y": 90
           },
           {
             "id": "Mark reminded",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1040,
             "y": 90
           }
@@ -12181,26 +12262,17 @@
       "summary": "Reads a supplier invoice with a model, checks the arithmetic and the duplicate history itself, and files it or sends it for review.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "LLM",
-        "Datastore",
-        "Chat"
+      "platforms": [
+        "openai",
+        "supabase"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
       ],
       "folder": "workflows/commerce",
-      "nodeCount": 11,
+      "nodeCount": 13,
       "tests": [
         "a clean invoice is filed",
         "a duplicate is caught and sent for review",
@@ -12256,67 +12328,83 @@
             "id": "Invoice received",
             "kind": "trigger",
             "x": 0,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Read the upload",
             "kind": "code",
             "x": 260,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Extract the fields",
-            "kind": "http",
+            "kind": "agent",
+            "x": 620,
+            "y": 90
+          },
+          {
+            "id": "Extract the fields · GPT",
+            "kind": "part",
+            "platform": "openai",
             "x": 520,
-            "y": 180
+            "y": 310
+          },
+          {
+            "id": "Extract the fields · shape",
+            "kind": "part",
+            "x": 720,
+            "y": 310
           },
           {
             "id": "Read the fields",
             "kind": "code",
-            "x": 780,
-            "y": 180
+            "x": 980,
+            "y": 220
           },
           {
             "id": "Seen this invoice?",
-            "kind": "http",
-            "x": 1040,
-            "y": 180
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1240,
+            "y": 220
           },
           {
             "id": "Check it",
             "kind": "code",
-            "x": 1300,
-            "y": 180
+            "x": 1500,
+            "y": 220
           },
           {
             "id": "Clean?",
             "kind": "branch",
-            "x": 1560,
-            "y": 180
+            "x": 1760,
+            "y": 220
           },
           {
             "id": "File it",
-            "kind": "http",
-            "x": 1820,
-            "y": 90
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2020,
+            "y": 130
           },
           {
             "id": "Queue for review",
-            "kind": "http",
-            "x": 1820,
-            "y": 270
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2020,
+            "y": 310
           },
           {
             "id": "Review message",
             "kind": "code",
-            "x": 2080,
-            "y": 180
+            "x": 2280,
+            "y": 220
           },
           {
             "id": "Tell finance",
             "kind": "call",
-            "x": 2340,
-            "y": 180
+            "x": 2540,
+            "y": 220
           }
         ],
         "edges": [
@@ -12369,6 +12457,18 @@
             "from": "Review message",
             "to": "Tell finance",
             "out": 0
+          },
+          {
+            "from": "Extract the fields · GPT",
+            "to": "Extract the fields",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Extract the fields · shape",
+            "to": "Extract the fields",
+            "out": 0,
+            "part": "outputParser"
           }
         ],
         "sections": []
@@ -12384,29 +12484,20 @@
       "summary": "When someone is hired, creates their checklist, books their first-week meetings, tells the people who need to act, and sends the welcome email on the right morning.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Datastore",
-        "Calendar",
-        "Email",
-        "Chat"
+      "platforms": [
+        "bamboohr",
+        "supabase",
+        "googleCalendar",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "CALENDAR_API_KEY",
-        "CALENDAR_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "idempotency-guard",
         "notify",
         "error-handler"
       ],
       "folder": "workflows/operations",
-      "nodeCount": 11,
+      "nodeCount": 12,
       "tests": [
         "creates six tasks, a meeting and a timed welcome",
         "a hire without a start date fails loudly"
@@ -12414,9 +12505,10 @@
       "story": [
         {
           "title": "A hire is confirmed",
-          "copy": "HR systems send the same event on every edit, so the hire is set up once.",
+          "copy": "BambooHR announces the hire and the record is read from it. It sends the same event on every edit, so the hire is set up once.",
           "nodes": [
             "Hire confirmed",
+            "Fetch the employee",
             "Read the hire",
             "Seen before?",
             "New hire?",
@@ -12457,69 +12549,84 @@
             "y": 180
           },
           {
+            "id": "Fetch the employee",
+            "kind": "http",
+            "platform": "bamboohr",
+            "x": 260,
+            "y": 180
+          },
+          {
             "id": "Read the hire",
             "kind": "code",
-            "x": 260,
+            "x": 520,
             "y": 180
           },
           {
             "id": "Seen before?",
             "kind": "call",
-            "x": 520,
+            "x": 780,
             "y": 180
           },
           {
             "id": "New hire?",
             "kind": "branch",
-            "x": 780,
+            "x": 1040,
             "y": 180
           },
           {
             "id": "Build the checklist",
             "kind": "code",
-            "x": 1040,
+            "x": 1300,
             "y": 90
           },
           {
             "id": "Save the task",
-            "kind": "http",
-            "x": 1300,
-            "y": 180
-          },
-          {
-            "id": "Book first-day welcome",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1560,
             "y": 180
           },
           {
-            "id": "Schedule the welcome email",
-            "kind": "http",
+            "id": "Book first-day welcome",
+            "kind": "app",
+            "platform": "googleCalendar",
             "x": 1820,
+            "y": 180
+          },
+          {
+            "id": "Schedule the welcome email",
+            "kind": "app",
+            "platform": "sendgrid",
+            "x": 2080,
             "y": 180
           },
           {
             "id": "Team message",
             "kind": "code",
-            "x": 2080,
+            "x": 2340,
             "y": 180
           },
           {
             "id": "Tell the team",
             "kind": "call",
-            "x": 2340,
+            "x": 2600,
             "y": 180
           },
           {
             "id": "Already set up",
             "kind": "end",
-            "x": 1040,
+            "x": 1300,
             "y": 270
           }
         ],
         "edges": [
           {
             "from": "Hire confirmed",
+            "to": "Fetch the employee",
+            "out": 0
+          },
+          {
+            "from": "Fetch the employee",
             "to": "Read the hire",
             "out": 0
           },
@@ -12582,18 +12689,11 @@
       "summary": "Posts today's meetings each weekday morning, with gaps and clashes pointed out, and stays silent on an empty day.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Calendar",
-        "Chat"
+      "platforms": [
+        "googleCalendar",
+        "slack"
       ],
-      "platforms": [],
-      "env": [
-        "CALENDAR_API_KEY",
-        "CALENDAR_BASE_URL",
-        "CHAT_API_KEY",
-        "CHAT_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -12639,7 +12739,8 @@
           },
           {
             "id": "Today's events",
-            "kind": "http",
+            "kind": "app",
+            "platform": "googleCalendar",
             "x": 260,
             "y": 180
           },
@@ -12657,7 +12758,8 @@
           },
           {
             "id": "Post the agenda",
-            "kind": "http",
+            "kind": "app",
+            "platform": "slack",
             "x": 1040,
             "y": 90
           },
@@ -12708,26 +12810,17 @@
       "summary": "Copies contacts changed since the last run from the CRM to the email platform, page by page, and only moves its bookmark forward when a run finishes.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "CRM",
-        "Email"
+      "platforms": [
+        "supabase",
+        "hubspot",
+        "mailchimp"
       ],
-      "platforms": [],
-      "env": [
-        "CRM_API_KEY",
-        "CRM_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
       "folder": "workflows/operations",
-      "nodeCount": 8,
+      "nodeCount": 11,
       "tests": [
         "syncs changed contacts and moves the bookmark",
         "a failed upsert leaves the bookmark where it was"
@@ -12756,7 +12849,10 @@
           "copy": "If the upsert fails the bookmark stays put and the next run picks up the same contacts. Nothing is skipped.",
           "nodes": [
             "Upsert to the list",
-            "Move the bookmark"
+            "Move the bookmark",
+            "Had a bookmark?",
+            "Start the bookmark",
+            "Bookmark moved"
           ]
         }
       ],
@@ -12766,49 +12862,72 @@
             "id": "Every 15 minutes",
             "kind": "trigger",
             "x": 0,
-            "y": 90
+            "y": 180
           },
           {
             "id": "Read the bookmark",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
-            "y": 90
+            "y": 180
           },
           {
             "id": "Start from",
             "kind": "code",
             "x": 520,
-            "y": 90
+            "y": 180
           },
           {
             "id": "Changed contacts",
             "kind": "http",
+            "platform": "hubspot",
             "x": 780,
-            "y": 90
+            "y": 180
           },
           {
             "id": "Shape for the list",
             "kind": "code",
             "x": 1040,
-            "y": 90
+            "y": 180
           },
           {
             "id": "Anything changed?",
             "kind": "branch",
             "x": 1300,
-            "y": 90
+            "y": 180
           },
           {
             "id": "Upsert to the list",
             "kind": "http",
+            "platform": "mailchimp",
             "x": 1560,
-            "y": 90
+            "y": 180
           },
           {
             "id": "Move the bookmark",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1820,
+            "y": 180
+          },
+          {
+            "id": "Had a bookmark?",
+            "kind": "branch",
+            "x": 2080,
+            "y": 180
+          },
+          {
+            "id": "Start the bookmark",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 2340,
             "y": 90
+          },
+          {
+            "id": "Bookmark moved",
+            "kind": "end",
+            "x": 2340,
+            "y": 270
           }
         ],
         "edges": [
@@ -12848,6 +12967,21 @@
             "out": 0
           },
           {
+            "from": "Move the bookmark",
+            "to": "Had a bookmark?",
+            "out": 0
+          },
+          {
+            "from": "Had a bookmark?",
+            "to": "Bookmark moved",
+            "out": 0
+          },
+          {
+            "from": "Had a bookmark?",
+            "to": "Start the bookmark",
+            "out": 1
+          },
+          {
             "from": "Anything changed?",
             "to": "Move the bookmark",
             "out": 1
@@ -12866,18 +13000,11 @@
       "summary": "Warns the owner of each contract 60, 30 and 7 days before it ends, so renewals are a decision and never an accident.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Email"
+      "platforms": [
+        "supabase",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -12922,7 +13049,8 @@
           },
           {
             "id": "Active contracts",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 90
           },
@@ -12934,13 +13062,15 @@
           },
           {
             "id": "Warn the owner",
-            "kind": "http",
+            "kind": "app",
+            "platform": "sendgrid",
             "x": 780,
             "y": 90
           },
           {
             "id": "Record the warning",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1040,
             "y": 90
           }
@@ -12980,16 +13110,10 @@
       "summary": "Checks each site every five minutes, alerts after two failures in a row, and reports how long it was down once it recovers.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Chat"
+      "platforms": [
+        "supabase"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
@@ -13039,7 +13163,8 @@
           },
           {
             "id": "Sites to watch",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 90
           },
@@ -13057,7 +13182,8 @@
           },
           {
             "id": "Save the state",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1040,
             "y": 90
           },
@@ -13119,18 +13245,12 @@
       "summary": "Checks every morning that last night's backup exists, is recent and is not suspiciously small. A backup nobody checks is a hope, not a backup.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Backup",
-        "Chat",
-        "Datastore"
+      "platforms": [
+        "supabase"
       ],
-      "platforms": [],
       "env": [
         "BACKUP_API_KEY",
-        "BACKUP_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL"
+        "BACKUP_BASE_URL"
       ],
       "calls": [
         "notify",
@@ -13194,7 +13314,8 @@
           },
           {
             "id": "Record the check",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 780,
             "y": 180
           },
@@ -13273,23 +13394,16 @@
       "summary": "Fills in company, role and size for a new CRM contact from an enrichment service, and never overwrites what a person already typed.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Enrichment",
-        "CRM"
+      "platforms": [
+        "clearbit",
+        "hubspot"
       ],
-      "platforms": [],
-      "env": [
-        "CRM_API_KEY",
-        "CRM_BASE_URL",
-        "ENRICH_API_KEY",
-        "ENRICH_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
       "folder": "workflows/sales",
-      "nodeCount": 10,
+      "nodeCount": 11,
       "tests": [
         "fills blanks and keeps what was typed",
         "skips a personal address without a lookup",
@@ -13311,6 +13425,7 @@
           "copy": "A failed lookup leaves the contact exactly as it was.",
           "nodes": [
             "Look them up",
+            "Found them?",
             "Lookup failed, left as is"
           ]
         },
@@ -13347,26 +13462,34 @@
           },
           {
             "id": "Look them up",
-            "kind": "http",
+            "kind": "app",
+            "platform": "clearbit",
             "x": 780,
             "y": 90
           },
           {
+            "id": "Found them?",
+            "kind": "branch",
+            "x": 1040,
+            "y": 180
+          },
+          {
             "id": "Only the blanks",
             "kind": "code",
-            "x": 1040,
+            "x": 1300,
             "y": 90
           },
           {
             "id": "Anything to add?",
             "kind": "branch",
-            "x": 1300,
+            "x": 1560,
             "y": 180
           },
           {
             "id": "Update the contact",
             "kind": "http",
-            "x": 1560,
+            "platform": "hubspot",
+            "x": 1820,
             "y": 90
           },
           {
@@ -13378,13 +13501,13 @@
           {
             "id": "Nothing new",
             "kind": "end",
-            "x": 1560,
+            "x": 1820,
             "y": 270
           },
           {
             "id": "Lookup failed, left as is",
             "kind": "end",
-            "x": 1040,
+            "x": 1300,
             "y": 270
           }
         ],
@@ -13406,6 +13529,11 @@
           },
           {
             "from": "Look them up",
+            "to": "Found them?",
+            "out": 0
+          },
+          {
+            "from": "Found them?",
             "to": "Only the blanks",
             "out": 0
           },
@@ -13425,7 +13553,7 @@
             "out": 1
           },
           {
-            "from": "Look them up",
+            "from": "Found them?",
             "to": "Lookup failed, left as is",
             "out": 1
           },
@@ -13448,26 +13576,17 @@
       "summary": "Turns a call transcript into a CRM note and dated follow-up tasks, and asks a person when it cannot tell who owns a task.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "LLM",
-        "CRM",
-        "Chat"
+      "platforms": [
+        "openai",
+        "hubspot"
       ],
-      "platforms": [],
-      "env": [
-        "CRM_API_KEY",
-        "CRM_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
       ],
       "folder": "workflows/sales",
-      "nodeCount": 15,
+      "nodeCount": 17,
       "tests": [
         "writes the note, creates owned tasks and asks about unowned ones",
         "a near-empty transcript is left alone",
@@ -13520,91 +13639,106 @@
             "id": "Transcript ready",
             "kind": "trigger",
             "x": 0,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Read the transcript",
             "kind": "code",
             "x": 260,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Enough to summarise?",
             "kind": "branch",
             "x": 520,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Extract",
-            "kind": "http",
-            "x": 780,
+            "kind": "agent",
+            "x": 880,
             "y": 90
+          },
+          {
+            "id": "Extract · GPT",
+            "kind": "part",
+            "platform": "openai",
+            "x": 780,
+            "y": 310
+          },
+          {
+            "id": "Extract · shape",
+            "kind": "part",
+            "x": 980,
+            "y": 310
           },
           {
             "id": "Read the notes",
             "kind": "code",
-            "x": 1040,
-            "y": 180
+            "x": 1240,
+            "y": 310
           },
           {
             "id": "Readable?",
             "kind": "branch",
-            "x": 1300,
-            "y": 180
+            "x": 1500,
+            "y": 310
           },
           {
             "id": "Add the CRM note",
-            "kind": "http",
-            "x": 1560,
-            "y": 90
+            "kind": "app",
+            "platform": "hubspot",
+            "x": 1760,
+            "y": 220
           },
           {
             "id": "One item per action",
             "kind": "code",
-            "x": 1820,
-            "y": 90
+            "x": 2020,
+            "y": 220
           },
           {
             "id": "Has an owner?",
             "kind": "branch",
-            "x": 2080,
-            "y": 180
+            "x": 2280,
+            "y": 310
           },
           {
             "id": "Create the task",
-            "kind": "http",
-            "x": 2340,
-            "y": 90
+            "kind": "app",
+            "platform": "hubspot",
+            "x": 2540,
+            "y": 220
           },
           {
             "id": "Unowned message",
             "kind": "code",
-            "x": 2340,
-            "y": 270
+            "x": 2540,
+            "y": 400
           },
           {
             "id": "Ask who owns them",
             "kind": "call",
-            "x": 2600,
-            "y": 180
+            "x": 2800,
+            "y": 310
           },
           {
             "id": "Unreadable message",
             "kind": "code",
-            "x": 1560,
-            "y": 270
+            "x": 1760,
+            "y": 400
           },
           {
             "id": "Flag for a manual read",
             "kind": "call",
-            "x": 1820,
-            "y": 270
+            "x": 2020,
+            "y": 400
           },
           {
             "id": "Too short to summarise",
             "kind": "end",
-            "x": 780,
-            "y": 270
+            "x": 880,
+            "y": 530
           }
         ],
         "edges": [
@@ -13677,6 +13811,18 @@
             "from": "Unowned message",
             "to": "Ask who owns them",
             "out": 0
+          },
+          {
+            "from": "Extract · GPT",
+            "to": "Extract",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Extract · shape",
+            "to": "Extract",
+            "out": 0,
+            "part": "outputParser"
           }
         ],
         "sections": []
@@ -13692,18 +13838,11 @@
       "summary": "A week after an order is delivered, asks for a review once. Customers with an open support conversation are not asked.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Email"
+      "platforms": [
+        "supabase",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -13751,7 +13890,8 @@
           },
           {
             "id": "Delivered orders",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 90
           },
@@ -13763,7 +13903,8 @@
           },
           {
             "id": "Open conversation?",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 780,
             "y": 90
           },
@@ -13775,13 +13916,15 @@
           },
           {
             "id": "Ask for a review",
-            "kind": "http",
+            "kind": "app",
+            "platform": "sendgrid",
             "x": 1300,
             "y": 90
           },
           {
             "id": "Mark asked",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1560,
             "y": 90
           }
@@ -13831,22 +13974,12 @@
       "summary": "Sends each survey score where it is useful: unhappy customers to a person today, happy ones to a review request, and every score to the record.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Datastore",
-        "Helpdesk",
-        "Email",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "zendesk",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL",
-        "HELPDESK_API_KEY",
-        "HELPDESK_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
@@ -13910,7 +14043,8 @@
           },
           {
             "id": "Record it",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 520,
             "y": 270
           },
@@ -13922,7 +14056,8 @@
           },
           {
             "id": "Open a ticket",
-            "kind": "http",
+            "kind": "app",
+            "platform": "zendesk",
             "x": 1040,
             "y": 90
           },
@@ -13940,7 +14075,8 @@
           },
           {
             "id": "Invite a public review",
-            "kind": "http",
+            "kind": "app",
+            "platform": "sendgrid",
             "x": 1040,
             "y": 270
           },
@@ -14006,23 +14142,16 @@
       "summary": "Registers someone for a webinar, sends the calendar invite, and reminds them a day and an hour before. Full sessions get a waitlist reply.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Datastore",
-        "Email"
+      "platforms": [
+        "supabase",
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
       "folder": "workflows/sales",
-      "nodeCount": 14,
+      "nodeCount": 15,
       "tests": [
         "registers, counts the seat and sends the invite",
         "registering twice takes one seat",
@@ -14055,8 +14184,9 @@
           "copy": "Registering twice takes one seat and sends one invite.",
           "nodes": [
             "Register",
-            "Newly registered?",
-            "Already registered"
+            "Registered already?",
+            "Already registered",
+            "Try again"
           ]
         },
         {
@@ -14075,85 +14205,96 @@
             "id": "Registration",
             "kind": "trigger",
             "x": 0,
-            "y": 180
+            "y": 270
           },
           {
             "id": "Read the form",
             "kind": "code",
             "x": 260,
-            "y": 180
+            "y": 270
           },
           {
             "id": "Valid?",
             "kind": "branch",
             "x": 520,
-            "y": 180
+            "y": 270
           },
           {
             "id": "Invalid",
             "kind": "respond",
             "x": 780,
-            "y": 90
+            "y": 180
           },
           {
             "id": "Load the webinar",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 780,
-            "y": 270
+            "y": 360
           },
           {
             "id": "Seats left?",
             "kind": "branch",
             "x": 1040,
-            "y": 180
+            "y": 270
           },
           {
             "id": "Register",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1300,
-            "y": 90
+            "y": 180
           },
           {
-            "id": "Newly registered?",
+            "id": "Registered already?",
             "kind": "branch",
             "x": 1560,
             "y": 90
           },
           {
-            "id": "Count the seat",
-            "kind": "http",
+            "id": "Try again",
+            "kind": "respond",
             "x": 1820,
             "y": 90
           },
           {
+            "id": "Count the seat",
+            "kind": "app",
+            "platform": "supabase",
+            "x": 1560,
+            "y": 270
+          },
+          {
             "id": "Send the invite",
-            "kind": "http",
-            "x": 2080,
-            "y": 180
+            "kind": "app",
+            "platform": "sendgrid",
+            "x": 1820,
+            "y": 270
           },
           {
             "id": "Confirmed",
             "kind": "respond",
-            "x": 2340,
-            "y": 180
+            "x": 2080,
+            "y": 270
           },
           {
             "id": "Already registered",
             "kind": "respond",
             "x": 1820,
-            "y": 270
+            "y": 450
           },
           {
             "id": "Add to waitlist",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 1300,
-            "y": 270
+            "y": 360
           },
           {
             "id": "Waitlisted",
             "kind": "respond",
             "x": 1560,
-            "y": 270
+            "y": 450
           }
         ],
         "edges": [
@@ -14184,11 +14325,6 @@
           },
           {
             "from": "Register",
-            "to": "Newly registered?",
-            "out": 0
-          },
-          {
-            "from": "Newly registered?",
             "to": "Count the seat",
             "out": 0
           },
@@ -14218,8 +14354,18 @@
             "out": 0
           },
           {
-            "from": "Newly registered?",
+            "from": "Register",
+            "to": "Registered already?",
+            "out": 1
+          },
+          {
+            "from": "Registered already?",
             "to": "Already registered",
+            "out": 0
+          },
+          {
+            "from": "Registered already?",
+            "to": "Try again",
             "out": 1
           }
         ],
@@ -14236,16 +14382,10 @@
       "summary": "Every ten minutes, finds tickets about to miss their first-response time, warns the owner, and escalates the ones that already have. Each ticket is raised once per stage.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Helpdesk",
-        "Chat"
+      "platforms": [
+        "zendesk"
       ],
-      "platforms": [],
-      "env": [
-        "HELPDESK_API_KEY",
-        "HELPDESK_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "notify",
         "error-handler"
@@ -14274,7 +14414,7 @@
         },
         {
           "title": "Raised once per stage",
-          "copy": "The stage is written on the ticket, so the next run stays quiet until it gets worse.",
+          "copy": "The stage is written on the Zendesk ticket as a tag, so the next run stays quiet until it gets worse.",
           "nodes": [
             "Remember the stage",
             "Write the alert",
@@ -14292,7 +14432,8 @@
           },
           {
             "id": "Unanswered tickets",
-            "kind": "http",
+            "kind": "app",
+            "platform": "zendesk",
             "x": 260,
             "y": 90
           },
@@ -14304,7 +14445,8 @@
           },
           {
             "id": "Remember the stage",
-            "kind": "http",
+            "kind": "app",
+            "platform": "zendesk",
             "x": 780,
             "y": 90
           },
@@ -14360,28 +14502,19 @@
       "kind": null,
       "summary": "Sorts the shared inbox: answers the handful of questions that have a fixed answer, files newsletters and receipts, and leaves everything else for a person.",
       "source": "reference",
-      "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "LLM",
-        "Email",
-        "Helpdesk"
+      "trigger": "gmailTrigger",
+      "platforms": [
+        "gmail",
+        "openai",
+        "sendgrid",
+        "zendesk"
       ],
-      "platforms": [],
-      "env": [
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL",
-        "HELPDESK_API_KEY",
-        "HELPDESK_BASE_URL",
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
       "folder": "workflows/support",
-      "nodeCount": 10,
+      "nodeCount": 12,
       "tests": [
         "a plain opening-hours question gets the template",
         "an unsure classification goes to a person",
@@ -14390,7 +14523,7 @@
       ],
       "story": [
         {
-          "title": "Mail arrives in the shared inbox",
+          "title": "Mail arrives in the shared Gmail inbox",
           "copy": "Newsletters, receipts and bounces are spotted from their headers and archived without a model call.",
           "nodes": [
             "Email received",
@@ -14429,62 +14562,80 @@
           {
             "id": "Email received",
             "kind": "trigger",
+            "platform": "gmail",
             "x": 0,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Read the email",
             "kind": "code",
             "x": 260,
-            "y": 180
+            "y": 310
           },
           {
             "id": "From a person?",
             "kind": "branch",
             "x": 520,
-            "y": 180
+            "y": 310
           },
           {
             "id": "Archive it",
-            "kind": "http",
-            "x": 780,
+            "kind": "app",
+            "platform": "gmail",
+            "x": 880,
             "y": 90
           },
           {
             "id": "What is it asking?",
-            "kind": "http",
-            "x": 780,
+            "kind": "agent",
+            "x": 880,
             "y": 270
+          },
+          {
+            "id": "What is it asking? · GPT",
+            "kind": "part",
+            "platform": "openai",
+            "x": 780,
+            "y": 490
+          },
+          {
+            "id": "What is it asking? · shape",
+            "kind": "part",
+            "x": 980,
+            "y": 490
           },
           {
             "id": "Read the intent",
             "kind": "code",
-            "x": 1040,
-            "y": 180
+            "x": 1240,
+            "y": 310
           },
           {
             "id": "A fixed-answer question?",
             "kind": "branch",
-            "x": 1300,
-            "y": 180
+            "x": 1500,
+            "y": 310
           },
           {
             "id": "Send the standard reply",
-            "kind": "http",
-            "x": 1560,
-            "y": 90
+            "kind": "app",
+            "platform": "sendgrid",
+            "x": 1760,
+            "y": 220
           },
           {
             "id": "Label as answered",
-            "kind": "http",
-            "x": 1820,
-            "y": 180
+            "kind": "app",
+            "platform": "gmail",
+            "x": 2020,
+            "y": 310
           },
           {
             "id": "Leave for a person",
-            "kind": "http",
-            "x": 1560,
-            "y": 270
+            "kind": "app",
+            "platform": "zendesk",
+            "x": 1760,
+            "y": 400
           }
         ],
         "edges": [
@@ -14532,6 +14683,18 @@
             "from": "A fixed-answer question?",
             "to": "Leave for a person",
             "out": 1
+          },
+          {
+            "from": "What is it asking? · GPT",
+            "to": "What is it asking?",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "What is it asking? · shape",
+            "to": "What is it asking?",
+            "out": 0,
+            "part": "outputParser"
           }
         ],
         "sections": []
@@ -14547,15 +14710,10 @@
       "summary": "The smallest useful workflow: receive a form post, keep the fields you named, store a row, answer the sender.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Datastore"
+      "platforms": [
+        "supabase"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -14581,7 +14739,8 @@
           },
           {
             "id": "Store the row",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 520,
             "y": 90
           },
@@ -14622,9 +14781,6 @@
       "summary": "Refuses any request that does not carry the secret header, before doing anything else.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook"
-      ],
       "platforms": [],
       "env": [
         "SHOP_API_KEY"
@@ -14696,9 +14852,6 @@
       "summary": "Checks a payload against simple rules and answers with exactly which fields were wrong, so the form can show it.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook"
-      ],
       "platforms": [],
       "env": [],
       "calls": [
@@ -14779,15 +14932,10 @@
       "summary": "Turns any event into one readable chat message.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Chat"
+      "platforms": [
+        "slack"
       ],
-      "platforms": [],
-      "env": [
-        "CHAT_API_KEY",
-        "CHAT_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -14807,7 +14955,8 @@
           },
           {
             "id": "Post it",
-            "kind": "http",
+            "kind": "app",
+            "platform": "slack",
             "x": 260,
             "y": 90
           }
@@ -14832,20 +14981,12 @@
       "summary": "Sends the same message by chat, email and SMS, where each channel failing leaves the other two untouched.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "Chat",
-        "Email",
-        "SMS"
+      "platforms": [
+        "slack",
+        "sendgrid",
+        "twilio"
       ],
-      "platforms": [],
-      "env": [
-        "CHAT_API_KEY",
-        "CHAT_BASE_URL",
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL",
-        "SMS_API_KEY",
-        "SMS_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -14866,19 +15007,22 @@
           },
           {
             "id": "Chat",
-            "kind": "http",
+            "kind": "app",
+            "platform": "slack",
             "x": 260,
             "y": 90
           },
           {
             "id": "Email",
-            "kind": "http",
+            "kind": "app",
+            "platform": "sendgrid",
             "x": 520,
             "y": 90
           },
           {
             "id": "SMS",
-            "kind": "http",
+            "kind": "app",
+            "platform": "twilio",
             "x": 780,
             "y": 90
           },
@@ -14924,14 +15068,10 @@
       "summary": "One place to send an email from: fills a template, refuses to send with a placeholder left unfilled.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "Email"
+      "platforms": [
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -14964,7 +15104,8 @@
           },
           {
             "id": "Send",
-            "kind": "http",
+            "kind": "app",
+            "platform": "sendgrid",
             "x": 780,
             "y": 90
           },
@@ -15021,18 +15162,11 @@
       "summary": "Every morning, counts yesterday's rows in a table and posts the number.",
       "source": "reference",
       "trigger": "scheduleTrigger",
-      "integrations": [
-        "Schedule",
-        "Datastore",
-        "Chat"
+      "platforms": [
+        "supabase",
+        "slack"
       ],
-      "platforms": [],
-      "env": [
-        "CHAT_API_KEY",
-        "CHAT_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -15053,7 +15187,8 @@
           },
           {
             "id": "Yesterday's rows",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 90
           },
@@ -15065,7 +15200,8 @@
           },
           {
             "id": "Post",
-            "kind": "http",
+            "kind": "app",
+            "platform": "slack",
             "x": 780,
             "y": 90
           }
@@ -15097,17 +15233,13 @@
       "system": null,
       "category": "Building blocks",
       "kind": "schedule",
-      "summary": "The two nodes a scheduled workflow adds so the heartbeat monitor can tell when it stops running.",
+      "summary": "What a scheduled workflow calls when it finishes, so the heartbeat monitor can tell when it stops running.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "Datastore"
+      "platforms": [
+        "supabase"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -15128,6 +15260,7 @@
           {
             "id": "Check in",
             "kind": "http",
+            "platform": "supabase",
             "x": 260,
             "y": 90
           }
@@ -15152,7 +15285,6 @@
       "summary": "Tells a caller whether now is inside working hours in a given time zone, so messages to people wait for the morning.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [],
       "platforms": [],
       "env": [],
       "calls": [
@@ -15201,7 +15333,6 @@
       "summary": "Keeps the first of each item sharing a key, after normalising it, so 'A@B.co ' and 'a@b.co' count as one.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [],
       "platforms": [],
       "env": [],
       "calls": [
@@ -15248,14 +15379,10 @@
       "summary": "Follows a cursor until the API says there is no more, with a hard stop so a broken API cannot loop forever.",
       "source": "reference",
       "trigger": "manualTrigger",
-      "integrations": [
-        "CRM"
+      "platforms": [
+        "hubspot"
       ],
-      "platforms": [],
-      "env": [
-        "CRM_API_KEY",
-        "CRM_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -15282,6 +15409,7 @@
           {
             "id": "Fetch a page",
             "kind": "http",
+            "platform": "hubspot",
             "x": 520,
             "y": 90
           },
@@ -15349,14 +15477,10 @@
       "summary": "Sends items in small batches with a pause between them, for APIs that reject bursts.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "Email"
+      "platforms": [
+        "sendgrid"
       ],
-      "platforms": [],
-      "env": [
-        "EMAIL_API_KEY",
-        "EMAIL_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -15382,7 +15506,8 @@
           },
           {
             "id": "Send",
-            "kind": "http",
+            "kind": "app",
+            "platform": "sendgrid",
             "x": 520,
             "y": 90
           },
@@ -15439,14 +15564,10 @@
       "summary": "Groups a long list into chunks of 100 and upserts each chunk in one request.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "Datastore"
+      "platforms": [
+        "supabase"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -15473,6 +15594,7 @@
           {
             "id": "Upsert the chunk",
             "kind": "http",
+            "platform": "supabase",
             "x": 520,
             "y": 90
           }
@@ -15502,7 +15624,6 @@
       "summary": "Calls an address up to four times, waiting longer each time, and reports clearly whether it finally worked.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [],
       "platforms": [],
       "env": [],
       "calls": [
@@ -15621,14 +15742,10 @@
       "summary": "The pattern for any write that must not be lost: try, and if it still fails after retries, park the payload.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "CRM"
+      "platforms": [
+        "hubspot"
       ],
-      "platforms": [],
-      "env": [
-        "CRM_API_KEY",
-        "CRM_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "dead-letter",
         "error-handler"
@@ -15651,6 +15768,7 @@
           {
             "id": "Write",
             "kind": "http",
+            "platform": "hubspot",
             "x": 260,
             "y": 180
           },
@@ -15708,14 +15826,10 @@
       "summary": "Answers whether a key (a user, an IP, a customer) is still under its hourly limit, and counts the attempt.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "Datastore"
+      "platforms": [
+        "supabase"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -15741,7 +15855,8 @@
           },
           {
             "id": "Read the count",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 520,
             "y": 90
           },
@@ -15754,6 +15869,7 @@
           {
             "id": "Count the attempt",
             "kind": "http",
+            "platform": "supabase",
             "x": 1040,
             "y": 90
           },
@@ -15804,15 +15920,10 @@
       "summary": "Records a pending decision and gives back approve and reject links. Nothing proceeds until one is pressed, and each link works once.",
       "source": "reference",
       "trigger": "webhook",
-      "integrations": [
-        "Webhook",
-        "Datastore"
+      "platforms": [
+        "supabase"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -15839,7 +15950,8 @@
           },
           {
             "id": "Resolve if still pending",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 520,
             "y": 180
           },
@@ -15902,7 +16014,6 @@
       "summary": "Parses CSV text properly, including quoted commas and blank lines, into one item per row.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [],
       "platforms": [],
       "env": [],
       "calls": [
@@ -15949,14 +16060,10 @@
       "summary": "Compares a record with the copy stored last run and reports which fields changed, so downstream work only happens on a real change.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "Datastore"
+      "platforms": [
+        "supabase"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -15977,7 +16084,8 @@
           },
           {
             "id": "Last copy",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 90
           },
@@ -15990,6 +16098,7 @@
           {
             "id": "Store this copy",
             "kind": "http",
+            "platform": "supabase",
             "x": 780,
             "y": 90
           },
@@ -16035,13 +16144,10 @@
       "summary": "Converts an amount with today's rate, rounds like money, and says so when the rate could not be fetched instead of returning a wrong number.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "Rates"
+      "platforms": [
+        "stripe"
       ],
-      "platforms": [],
-      "env": [
-        "RATES_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -16063,6 +16169,7 @@
           {
             "id": "Today's rate",
             "kind": "http",
+            "platform": "stripe",
             "x": 260,
             "y": 90
           },
@@ -16098,7 +16205,6 @@
       "summary": "Turns any title into a safe, readable URL slug, including accented and non-Latin titles.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [],
       "platforms": [],
       "env": [],
       "calls": [
@@ -16145,7 +16251,6 @@
       "summary": "Works out the start and end of 'yesterday' or 'last week' in a named time zone, which is where most reporting bugs come from.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [],
       "platforms": [],
       "env": [],
       "calls": [
@@ -16192,17 +16297,11 @@
       "summary": "The skeleton of every reliable sync: read the bookmark, fetch what is newer, write it, and only then move the bookmark.",
       "source": "reference",
       "trigger": "manualTrigger",
-      "integrations": [
-        "Datastore",
-        "CRM"
+      "platforms": [
+        "supabase",
+        "hubspot"
       ],
-      "platforms": [],
-      "env": [
-        "CRM_API_KEY",
-        "CRM_BASE_URL",
-        "DB_API_KEY",
-        "DB_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
@@ -16223,13 +16322,15 @@
           },
           {
             "id": "Read bookmark",
-            "kind": "http",
+            "kind": "app",
+            "platform": "supabase",
             "x": 260,
             "y": 180
           },
           {
             "id": "Fetch newer",
             "kind": "http",
+            "platform": "hubspot",
             "x": 520,
             "y": 180
           },
@@ -16248,12 +16349,14 @@
           {
             "id": "Write rows",
             "kind": "http",
+            "platform": "supabase",
             "x": 1300,
             "y": 90
           },
           {
             "id": "Move bookmark",
             "kind": "http",
+            "platform": "supabase",
             "x": 1560,
             "y": 180
           },
@@ -16306,32 +16409,26 @@
     },
     {
       "id": "block-file-to-storage",
-      "name": "Block · Save a remote file to storage",
+      "name": "Block · Archive a Drive file once",
       "tier": "block",
       "system": null,
       "category": "Building blocks",
       "kind": "data",
-      "summary": "Records a file under a name derived from its own address, so the same file fetched twice is stored once.",
+      "summary": "Copies a Google Drive file into the archive folder under a dated name, and records it so the same file sent twice is archived once.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "Storage",
-        "Datastore"
+      "platforms": [
+        "supabase",
+        "googleDrive"
       ],
-      "platforms": [],
-      "env": [
-        "DB_API_KEY",
-        "DB_BASE_URL",
-        "STORAGE_API_KEY",
-        "STORAGE_BASE_URL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
       "folder": "blocks/data",
-      "nodeCount": 6,
+      "nodeCount": 5,
       "tests": [
-        "the same address is copied once"
+        "the same file is archived once"
       ],
       "story": [],
       "graph": {
@@ -16349,27 +16446,23 @@
             "y": 180
           },
           {
-            "id": "Claim the name",
-            "kind": "http",
+            "id": "Claim the file",
+            "kind": "app",
+            "platform": "supabase",
             "x": 520,
             "y": 180
           },
           {
-            "id": "New file?",
-            "kind": "branch",
+            "id": "Copy to the archive",
+            "kind": "app",
+            "platform": "googleDrive",
             "x": 780,
-            "y": 180
-          },
-          {
-            "id": "Copy to storage",
-            "kind": "http",
-            "x": 1040,
             "y": 90
           },
           {
-            "id": "Already stored",
+            "id": "Already archived",
             "kind": "end",
-            "x": 1040,
+            "x": 780,
             "y": 270
           }
         ],
@@ -16381,22 +16474,17 @@
           },
           {
             "from": "Name it",
-            "to": "Claim the name",
+            "to": "Claim the file",
             "out": 0
           },
           {
-            "from": "Claim the name",
-            "to": "New file?",
+            "from": "Claim the file",
+            "to": "Copy to the archive",
             "out": 0
           },
           {
-            "from": "New file?",
-            "to": "Copy to storage",
-            "out": 0
-          },
-          {
-            "from": "New file?",
-            "to": "Already stored",
+            "from": "Claim the file",
+            "to": "Already archived",
             "out": 1
           }
         ],
@@ -16413,20 +16501,15 @@
       "summary": "Asks a model for JSON, checks the reply has the fields you need, asks once more if it does not, and then gives up honestly.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "LLM"
+      "platforms": [
+        "openai"
       ],
-      "platforms": [],
-      "env": [
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
       "folder": "blocks/ai",
-      "nodeCount": 7,
+      "nodeCount": 8,
       "tests": [
         "accepts a complete reply first time",
         "asks once more, then gives up"
@@ -16438,43 +16521,50 @@
             "id": "When called",
             "kind": "trigger",
             "x": 0,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Ask",
-            "kind": "http",
+            "kind": "agent",
             "x": 260,
-            "y": 180
+            "y": 90
+          },
+          {
+            "id": "Ask · GPT",
+            "kind": "part",
+            "platform": "openai",
+            "x": 260,
+            "y": 310
           },
           {
             "id": "Check the reply",
             "kind": "code",
             "x": 520,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Good?",
             "kind": "branch",
             "x": 780,
-            "y": 180
+            "y": 220
           },
           {
             "id": "Try once more?",
             "kind": "branch",
             "x": 1040,
-            "y": 90
+            "y": 130
           },
           {
             "id": "Usable",
             "kind": "set",
             "x": 1040,
-            "y": 270
+            "y": 310
           },
           {
             "id": "Not usable",
             "kind": "set",
             "x": 1300,
-            "y": 180
+            "y": 220
           }
         ],
         "edges": [
@@ -16512,6 +16602,12 @@
             "from": "Try once more?",
             "to": "Not usable",
             "out": 1
+          },
+          {
+            "from": "Ask · GPT",
+            "to": "Ask",
+            "out": 0,
+            "part": "languageModel"
           }
         ],
         "sections": []
@@ -16527,7 +16623,6 @@
       "summary": "Replaces emails, phone numbers and card numbers with placeholders, and hands back the map to restore them afterwards.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [],
       "platforms": [],
       "env": [],
       "calls": [
@@ -16574,7 +16669,6 @@
       "summary": "Cuts long text into chunks that end on sentence boundaries and overlap by whole sentences, ready for embedding or a model's context window.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [],
       "platforms": [],
       "env": [],
       "calls": [
@@ -16621,20 +16715,15 @@
       "summary": "Has a model put a message into one of a fixed set of labels and routes on it, with a default route for anything unexpected.",
       "source": "reference",
       "trigger": "executeWorkflowTrigger",
-      "integrations": [
-        "LLM"
+      "platforms": [
+        "openai"
       ],
-      "platforms": [],
-      "env": [
-        "LLM_API_KEY",
-        "LLM_BASE_URL",
-        "LLM_MODEL"
-      ],
+      "env": [],
       "calls": [
         "error-handler"
       ],
       "folder": "blocks/ai",
-      "nodeCount": 7,
+      "nodeCount": 9,
       "tests": [
         "routes a billing message",
         "an unexpected label takes the default route",
@@ -16651,38 +16740,51 @@
           },
           {
             "id": "Classify",
-            "kind": "http",
+            "kind": "agent",
+            "x": 360,
+            "y": 140
+          },
+          {
+            "id": "Classify · GPT",
+            "kind": "part",
+            "platform": "openai",
             "x": 260,
-            "y": 270
+            "y": 360
+          },
+          {
+            "id": "Classify · shape",
+            "kind": "part",
+            "x": 460,
+            "y": 360
           },
           {
             "id": "Read the label",
             "kind": "code",
-            "x": 520,
+            "x": 720,
             "y": 270
           },
           {
             "id": "By label",
             "kind": "branch",
-            "x": 780,
+            "x": 980,
             "y": 270
           },
           {
             "id": "Billing",
             "kind": "set",
-            "x": 1040,
+            "x": 1240,
             "y": 90
           },
           {
             "id": "Technical",
             "kind": "set",
-            "x": 1040,
+            "x": 1240,
             "y": 270
           },
           {
             "id": "General",
             "kind": "set",
-            "x": 1040,
+            "x": 1240,
             "y": 450
           }
         ],
@@ -16716,6 +16818,18 @@
             "from": "By label",
             "to": "General",
             "out": 2
+          },
+          {
+            "from": "Classify · GPT",
+            "to": "Classify",
+            "out": 0,
+            "part": "languageModel"
+          },
+          {
+            "from": "Classify · shape",
+            "to": "Classify",
+            "out": 0,
+            "part": "outputParser"
           }
         ],
         "sections": []

@@ -2,49 +2,43 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Order ops · New order
-// Nodes   : 18  |  Connections: 16
+// Nodes   : 15  |  Connections: 13
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
-// OrderCreated                       webhook
-// FromTheStore                       if
-// Unauthorised                       respondToWebhook
-// Received                           respondToWebhook
+// OrderCreated                       shopifyTrigger             [creds]
 // ReadTheOrder                       code
 // SeenBefore                         executeWorkflow
 // NewOrder                           if
 // AlreadyHandled                     noOp
-// SaveTheOrder                       httpRequest                [retry]
+// SaveTheOrder                       supabase                   [creds] [retry]
 // OneItemPerLine                     code
-// TakeFromStock                      httpRequest                [onError→out(1)] [retry]
+// TakeFromStock                      httpRequest                [onError→out(1)] [creds] [retry]
 // WhatIsRunningLow                   code
 // AnythingLow                        if
 // WarnTheTeam                        executeWorkflow
-// ConfirmToCustomer                  httpRequest                [retry]
+// ConfirmToCustomer                  sendGrid                   [creds] [retry]
 // StockFailurePayload                code
 // ParkForReplay                      executeWorkflow
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
 // OrderCreated
-//    → FromTheStore
-//      → Received
-//        → ReadTheOrder
-//          → SeenBefore
-//            → NewOrder
-//              → SaveTheOrder
-//                → OneItemPerLine
-//                  → TakeFromStock
-//                    → WhatIsRunningLow
-//                      → AnythingLow
-//                        → WarnTheTeam
-//                   .out(1) → StockFailurePayload
-//                      → ParkForReplay
-//                → ConfirmToCustomer
-//             .out(1) → AlreadyHandled
-//     .out(1) → Unauthorised
+//    → ReadTheOrder
+//      → SeenBefore
+//        → NewOrder
+//          → SaveTheOrder
+//            → OneItemPerLine
+//              → TakeFromStock
+//                → WhatIsRunningLow
+//                  → AnythingLow
+//                    → WarnTheTeam
+//               .out(1) → StockFailurePayload
+//                  → ParkForReplay
+//            → ConfirmToCustomer
+//         .out(1) → AlreadyHandled
 // </workflow-map>
 
 // =====================================================================
@@ -75,86 +69,22 @@ export class OrderOpsNewOrderWorkflow {
         content: `## Order ops · New order
 Takes a new order from the store, records it once, takes its items out of stock, confirms to the customer, and warns the team about anything running low.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL
+**Platforms:** Shopify, Supabase, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/order-ops\``,
     };
 
     @node({
         id: '4912eeaa-972c-4c81-abc2-f564361e5215',
-        webhookId: '03427abe-6365-492a-a7ce-ab3daf2128ed',
+        webhookId: 'ba75f716-9226-4635-a13e-b6ee1ff3dc3b',
         name: 'Order created',
-        type: 'n8n-nodes-base.webhook',
-        version: 2,
+        type: 'n8n-nodes-base.shopifyTrigger',
+        version: 1,
         position: [0, 180],
+        credentials: { shopifyAccessTokenApi: { id: '__CRED:shopify__', name: 'Shopify' } },
     })
     OrderCreated = {
-        httpMethod: 'POST',
-        path: 'order-created',
-        responseMode: 'responseNode',
-        options: {},
-    };
-
-    @node({
-        id: 'ffb10e7f-4bdd-4a22-a901-37129cfe791b',
-        name: 'From the store?',
-        type: 'n8n-nodes-base.if',
-        version: 2.2,
-        position: [260, 180],
-    })
-    FromTheStore = {
-        conditions: {
-            options: {
-                caseSensitive: true,
-                leftValue: '',
-                typeValidation: 'loose',
-                version: 2,
-            },
-            conditions: [
-                {
-                    id: 'fbc14570-bfc3-439e-a0db-82ba8a508c23',
-                    leftValue: "={{ $json.headers['x-webhook-secret'] === $env.SHOP_API_KEY }}",
-                    rightValue: '',
-                    operator: {
-                        type: 'boolean',
-                        operation: 'true',
-                        singleValue: true,
-                    },
-                },
-            ],
-            combinator: 'and',
-        },
-        options: {},
-    };
-
-    @node({
-        id: 'acdfd98a-2bec-47f4-a79c-818cabc96e9e',
-        name: 'Unauthorised',
-        type: 'n8n-nodes-base.respondToWebhook',
-        version: 1.1,
-        position: [520, 90],
-    })
-    Unauthorised = {
-        respondWith: 'json',
-        responseBody: '={{ JSON.stringify({ ok: false }) }}',
-        options: {
-            responseCode: 401,
-        },
-    };
-
-    @node({
-        id: '0bbefa30-9fa8-4379-aaef-79ed7104eb31',
-        name: 'Received',
-        type: 'n8n-nodes-base.respondToWebhook',
-        version: 1.1,
-        position: [520, 270],
-    })
-    Received = {
-        respondWith: 'json',
-        responseBody: '={{ JSON.stringify({ ok: true }) }}',
-        options: {
-            responseCode: 200,
-        },
+        authentication: 'accessToken',
+        topic: 'orders/create',
     };
 
     @node({
@@ -162,10 +92,10 @@ Takes a new order from the store, records it once, takes its items out of stock,
         name: 'Read the order',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [780, 180],
+        position: [260, 180],
     })
     ReadTheOrder = {
-        jsCode: `const o = $("Order created").first().json.body ?? {};
+        jsCode: `const o = $("Order created").first().json ?? {};
 const lines = (o.line_items ?? []).map((l) => ({ sku: String(l.sku), title: l.title, quantity: Number(l.quantity ?? 1), price: Number(l.price ?? 0) }));
 if (!o.id || !lines.length) throw new Error("Order has no id or no line items");
 return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCase(), customer: o.customer?.first_name ?? "there", currency: o.currency ?? "USD", total: lines.reduce((s, l) => s + l.price * l.quantity, 0), lines, scope: "order", key: String(o.id) } }];`,
@@ -176,7 +106,7 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'Seen before?',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1040, 180],
+        position: [520, 180],
     })
     SeenBefore = {
         workflowId: {
@@ -192,7 +122,7 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'New order?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1300, 180],
+        position: [780, 180],
     })
     NewOrder = {
         conditions: {
@@ -224,39 +154,58 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'Already handled',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1560, 90],
+        position: [1040, 90],
     })
     AlreadyHandled = {};
 
     @node({
         id: 'aef03a4a-86e2-4430-a437-6db3c673ce6c',
         name: 'Save the order',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1560, 270],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [1040, 270],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SaveTheOrder = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/orders',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'orders',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'order_id',
+                    fieldValue: '={{ $json.order_id }}',
+                },
+                {
+                    fieldId: 'email',
+                    fieldValue: '={{ $json.email }}',
+                },
+                {
+                    fieldId: 'total',
+                    fieldValue: '={{ $json.total }}',
+                },
+                {
+                    fieldId: 'currency',
+                    fieldValue: '={{ $json.currency }}',
+                },
+                {
+                    fieldId: 'lines',
+                    fieldValue: '={{ $json.lines }}',
+                },
+                {
+                    fieldId: 'status',
+                    fieldValue: "={{ 'paid' }}",
+                },
+                {
+                    fieldId: 'created_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ order_id: $json.order_id, email: $json.email, total: $json.total, currency: $json.currency, lines: $json.lines, status: 'paid', created_at: $now.toISO() }) }}",
     };
 
     @node({
@@ -264,7 +213,7 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'One item per line',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1820, 90],
+        position: [1300, 90],
     })
     OneItemPerLine = {
         jsCode: 'return $("New order?").first().json.lines.map((l) => ({ json: { ...l, order_id: $("New order?").first().json.order_id } }));',
@@ -275,7 +224,8 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'Take from stock',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2080, 180],
+        position: [1560, 180],
+        credentials: { shopifyAccessTokenApi: { id: '__CRED:shopify__', name: 'Shopify' } },
         onError: 'continueErrorOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -283,22 +233,15 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
     })
     TakeFromStock = {
         method: 'POST',
-        url: '={{ $env.SHOP_BASE_URL }}/inventory_levels/adjust',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.SHOP_API_KEY }}",
-                },
-            ],
-        },
+        url: "={{ 'https://acme-store.myshopify.com/admin/api/2025-01' + '/inventory_levels/adjust.json' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'shopifyAccessTokenApi',
         sendBody: true,
         specifyBody: 'json',
         jsonBody: '={{ JSON.stringify({ sku: $json.sku, available_adjustment: -$json.quantity }) }}',
+        options: {
+            timeout: 15000,
+        },
     };
 
     @node({
@@ -306,7 +249,7 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'What is running low?',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2340, 90],
+        position: [1820, 90],
     })
     WhatIsRunningLow = {
         jsCode: `const lines = $("One item per line").all();
@@ -320,7 +263,7 @@ return [{ json: { low, any_low: low.length > 0, text: "Running low: " + low.map(
         name: 'Anything low?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [2600, 90],
+        position: [2080, 90],
     })
     AnythingLow = {
         conditions: {
@@ -352,7 +295,7 @@ return [{ json: { low, any_low: low.length > 0, text: "Running low: " + low.map(
         name: 'Warn the team',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2860, 180],
+        position: [2340, 180],
     })
     WarnTheTeam = {
         workflowId: {
@@ -366,32 +309,39 @@ return [{ json: { low, any_low: low.length > 0, text: "Running low: " + low.map(
     @node({
         id: '991c63e2-d785-4358-ad19-0d208e3a6370',
         name: 'Confirm to customer',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1820, 270],
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
+        position: [1300, 270],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ConfirmToCustomer = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: "={{ $('New order?').first().json.email }}",
+        dynamicTemplate: true,
+        templateId: "={{ 'd-order-confirmation' }}",
+        dynamicTemplateFields: {
+            fields: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
+                    key: 'name',
+                    value: "={{ $('New order?').first().json.customer }}",
+                },
+                {
+                    key: 'lines',
+                    value: "={{ $('New order?').first().json.lines }}",
+                },
+                {
+                    key: 'total',
+                    value: "={{ $('New order?').first().json.total }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $('New order?').first().json.email, subject: 'Order ' + $('New order?').first().json.order_id + ' confirmed', template: 'order-confirmation', data: { name: $('New order?').first().json.customer, lines: $('New order?').first().json.lines, total: $('New order?').first().json.total } }) }}",
+        additionalFields: {},
     };
 
     @node({
@@ -399,7 +349,7 @@ return [{ json: { low, any_low: low.length > 0, text: "Running low: " + low.map(
         name: 'Stock failure payload',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2340, 270],
+        position: [1820, 270],
     })
     StockFailurePayload = {
         jsCode: `const l = $input.first().json;
@@ -411,7 +361,7 @@ return [{ json: { source: "order-intake", reason: "Stock could not be adjusted f
         name: 'Park for replay',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2600, 270],
+        position: [2080, 270],
     })
     ParkForReplay = {
         workflowId: {
@@ -428,10 +378,7 @@ return [{ json: { source: "order-intake", reason: "Stock could not be adjusted f
 
     @links()
     defineRouting() {
-        this.OrderCreated.out(0).to(this.FromTheStore.in(0));
-        this.FromTheStore.out(0).to(this.Received.in(0));
-        this.FromTheStore.out(1).to(this.Unauthorised.in(0));
-        this.Received.out(0).to(this.ReadTheOrder.in(0));
+        this.OrderCreated.out(0).to(this.ReadTheOrder.in(0));
         this.ReadTheOrder.out(0).to(this.SeenBefore.in(0));
         this.SeenBefore.out(0).to(this.NewOrder.in(0));
         this.NewOrder.out(0).to(this.SaveTheOrder.in(0));

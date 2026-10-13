@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Block · Check in with the heartbeat monitor\nThe two nodes a scheduled workflow adds so the heartbeat monitor can tell when it stops running.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/schedule`"
+        "content": "## Block · Check in with the heartbeat monitor\nWhat a scheduled workflow calls when it finishes, so the heartbeat monitor can tell when it stops running.\n\n**Platforms:** Supabase\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/schedule`"
       }
     },
     {
@@ -40,20 +40,15 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/heartbeats",
-        "options": {
-          "timeout": 15000
-        },
+        "url": "={{ 'https://acme.supabase.co/rest/v1/heartbeats' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            },
-            {
               "name": "Prefer",
-              "value": "resolution=merge-duplicates"
+              "value": "={{ 'resolution=merge-duplicates,return=representation' }}"
             }
           ]
         },
@@ -68,11 +63,20 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ name: $json.name, last_seen: $now.toISO(), max_gap_minutes: $json.max_gap_minutes ?? 90 }) }}"
+        "jsonBody": "={{ JSON.stringify({ name: $json.name, last_seen: $now.toISO(), max_gap_minutes: $json.max_gap_minutes ?? 90 }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     }
   ],
   "connections": {

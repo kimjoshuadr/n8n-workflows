@@ -9,12 +9,12 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Every30Minutes                     scheduleTrigger
-// OpenCarts                          httpRequest                [alwaysOutput] [retry]
+// OpenCarts                          supabase                   [creds] [alwaysOutput] [retry]
 // OldEnoughWithAnEmail               code
-// OrderedSince                       httpRequest                [alwaysOutput] [retry]
+// OrderedSince                       supabase                   [creds] [alwaysOutput] [retry]
 // KeepTheOnesWhoDidNot               code
-// SendTheReminder                    httpRequest                [retry]
-// MarkReminded                       httpRequest                [retry]
+// SendTheReminder                    sendGrid                   [creds] [retry]
+// MarkReminded                       supabase                   [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -55,8 +55,7 @@ export class OrderOpsAbandonedCartRecoveryWorkflow {
         content: `## Order ops · Abandoned cart recovery
 Every half hour, writes once to people who left a cart over an hour ago and have not ordered since.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** Supabase, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/order-ops\``,
     };
 
@@ -81,39 +80,33 @@ Every half hour, writes once to people who left a cart over an hour ago and have
     @node({
         id: 'ef20ccc2-6d8f-4926-a900-55032fbf7a07',
         name: 'Open carts',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     OpenCarts = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/carts',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'carts',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'recovered',
-                    value: "={{ 'eq.false' }}",
+                    keyName: 'recovered',
+                    condition: 'eq',
+                    keyValue: "={{ 'false' }}",
                 },
                 {
-                    name: 'reminded',
-                    value: "={{ 'eq.false' }}",
+                    keyName: 'reminded',
+                    condition: 'eq',
+                    keyValue: "={{ 'false' }}",
                 },
             ],
         },
@@ -137,39 +130,29 @@ return $input.all().map((i) => i.json).filter((c) => c.email && c.updated_at)
     @node({
         id: '45339362-e072-4837-af59-ff251cb63367',
         name: 'Ordered since?',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [780, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     OrderedSince = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/orders',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'orders',
+        returnAll: false,
+        limit: 1,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'email',
-                    value: "={{ 'eq.' + $json.email }}",
-                },
-                {
-                    name: 'limit',
-                    value: "={{ '1' }}",
+                    keyName: 'email',
+                    condition: 'eq',
+                    keyValue: '={{ $json.email }}',
                 },
             ],
         },
@@ -191,71 +174,76 @@ return $input.all().map((item, i) => ({ cart: carts[i]?.json, ordered: !!item.js
     @node({
         id: '7a6181b9-c613-4c6f-aaf1-dc55d26ca9a6',
         name: 'Send the reminder',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
         position: [1300, 90],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SendTheReminder = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: '={{ $json.email }}',
+        dynamicTemplate: true,
+        templateId: "={{ 'd-cart-reminder' }}",
+        dynamicTemplateFields: {
+            fields: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
+                    key: 'items',
+                    value: '={{ $json.items }}',
+                },
+                {
+                    key: 'cart_url',
+                    value: '={{ $json.cart_url }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $json.email, subject: 'You left something behind', template: 'cart-reminder', data: { items: $json.items, cart_url: $json.cart_url } }) }}",
+        additionalFields: {},
     };
 
     @node({
         id: 'bffa7485-a137-422c-a30b-1fc7f3ea835d',
         name: 'Mark reminded',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1560, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkReminded = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/carts',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'carts',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Keep the ones who did not').item.json.id }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $('Keep the ones who did not').item.json.id }}",
+                    fieldId: 'reminded',
+                    fieldValue: '={{ true }}',
+                },
+                {
+                    fieldId: 'reminded_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ reminded: true, reminded_at: $now.toISO() }) }}',
     };
 
     // =====================================================================

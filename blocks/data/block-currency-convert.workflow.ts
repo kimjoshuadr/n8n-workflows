@@ -9,7 +9,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
-// TodaySRate                         httpRequest                [onError→regular] [retry]
+// TodaySRate                         httpRequest                [onError→regular] [creds] [retry]
 // Convert                            code
 //
 // ROUTING MAP
@@ -47,8 +47,7 @@ export class BlockConvertACurrencyAmountWorkflow {
         content: `## Block · Convert a currency amount
 Converts an amount with today's rate, rounds like money, and says so when the rate could not be fetched instead of returning a wrong number.
 
-**Platforms:** none, this is logic only
-**Settings:** RATES_BASE_URL
+**Platforms:** Stripe
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/data\``,
     };
 
@@ -69,6 +68,7 @@ Converts an amount with today's rate, rounds like money, and says so when the ra
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [260, 90],
+        credentials: { stripeApi: { id: '__CRED:stripe__', name: 'Stripe' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -76,22 +76,11 @@ Converts an amount with today's rate, rounds like money, and says so when the ra
     })
     TodaySRate = {
         method: 'GET',
-        url: '={{ $env.RATES_BASE_URL }}/latest',
+        url: "={{ 'https://api.stripe.com/v1/exchange_rates/' + String($json.from).toLowerCase() }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'stripeApi',
         options: {
             timeout: 15000,
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'from',
-                    value: '={{ $json.from }}',
-                },
-                {
-                    name: 'to',
-                    value: '={{ $json.to }}',
-                },
-            ],
         },
     };
 
@@ -104,7 +93,7 @@ Converts an amount with today's rate, rounds like money, and says so when the ra
     })
     Convert = {
         jsCode: `const req = $("When called").first().json;
-const rate = $input.first().json.rates?.[req.to];
+const rate = $input.first().json.rates?.[String(req.to).toLowerCase()];
 if (typeof rate !== "number") return [{ json: { ...req, converted: null, ok: false, reason: "No rate available for " + req.from + " to " + req.to } }];
 return [{ json: { ...req, rate, converted: Math.round(req.amount * rate * 100) / 100, ok: true } }];`,
     };

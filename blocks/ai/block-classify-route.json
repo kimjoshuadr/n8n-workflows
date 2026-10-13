@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Block · Classify, then route\nHas a model put a message into one of a fixed set of labels and routes on it, with a default route for anything unexpected.\n\n**Platforms:** none, this is logic only\n**Settings:** LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/ai`"
+        "content": "## Block · Classify, then route\nHas a model put a message into one of a fixed set of labels and routes on it, with a default route for anything unexpected.\n\n**Platforms:** OpenAI\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/ai`"
       }
     },
     {
@@ -32,53 +32,80 @@
     {
       "id": "7f5afb55-e7b6-4364-a31c-89186973d9b6",
       "position": [
-        260,
-        270
+        360,
+        140
       ],
       "name": "Classify",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "hasOutputParser": true,
         "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: \"[task:classify] Classify the message. Reply with JSON: { label: 'billing'|'technical'|'general' }.\" },\n    { role: \"user\", content: $json.text }\n  ]\n}) }}"
+          "systemMessage": "[task:classify] Classify the message. Reply with JSON: { label: 'billing'|'technical'|'general' }.",
+          "maxIterations": 2
+        }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000,
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "2b196688-2df7-44e2-a30a-33184243a659",
+      "position": [
+        260,
+        360
+      ],
+      "name": "Classify · GPT",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "__CRED:openai__",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "ab4c059e-45fe-4d18-ad73-3ab6d80feab9",
+      "position": [
+        460,
+        360
+      ],
+      "name": "Classify · shape",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"label\": \"billing\",\n  \"urgent\": false,\n  \"sentiment\": \"neutral\"\n}"
+      }
     },
     {
       "id": "55b3c9c1-edd0-44bc-aabc-e42c6e07ab91",
       "position": [
-        520,
+        720,
         270
       ],
       "name": "Read the label",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "let label = \"general\";\ntry { const l = JSON.parse($input.first().json.choices[0].message.content).label; if ([\"billing\", \"technical\", \"general\"].includes(l)) label = l; } catch (e) {}\nreturn [{ json: { ...$(\"When called\").first().json, label } }];"
+        "jsCode": "let label = \"general\";\ntry { const out = $input.first().json.output; const l = (typeof out === \"string\" ? JSON.parse(out) : out).label; if ([\"billing\", \"technical\", \"general\"].includes(l)) label = l; } catch (e) {}\nreturn [{ json: { ...$(\"When called\").first().json, label } }];"
       }
     },
     {
       "id": "f8981aeb-fba8-4c36-a952-56bc2e49eca2",
       "position": [
-        780,
+        980,
         270
       ],
       "name": "By label",
@@ -147,7 +174,7 @@
     {
       "id": "9449d4c0-015e-44f3-a69b-ec20bc010ba5",
       "position": [
-        1040,
+        1240,
         90
       ],
       "name": "Billing",
@@ -171,7 +198,7 @@
     {
       "id": "aeb0c474-4a07-40d3-ac1b-7ec6bce85c62",
       "position": [
-        1040,
+        1240,
         270
       ],
       "name": "Technical",
@@ -195,7 +222,7 @@
     {
       "id": "0ba726e6-de4d-4b0c-a784-4973ac803bf4",
       "position": [
-        1040,
+        1240,
         450
       ],
       "name": "General",
@@ -271,6 +298,28 @@
           {
             "node": "General",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify · GPT": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify · shape": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Classify",
+            "type": "ai_outputParser",
             "index": 0
           }
         ]

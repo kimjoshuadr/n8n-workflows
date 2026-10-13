@@ -10,7 +10,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // RunManually                        manualTrigger
 // Start                              set
-// FetchAPage                         httpRequest                [retry]
+// FetchAPage                         httpRequest                [creds] [retry]
 // KeepGoing                          code
 // MorePages                          if
 // AllPages                           code
@@ -54,8 +54,7 @@ export class BlockReadEveryPageOfAnApiWorkflow {
         content: `## Block · Read every page of an API
 Follows a cursor until the API says there is no more, with a hard stop so a broken API cannot loop forever.
 
-**Platforms:** none, this is logic only
-**Settings:** CRM_API_KEY, CRM_BASE_URL
+**Platforms:** HubSpot
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/lists\``,
     };
 
@@ -102,25 +101,16 @@ Follows a cursor until the API says there is no more, with a hard stop so a brok
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [520, 90],
+        credentials: { hubspotAppToken: { id: '__CRED:hubspot__', name: 'HubSpot' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     FetchAPage = {
         method: 'GET',
-        url: '={{ $env.CRM_BASE_URL }}/contacts',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CRM_API_KEY }}",
-                },
-            ],
-        },
+        url: "={{ 'https://api.hubapi.com/crm/v3/objects/contacts' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'hubspotAppToken',
         sendQuery: true,
         queryParameters: {
             parameters: [
@@ -134,6 +124,9 @@ Follows a cursor until the API says there is no more, with a hard stop so a brok
                 },
             ],
         },
+        options: {
+            timeout: 15000,
+        },
     };
 
     @node({
@@ -146,7 +139,7 @@ Follows a cursor until the API says there is no more, with a hard stop so a brok
     KeepGoing = {
         jsCode: `const res = $input.first().json;
 const page = Number($("Start").first().json.page) + $runIndex + 1;
-return [{ json: { items: res.results ?? [], cursor: res.next ?? "", page, more: !!res.next && page < 50 } }];`,
+return [{ json: { items: res.results ?? [], cursor: res.paging?.next?.after ?? "", page, more: !!res.paging?.next?.after && page < 50 } }];`,
     };
 
     @node({

@@ -6,24 +6,25 @@
 
 Pulls the supplier's stock feed every two hours and updates the store only for products whose quantity changed, refusing a feed that looks wrong.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Supplier, Datastore, Shop, Chat |
-| Nodes | 10 |
-| Calls | `notify`, `error-handler` |
-| Files | [`inventory-sync.json`](inventory-sync.json) · [`inventory-sync.workflow.ts`](inventory-sync.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/shopify.svg" width="16" height="16" alt=""> Shopify
+- **Nodes:** 13
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`inventory-sync.json`](inventory-sync.json) · [`inventory-sync.workflow.ts`](inventory-sync.workflow.ts)
 
 ```mermaid
 flowchart LR
   nbzf7x1(["Every 2 hours"])
   n1n88ecr[/"Supplier feed"/]
-  nwz9eae[/"Last known stock"/]
+  nwz9eae["Last known stock"]
   nnrb8yo["What changed?"]
   n1kc0ib{"Feed looks sane?"}
   nsekrgf["One item per change"]
   njmguf6[/"Update the store"/]
-  nds23nn[/"Update the snapshot"/]
+  nds23nn["Update the snapshot"]
+  n1u098wk{"Known product?"}
+  nws2adu["Add to the snapshot"]
+  n1p4ny4m["Snapshot updated"]
   n1yxv2k0["Refused message"]
   n4d13md[["Alert"]]
   nbzf7x1 --> n1n88ecr
@@ -33,6 +34,9 @@ flowchart LR
   n1kc0ib -->|yes| nsekrgf
   nsekrgf --> njmguf6
   njmguf6 --> nds23nn
+  nds23nn --> n1u098wk
+  n1u098wk -->|yes| n1p4ny4m
+  n1u098wk -->|no| nws2adu
   n1kc0ib -->|no| n1yxv2k0
   n1yxv2k0 --> n4d13md
 ```
@@ -53,13 +57,11 @@ flowchart LR
 
 Refunds small amounts on recent orders automatically, and sends anything larger, older or repeated to a person with the facts attached.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Datastore, Payments, Email, Chat |
-| Nodes | 18 |
-| Calls | `notify`, `error-handler` |
-| Files | [`refund-approval.json`](refund-approval.json) · [`refund-approval.workflow.ts`](refund-approval.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/stripe.svg" width="16" height="16" alt=""> Stripe
+- **Nodes:** 18
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`refund-approval.json`](refund-approval.json) · [`refund-approval.workflow.ts`](refund-approval.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -67,16 +69,16 @@ flowchart LR
   n4skscd["Read the request"]
   n2xqlyi{"Valid?"}
   n1clxfxs(["Invalid"])
-  n2f5mh8[/"Load the order"/]
+  n2f5mh8["Load the order"]
   n1dhn3qu{"Order found?"}
   ntr7sj5(["Unknown order"])
-  nzokvbo[/"Past refunds"/]
+  nzokvbo["Past refunds"]
   n1iue1ne["Apply the policy"]
   ne9uvpf{"Decision"}
   n1xheo7a(["Already refunded"])
-  nz9z0gn[/"Refund at the processor"/]
-  n1qn7jj[/"Record the refund"/]
-  nwbgapf[/"Mark the order"/]
+  n13d11l3[/"Refund in Stripe"/]
+  n1qn7jj["Record the refund"]
+  nwbgapf["Mark the order"]
   n1s8oc3i(["Refunded"])
   n20moti["Review message"]
   n10am1f0[["Ask finance"]]
@@ -91,8 +93,8 @@ flowchart LR
   n2xqlyi -->|no| n1clxfxs
   n1dhn3qu -->|no| ntr7sj5
   ne9uvpf --> n1xheo7a
-  ne9uvpf --> nz9z0gn
-  nz9z0gn --> n1qn7jj
+  ne9uvpf --> n13d11l3
+  n13d11l3 --> n1qn7jj
   n1qn7jj --> nwbgapf
   nwbgapf --> n1s8oc3i
   ne9uvpf --> n20moti
@@ -119,21 +121,19 @@ flowchart LR
 
 Tells subscribers a week before an annual renewal, once, with the amount and the date, so the charge is never a surprise.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, Email |
-| Nodes | 5 |
-| Calls | `error-handler` |
-| Files | [`renewal-reminder.json`](renewal-reminder.json) · [`renewal-reminder.workflow.ts`](renewal-reminder.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 5
+- **Calls:** `error-handler`
+- **Files:** [`renewal-reminder.json`](renewal-reminder.json) · [`renewal-reminder.workflow.ts`](renewal-reminder.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1k1kxc4(["08:00 daily"])
-  n1wseps3[/"Active subscriptions"/]
+  n1wseps3["Active subscriptions"]
   n50z9pm["Renewing in a week"]
-  n1ki2bqw[/"Send the notice"/]
-  n1absg40[/"Mark reminded"/]
+  n1ki2bqw["Send the notice"]
+  n1absg40["Mark reminded"]
   n1k1kxc4 --> n1wseps3
   n1wseps3 --> n50z9pm
   n50z9pm --> n1ki2bqw
@@ -155,25 +155,25 @@ flowchart LR
 
 Reads a supplier invoice with a model, checks the arithmetic and the duplicate history itself, and files it or sends it for review.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | LLM, Datastore, Chat |
-| Nodes | 11 |
-| Calls | `notify`, `error-handler` |
-| Files | [`invoice-intake.json`](invoice-intake.json) · [`invoice-intake.workflow.ts`](invoice-intake.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI &nbsp;·&nbsp; <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase
+- **Nodes:** 13
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`invoice-intake.json`](invoice-intake.json) · [`invoice-intake.workflow.ts`](invoice-intake.workflow.ts)
 
 ```mermaid
 flowchart LR
   n8xk0bf(["Invoice received"])
   nqy0qxf["Read the upload"]
-  n1jqwfxq[/"Extract the fields"/]
+  n1jqwfxq[["Extract the fields"]]
+  n197auuo("Extract the fields · GPT")
+  n14pmnwm("Extract the fields · shape")
   njqdbt7["Read the fields"]
-  n1ebk2nq[/"Seen this invoice?"/]
+  n1ebk2nq["Seen this invoice?"]
   nuc14dm["Check it"]
   n1t4wyd9{"Clean?"}
-  n221iyw[/"File it"/]
-  n1coc5k5[/"Queue for review"/]
+  n221iyw["File it"]
+  n1coc5k5["Queue for review"]
   n20moti["Review message"]
   nd3wmc2[["Tell finance"]]
   n8xk0bf --> nqy0qxf
@@ -186,6 +186,8 @@ flowchart LR
   n1t4wyd9 -->|no| n1coc5k5
   n1coc5k5 --> n20moti
   n20moti --> nd3wmc2
+  n197auuo -.-> n1jqwfxq
+  n14pmnwm -.-> n1jqwfxq
 ```
 
 **How it runs**

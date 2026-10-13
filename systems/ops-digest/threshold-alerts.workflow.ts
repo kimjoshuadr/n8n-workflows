@@ -9,9 +9,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Hourly                             scheduleTrigger
-// WatchedMetrics                     httpRequest                [alwaysOutput] [retry]
+// WatchedMetrics                     supabase                   [creds] [alwaysOutput] [retry]
 // WhichChangedState                  code
-// RememberTheState                   httpRequest                [retry]
+// RememberTheState                   supabase                   [creds] [retry]
 // AlertText                          code
 // Alert                              executeWorkflow
 //
@@ -53,8 +53,7 @@ export class OpsDigestThresholdAlertsWorkflow {
         content: `## Ops digest · Threshold alerts
 Checks each watched number hourly and alerts when it crosses its line, and again when it recovers. It does not repeat itself in between.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/ops-digest\``,
     };
 
@@ -79,29 +78,20 @@ Checks each watched number hourly and alerts when it crosses its line, and again
     @node({
         id: 'ed15231e-e603-486a-a912-74d2e74361e2',
         name: 'Watched metrics',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     WatchedMetrics = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/watched_metrics',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'watched_metrics',
+        returnAll: true,
     };
 
     @node({
@@ -122,40 +112,42 @@ Checks each watched number hourly and alerts when it crosses its line, and again
     @node({
         id: '92b216ff-2d58-4282-ad84-831c4797cf30',
         name: 'Remember the state',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [780, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     RememberTheState = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/watched_metrics',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'watched_metrics',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'name',
+                    condition: 'eq',
+                    keyValue: '={{ $json.name }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'name',
-                    value: "={{ 'eq.' + $json.name }}",
+                    fieldId: 'last_state',
+                    fieldValue: '={{ $json.state }}',
+                },
+                {
+                    fieldId: 'state_changed_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ last_state: $json.state, state_changed_at: $now.toISO() }) }}',
     };
 
     @node({

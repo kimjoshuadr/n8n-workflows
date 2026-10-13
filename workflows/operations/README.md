@@ -6,28 +6,28 @@
 
 When someone is hired, creates their checklist, books their first-week meetings, tells the people who need to act, and sends the welcome email on the right morning.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Datastore, Calendar, Email, Chat |
-| Nodes | 11 |
-| Calls | `idempotency-guard`, `notify`, `error-handler` |
-| Files | [`employee-onboarding.json`](employee-onboarding.json) · [`employee-onboarding.workflow.ts`](employee-onboarding.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/bamboohr.png" width="16" height="16" alt=""> BambooHR &nbsp;·&nbsp; <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/googleCalendar.svg" width="16" height="16" alt=""> Google Calendar &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 12
+- **Calls:** `idempotency-guard`, `notify`, `error-handler`
+- **Files:** [`employee-onboarding.json`](employee-onboarding.json) · [`employee-onboarding.workflow.ts`](employee-onboarding.workflow.ts)
 
 ```mermaid
 flowchart LR
   nn84bve(["Hire confirmed"])
+  n1rk21sa[/"Fetch the employee"/]
   ng26qx2["Read the hire"]
   n1ja4syq[["Seen before?"]]
   n1b8iebo{"New hire?"}
   not5ata["Build the checklist"]
-  nemadsg[/"Save the task"/]
-  n1jbitv5[/"Book first-day welcome"/]
-  npoplal[/"Schedule the welcome email"/]
+  nemadsg["Save the task"]
+  n1jbitv5["Book first-day welcome"]
+  npoplal["Schedule the welcome email"]
   n1cvbvfv["Team message"]
   n8m5mk4[["Tell the team"]]
   n14zcpmw["Already set up"]
-  nn84bve --> ng26qx2
+  nn84bve --> n1rk21sa
+  n1rk21sa --> ng26qx2
   ng26qx2 --> n1ja4syq
   n1ja4syq --> n1b8iebo
   n1b8iebo -->|yes| not5ata
@@ -41,7 +41,7 @@ flowchart LR
 
 **How it runs**
 
-1. **A hire is confirmed.** HR systems send the same event on every edit, so the hire is set up once.
+1. **A hire is confirmed.** BambooHR announces the hire and the record is read from it. It sends the same event on every edit, so the hire is set up once.
 2. **A dated checklist.** Six tasks counted back from the start date, each with an owner. Remote hires get a shipped laptop, not a desk.
 3. **The first morning is arranged.** A welcome meeting on the calendar and an email timed for 8am on day one.
 4. **The people who must act are told.** One message, with the date.
@@ -55,21 +55,19 @@ flowchart LR
 
 Posts today's meetings each weekday morning, with gaps and clashes pointed out, and stays silent on an empty day.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Calendar, Chat |
-| Nodes | 6 |
-| Calls | `error-handler` |
-| Files | [`daily-agenda.json`](daily-agenda.json) · [`daily-agenda.workflow.ts`](daily-agenda.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/googleCalendar.svg" width="16" height="16" alt=""> Google Calendar &nbsp;·&nbsp; <img src="../../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack
+- **Nodes:** 6
+- **Calls:** `error-handler`
+- **Files:** [`daily-agenda.json`](daily-agenda.json) · [`daily-agenda.workflow.ts`](daily-agenda.workflow.ts)
 
 ```mermaid
 flowchart LR
   njkue0y(["Weekdays 07:30"])
-  nv031w3[/"Today's events"/]
+  nv031w3["Today's events"]
   ncxgb2w["Lay out the day"]
   n1hk3io9{"Anything on?"}
-  n17rmdxw[/"Post the agenda"/]
+  n17rmdxw["Post the agenda"]
   n1odn3lu["Clear day"]
   njkue0y --> nv031w3
   nv031w3 --> ncxgb2w
@@ -93,24 +91,25 @@ flowchart LR
 
 Copies contacts changed since the last run from the CRM to the email platform, page by page, and only moves its bookmark forward when a run finishes.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, CRM, Email |
-| Nodes | 8 |
-| Calls | `error-handler` |
-| Files | [`contact-sync.json`](contact-sync.json) · [`contact-sync.workflow.ts`](contact-sync.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/hubspot.svg" width="16" height="16" alt=""> HubSpot &nbsp;·&nbsp; <img src="../../assets/platforms/mailchimp.svg" width="16" height="16" alt=""> Mailchimp
+- **Nodes:** 11
+- **Calls:** `error-handler`
+- **Files:** [`contact-sync.json`](contact-sync.json) · [`contact-sync.workflow.ts`](contact-sync.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1cdh6b3(["Every 15 minutes"])
-  n1a7rdoo[/"Read the bookmark"/]
+  n1a7rdoo["Read the bookmark"]
   nb1oy6n["Start from"]
   nxysr52[/"Changed contacts"/]
   n15spuy["Shape for the list"]
   n1jg6qaq{"Anything changed?"}
   n1gxbjs8[/"Upsert to the list"/]
-  n9xotyl[/"Move the bookmark"/]
+  n9xotyl["Move the bookmark"]
+  n15666cu{"Had a bookmark?"}
+  n1s5uh62["Start the bookmark"]
+  nxltlio["Bookmark moved"]
   n1cdh6b3 --> n1a7rdoo
   n1a7rdoo --> nb1oy6n
   nb1oy6n --> nxysr52
@@ -118,6 +117,9 @@ flowchart LR
   n15spuy --> n1jg6qaq
   n1jg6qaq -->|yes| n1gxbjs8
   n1gxbjs8 --> n9xotyl
+  n9xotyl --> n15666cu
+  n15666cu -->|yes| nxltlio
+  n15666cu -->|no| n1s5uh62
   n1jg6qaq -->|no| n9xotyl
 ```
 
@@ -136,21 +138,19 @@ flowchart LR
 
 Warns the owner of each contract 60, 30 and 7 days before it ends, so renewals are a decision and never an accident.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, Email |
-| Nodes | 5 |
-| Calls | `error-handler` |
-| Files | [`contract-expiry.json`](contract-expiry.json) · [`contract-expiry.workflow.ts`](contract-expiry.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 5
+- **Calls:** `error-handler`
+- **Files:** [`contract-expiry.json`](contract-expiry.json) · [`contract-expiry.workflow.ts`](contract-expiry.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1pl3cmg(["Monday 09:00"])
-  n9kigby[/"Active contracts"/]
+  n9kigby["Active contracts"]
   nthq0tv["Which warning is due?"]
-  n1m8c29[/"Warn the owner"/]
-  n1il5c79[/"Record the warning"/]
+  n1m8c29["Warn the owner"]
+  n1il5c79["Record the warning"]
   n1pl3cmg --> n9kigby
   n9kigby --> nthq0tv
   nthq0tv --> n1m8c29

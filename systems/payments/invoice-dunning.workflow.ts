@@ -9,14 +9,14 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // _0900Daily                         scheduleTrigger
-// OpenInvoices                       httpRequest                [alwaysOutput] [retry]
+// OpenInvoices                       supabase                   [creds] [alwaysOutput] [retry]
 // WhichStepIsDue                     code
 // StillAReminder                     if
-// SendTheReminder                    httpRequest                [retry]
-// RecordTheStep                      httpRequest                [retry]
+// SendTheReminder                    sendGrid                   [creds] [retry]
+// RecordTheStep                      supabase                   [creds] [retry]
 // EscalationMessage                  code
 // HandToAPerson                      executeWorkflow
-// MarkEscalated                      httpRequest                [retry]
+// MarkEscalated                      supabase                   [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -59,8 +59,7 @@ export class PaymentsOverdueRemindersWorkflow {
         content: `## Payments · Overdue reminders
 Each morning, reminds customers with overdue invoices at 3, 7 and 14 days, then hands the invoice to a person at 21.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** Supabase, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/payments\``,
     };
 
@@ -85,35 +84,28 @@ Each morning, reminds customers with overdue invoices at 3, 7 and 14 days, then 
     @node({
         id: 'a3fea65c-604e-49da-af30-668ab48ec8bb',
         name: 'Open invoices',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     OpenInvoices = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/invoices',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'invoices',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'status',
-                    value: "={{ 'eq.open' }}",
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'open' }}",
                 },
             ],
         },
@@ -171,72 +163,80 @@ return $input.all().map((i) => i.json).filter((inv) => inv.due_date && inv.email
     @node({
         id: 'd1e2847d-7e25-4685-a26f-abc67b7d819d',
         name: 'Send the reminder',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
         position: [1040, 90],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SendTheReminder = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: '={{ $json.email }}',
+        dynamicTemplate: true,
+        templateId: "={{ 'd-overdue-' + $json.step }}",
+        dynamicTemplateFields: {
+            fields: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
+                    key: 'number',
+                    value: '={{ $json.number }}',
+                },
+                {
+                    key: 'amount',
+                    value: '={{ $json.amount }}',
+                },
+                {
+                    key: 'pay_url',
+                    value: '={{ $json.pay_url }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $json.email, subject: 'Invoice ' + $json.number + ' is ' + $json.overdue + ' days overdue', template: 'overdue-' + $json.step, data: { number: $json.number, amount: $json.amount, pay_url: $json.pay_url } }) }}",
+        additionalFields: {},
     };
 
     @node({
         id: '28d0640a-b3f0-4b68-a581-6844dca138a2',
         name: 'Record the step',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1300, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     RecordTheStep = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/invoices',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'invoices',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Which step is due?').item.json.id }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $('Which step is due?').item.json.id }}",
+                    fieldId: 'last_reminder_step',
+                    fieldValue: "={{ $('Which step is due?').item.json.step }}",
+                },
+                {
+                    fieldId: 'last_reminder_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ last_reminder_step: $('Which step is due?').item.json.step, last_reminder_at: $now.toISO() }) }}",
     };
 
     @node({
@@ -269,40 +269,42 @@ return $input.all().map((i) => i.json).filter((inv) => inv.due_date && inv.email
     @node({
         id: '1bc9658f-4841-4f01-aa08-6e03d91749d1',
         name: 'Mark escalated',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1560, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkEscalated = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/invoices',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'invoices',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Escalation message').item.json.id }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $('Escalation message').item.json.id }}",
+                    fieldId: 'last_reminder_step',
+                    fieldValue: '={{ 21 }}',
+                },
+                {
+                    fieldId: 'status',
+                    fieldValue: "={{ 'escalated' }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ last_reminder_step: 21, status: 'escalated' }) }}",
     };
 
     // =====================================================================

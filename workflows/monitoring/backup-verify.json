@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Monitoring · Backup verification\nChecks every morning that last night's backup exists, is recent and is not suspiciously small. A backup nobody checks is a hope, not a backup.\n\n**Platforms:** none, this is logic only\n**Settings:** BACKUP_API_KEY, BACKUP_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/monitoring`"
+        "content": "## Monitoring · Backup verification\nChecks every morning that last night's backup exists, is recent and is not suspiciously small. A backup nobody checks is a hope, not a backup.\n\n**Platforms:** Supabase\n**Settings:** BACKUP_API_KEY, BACKUP_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/monitoring`"
       }
     },
     {
@@ -86,31 +86,44 @@
         180
       ],
       "name": "Record the check",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/backup_checks",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "backup_checks",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "ok",
+              "fieldValue": "={{ $json.ok }}"
+            },
+            {
+              "fieldId": "problems",
+              "fieldValue": "={{ $json.problems }}"
+            },
+            {
+              "fieldId": "size_mb",
+              "fieldValue": "={{ $json.size_mb }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ ok: $json.ok, problems: $json.problems, size_mb: $json.size_mb, at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "5f142642-a0b0-4e32-ab76-cec30b3474b5",

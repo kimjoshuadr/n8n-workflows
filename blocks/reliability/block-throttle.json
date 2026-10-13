@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Block · Limit actions per key per hour\nAnswers whether a key (a user, an IP, a customer) is still under its hourly limit, and counts the attempt.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
+        "content": "## Block · Limit actions per key per hour\nAnswers whether a key (a user, an IP, a customer) is still under its hourly limit, and counts the attempt.\n\n**Platforms:** Supabase\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
       }
     },
     {
@@ -49,29 +49,21 @@
         90
       ],
       "name": "Read the count",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/throttle",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "throttle",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "bucket",
-              "value": "={{ 'eq.' + $json.bucket }}"
+              "keyName": "bucket",
+              "condition": "eq",
+              "keyValue": "={{ $json.bucket }}"
             }
           ]
         }
@@ -79,7 +71,13 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "476bcae2-c494-44ba-ae25-066f7ad5f163",
@@ -105,20 +103,15 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/throttle",
-        "options": {
-          "timeout": 15000
-        },
+        "url": "={{ 'https://acme.supabase.co/rest/v1/throttle' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            },
-            {
               "name": "Prefer",
-              "value": "resolution=merge-duplicates"
+              "value": "={{ 'resolution=merge-duplicates,return=representation' }}"
             }
           ]
         },
@@ -133,11 +126,20 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ bucket: $json.bucket, count: $json.count }) }}"
+        "jsonBody": "={{ JSON.stringify({ bucket: $json.bucket, count: $json.count }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "7c828451-7e60-4ebc-ae4f-59b487b09bde",

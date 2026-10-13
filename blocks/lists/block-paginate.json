@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Block · Read every page of an API\nFollows a cursor until the API says there is no more, with a hard stop so a broken API cannot loop forever.\n\n**Platforms:** none, this is logic only\n**Settings:** CRM_API_KEY, CRM_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/lists`"
+        "content": "## Block · Read every page of an API\nFollows a cursor until the API says there is no more, with a hard stop so a broken API cannot loop forever.\n\n**Platforms:** HubSpot\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/lists`"
       }
     },
     {
@@ -68,19 +68,9 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.CRM_BASE_URL }}/contacts",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
-            }
-          ]
-        },
+        "url": "={{ 'https://api.hubapi.com/crm/v3/objects/contacts' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -93,11 +83,20 @@
               "value": "={{ '100' }}"
             }
           ]
+        },
+        "options": {
+          "timeout": 15000
         }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
     },
     {
       "id": "416d8ef4-a10f-43db-ac2c-55621d161a9c",
@@ -109,7 +108,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const res = $input.first().json;\nconst page = Number($(\"Start\").first().json.page) + $runIndex + 1;\nreturn [{ json: { items: res.results ?? [], cursor: res.next ?? \"\", page, more: !!res.next && page < 50 } }];"
+        "jsCode": "const res = $input.first().json;\nconst page = Number($(\"Start\").first().json.page) + $runIndex + 1;\nreturn [{ json: { items: res.results ?? [], cursor: res.paging?.next?.after ?? \"\", page, more: !!res.paging?.next?.after && page < 50 } }];"
       }
     },
     {

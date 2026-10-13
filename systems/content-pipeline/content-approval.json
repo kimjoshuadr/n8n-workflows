@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Content pipeline · Approve and publish\nReceives a person's decision on a draft. Approved drafts are published to the CMS once and queued for sharing; rejected ones go back with the reason.\n\n**Platforms:** none, this is logic only\n**Settings:** CMS_API_KEY, CMS_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/content-pipeline`"
+        "content": "## Content pipeline · Approve and publish\nReceives a person's decision on a draft. Approved drafts are published to the CMS once and queued for sharing; rejected ones go back with the reason.\n\n**Platforms:** Supabase, WordPress\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/content-pipeline`"
       }
     },
     {
@@ -104,29 +104,21 @@
         270
       ],
       "name": "Load the draft",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/content_drafts",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "content_drafts",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "id",
-              "value": "={{ 'eq.' + $json.draft_id }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.draft_id }}"
             }
           ]
         }
@@ -134,7 +126,13 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "6f0ef800-0409-458e-a682-49a6271d6100",
@@ -222,36 +220,32 @@
       }
     },
     {
-      "id": "da3bfa64-8127-442a-af58-b4f958504c20",
+      "id": "f79c114b-edea-40aa-a9f9-8cafe84c0785",
       "position": [
         1560,
         90
       ],
-      "name": "Publish to CMS",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "Publish to WordPress",
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CMS_BASE_URL }}/posts",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CMS_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ title: $json.title, content: $json.body, status: 'publish', meta: { keywords: $json.keywords } }) }}"
+        "resource": "post",
+        "operation": "create",
+        "title": "={{ $json.title }}",
+        "additionalFields": {
+          "content": "={{ $json.body }}",
+          "status": "={{ 'publish' }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "wordpressApi": {
+          "id": "__CRED:wordpress__",
+          "name": "WordPress"
+        }
+      }
     },
     {
       "id": "6bffc76d-2b27-4279-a5c8-83e49d6db969",
@@ -260,39 +254,58 @@
         90
       ],
       "name": "Mark published",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/content_drafts",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "content_drafts",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Read the decision').first().json.draft_id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "id",
-              "value": "={{ 'eq.' + $('Read the decision').first().json.draft_id }}"
+              "fieldId": "status",
+              "fieldValue": "={{ 'published' }}"
+            },
+            {
+              "fieldId": "post_id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "approved_by",
+              "fieldValue": "={{ $('Read the decision').first().json.by }}"
+            },
+            {
+              "fieldId": "published_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "shared",
+              "fieldValue": "={{ false }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'published', post_id: $json.id, approved_by: $('Read the decision').first().json.by, published_at: $now.toISO(), shared: false }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "1b5bcd38-0d80-4961-aefa-49f7e6b1e9ad",
@@ -318,39 +331,50 @@
         270
       ],
       "name": "Mark rejected",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/content_drafts",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "content_drafts",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "id",
-              "value": "={{ 'eq.' + $json.id }}"
+              "fieldId": "status",
+              "fieldValue": "={{ 'rejected' }}"
+            },
+            {
+              "fieldId": "rejected_by",
+              "fieldValue": "={{ $('Read the decision').first().json.by }}"
+            },
+            {
+              "fieldId": "reason",
+              "fieldValue": "={{ $('Read the decision').first().json.reason }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'rejected', rejected_by: $('Read the decision').first().json.by, reason: $('Read the decision').first().json.reason }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "d968cf3e-5801-455c-aa4b-d6a5a7566ef7",
@@ -444,7 +468,7 @@
       "main": [
         [
           {
-            "node": "Publish to CMS",
+            "node": "Publish to WordPress",
             "type": "main",
             "index": 0
           }
@@ -458,7 +482,7 @@
         ]
       ]
     },
-    "Publish to CMS": {
+    "Publish to WordPress": {
       "main": [
         [
           {

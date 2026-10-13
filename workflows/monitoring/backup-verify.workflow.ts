@@ -11,7 +11,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // _0700Daily                         scheduleTrigger
 // LatestBackup                       httpRequest                [onError→regular] [retry]
 // JudgeIt                            code
-// RecordTheCheck                     httpRequest                [onError→regular] [retry]
+// RecordTheCheck                     supabase                   [onError→regular] [creds] [retry]
 // Healthy                            if
 // ProblemMessage                     code
 // Alert                              executeWorkflow
@@ -57,8 +57,8 @@ export class MonitoringBackupVerificationWorkflow {
         content: `## Monitoring · Backup verification
 Checks every morning that last night's backup exists, is recent and is not suspiciously small. A backup nobody checks is a hope, not a backup.
 
-**Platforms:** none, this is logic only
-**Settings:** BACKUP_API_KEY, BACKUP_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase
+**Settings:** BACKUP_API_KEY, BACKUP_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/monitoring\``,
     };
 
@@ -132,33 +132,40 @@ return [{ json: { ok: problems.length === 0, problems, size_mb: b?.size_bytes ? 
     @node({
         id: '0041fe8d-71ce-41b5-a6b5-d8191398cc3f',
         name: 'Record the check',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [780, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     RecordTheCheck = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/backup_checks',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'backup_checks',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'ok',
+                    fieldValue: '={{ $json.ok }}',
+                },
+                {
+                    fieldId: 'problems',
+                    fieldValue: '={{ $json.problems }}',
+                },
+                {
+                    fieldId: 'size_mb',
+                    fieldValue: '={{ $json.size_mb }}',
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            '={{ JSON.stringify({ ok: $json.ok, problems: $json.problems, size_mb: $json.size_mb, at: $now.toISO() }) }}',
     };
 
     @node({

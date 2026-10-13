@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Feedback · Route survey scores\nSends each survey score where it is useful: unhappy customers to a person today, happy ones to a review request, and every score to the record.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
+        "content": "## Feedback · Route survey scores\nSends each survey score where it is useful: unhappy customers to a person today, happy ones to a review request, and every score to the record.\n\n**Platforms:** Supabase, Zendesk, SendGrid\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
       }
     },
     {
@@ -53,30 +53,47 @@
         270
       ],
       "name": "Record it",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/nps_responses",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "nps_responses",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "email",
+              "fieldValue": "={{ $json.email }}"
+            },
+            {
+              "fieldId": "score",
+              "fieldValue": "={{ $json.score }}"
+            },
+            {
+              "fieldId": "comment",
+              "fieldValue": "={{ $json.comment }}"
+            },
+            {
+              "fieldId": "group",
+              "fieldValue": "={{ $json.group }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: $json.email, score: $json.score, comment: $json.comment, group: $json.group, at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "d50b1c61-e2bd-472a-a71a-00c0ab501795",
@@ -154,30 +171,28 @@
         90
       ],
       "name": "Open a ticket",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.zendesk",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.HELPDESK_BASE_URL }}/tickets",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.HELPDESK_API_KEY }}"
-            }
+        "resource": "ticket",
+        "operation": "create",
+        "description": "={{ $('Read the score').first().json.email + ' said: ' + ($('Read the score').first().json.comment || '(no comment)') }}",
+        "additionalFields": {
+          "subject": "={{ 'Unhappy customer (score ' + $('Read the score').first().json.score + ')' }}",
+          "tags": [
+            "nps-detractor"
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ subject: 'Unhappy customer (score ' + $('Read the score').first().json.score + ')', from: $('Read the score').first().json.email, body: $('Read the score').first().json.comment, priority: 'high', team: 'success' }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "zendeskApi": {
+          "id": "__CRED:zendesk__",
+          "name": "Zendesk"
+        }
+      }
     },
     {
       "id": "af2e9c76-4151-4385-ab0a-1504598d4940",
@@ -217,30 +232,30 @@
         270
       ],
       "name": "Invite a public review",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ $('Read the score').first().json.email }}",
+        "dynamicTemplate": true,
+        "templateId": "={{ 'd-review-invite' }}",
+        "dynamicTemplateFields": {
+          "fields": []
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: $('Read the score').first().json.email, subject: 'Thank you. Would you share that?', template: 'review-invite' }) }}"
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "f5ff5b9f-7408-4f49-a854-41a69502410a",

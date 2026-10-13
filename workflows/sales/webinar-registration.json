@@ -13,14 +13,14 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Events · Webinar registration and reminders\nRegisters someone for a webinar, sends the calendar invite, and reminds them a day and an hour before. Full sessions get a waitlist reply.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
+        "content": "## Events · Webinar registration and reminders\nRegisters someone for a webinar, sends the calendar invite, and reminds them a day and an hour before. Full sessions get a waitlist reply.\n\n**Platforms:** Supabase, SendGrid\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
       }
     },
     {
       "id": "84fdd34d-0acb-4d79-afc1-890f3c149c2b",
       "position": [
         0,
-        180
+        270
       ],
       "name": "Registration",
       "type": "n8n-nodes-base.webhook",
@@ -37,7 +37,7 @@
       "id": "a4de99b5-a706-4a2f-a431-d8138de2aa91",
       "position": [
         260,
-        180
+        270
       ],
       "name": "Read the form",
       "type": "n8n-nodes-base.code",
@@ -50,7 +50,7 @@
       "id": "6ac60d43-855b-4256-ab86-5cb748269af3",
       "position": [
         520,
-        180
+        270
       ],
       "name": "Valid?",
       "type": "n8n-nodes-base.if",
@@ -84,7 +84,7 @@
       "id": "969476db-290f-4136-add8-c2187d38051d",
       "position": [
         780,
-        90
+        180
       ],
       "name": "Invalid",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -101,32 +101,24 @@
       "id": "f5a5fd9d-6142-41d4-afdc-9431895facb9",
       "position": [
         780,
-        270
+        360
       ],
       "name": "Load the webinar",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/webinars",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "webinars",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "id",
-              "value": "={{ 'eq.' + $json.webinar_id }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.webinar_id }}"
             }
           ]
         }
@@ -134,13 +126,19 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "52b5b9dd-0c38-4456-a42a-11d8c20516df",
       "position": [
         1040,
-        180
+        270
       ],
       "name": "Seats left?",
       "type": "n8n-nodes-base.if",
@@ -174,51 +172,60 @@
       "id": "5a5f949e-b610-4c2b-aafc-11893dadaadc",
       "position": [
         1300,
-        90
+        180
       ],
       "name": "Register",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/registrations",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "registrations",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "key",
+              "fieldValue": "={{ $('Read the form').first().json.webinar_id + ':' + $('Read the form').first().json.email }}"
+            },
+            {
+              "fieldId": "webinar_id",
+              "fieldValue": "={{ $('Read the form').first().json.webinar_id }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Read the form').first().json.email }}"
+            },
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('Read the form').first().json.name }}"
+            },
+            {
+              "fieldId": "reminded_day",
+              "fieldValue": "={{ false }}"
+            },
+            {
+              "fieldId": "reminded_hour",
+              "fieldValue": "={{ false }}"
             }
           ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "on_conflict",
-              "value": "={{ 'key' }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ key: $('Read the form').first().json.webinar_id + ':' + $('Read the form').first().json.email, webinar_id: $('Read the form').first().json.webinar_id, email: $('Read the form').first().json.email, name: $('Read the form').first().json.name, reminded_day: false, reminded_hour: false }) }}"
+        }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
-      "id": "ae900ee8-782e-41fd-a01a-868339b997fb",
+      "id": "b6e25c6d-ac45-4ebe-a974-d7bff37afbcf",
       "position": [
         1560,
         90
       ],
-      "name": "Newly registered?",
+      "name": "Registered already?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "parameters": {
@@ -231,8 +238,8 @@
           },
           "conditions": [
             {
-              "id": "0f192728-634d-47cc-a52d-0f5eaa7461a2",
-              "leftValue": "={{ !!$json.id }}",
+              "id": "9f291673-cc31-41db-aa79-28029678fc00",
+              "leftValue": "={{ /duplicate key|23505/.test(String($json.error ?? '')) }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -247,83 +254,116 @@
       }
     },
     {
-      "id": "39d1899e-d1cd-4cf0-a1ba-c4c5c3b8a480",
+      "id": "4906bd42-13fa-4320-af48-dfa69a248875",
       "position": [
         1820,
         90
       ],
-      "name": "Count the seat",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "Try again",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/webinars",
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'Registration is unavailable for a moment. Please try again.' }) }}",
         "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+          "responseCode": 503
+        }
+      }
+    },
+    {
+      "id": "39d1899e-d1cd-4cf0-a1ba-c4c5c3b8a480",
+      "position": [
+        1560,
+        270
+      ],
+      "name": "Count the seat",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "webinars",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Load the webinar').first().json.id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "id",
-              "value": "={{ 'eq.' + $('Load the webinar').first().json.id }}"
+              "fieldId": "registered",
+              "fieldValue": "={{ ($('Load the webinar').first().json.registered ?? 0) + 1 }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ registered: ($('Load the webinar').first().json.registered ?? 0) + 1 }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "5ddd5294-a794-4b65-ab8d-b5b27a9c8270",
       "position": [
-        2080,
-        180
+        1820,
+        270
       ],
       "name": "Send the invite",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ $('Read the form').first().json.email }}",
+        "dynamicTemplate": true,
+        "templateId": "={{ 'd-webinar-confirmed' }}",
+        "dynamicTemplateFields": {
+          "fields": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+              "key": "title",
+              "value": "={{ $('Load the webinar').first().json.title }}"
+            },
+            {
+              "key": "starts_at",
+              "value": "={{ $('Load the webinar').first().json.starts_at }}"
+            },
+            {
+              "key": "join_url",
+              "value": "={{ $('Load the webinar').first().json.join_url }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: $('Read the form').first().json.email, subject: 'You are in: ' + $('Load the webinar').first().json.title, template: 'webinar-confirmed', data: { starts_at: $('Load the webinar').first().json.starts_at, join_url: $('Load the webinar').first().json.join_url }, calendar_invite: true }) }}"
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "4ff542d0-6946-47aa-a546-25dd5a54921d",
       "position": [
-        2340,
-        180
+        2080,
+        270
       ],
       "name": "Confirmed",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -340,7 +380,7 @@
       "id": "e75c8f15-5b89-4a39-aa36-d441b6d50f68",
       "position": [
         1820,
-        270
+        450
       ],
       "name": "Already registered",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -357,39 +397,48 @@
       "id": "be848488-61d4-47e6-ab84-78065c63d285",
       "position": [
         1300,
-        270
+        360
       ],
       "name": "Add to waitlist",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/waitlist",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "waitlist",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "webinar_id",
+              "fieldValue": "={{ $('Read the form').first().json.webinar_id }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Read the form').first().json.email }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ webinar_id: $('Read the form').first().json.webinar_id, email: $('Read the form').first().json.email, at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "f0100853-d664-47d8-ad8a-fa1dfa6be095",
       "position": [
         1560,
-        270
+        450
       ],
       "name": "Waitlisted",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -477,17 +526,6 @@
       "main": [
         [
           {
-            "node": "Newly registered?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Newly registered?": {
-      "main": [
-        [
-          {
             "node": "Count the seat",
             "type": "main",
             "index": 0
@@ -495,7 +533,7 @@
         ],
         [
           {
-            "node": "Already registered",
+            "node": "Registered already?",
             "type": "main",
             "index": 0
           }
@@ -529,6 +567,24 @@
         [
           {
             "node": "Waitlisted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registered already?": {
+      "main": [
+        [
+          {
+            "node": "Already registered",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Try again",
             "type": "main",
             "index": 0
           }

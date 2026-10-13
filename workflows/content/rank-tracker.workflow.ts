@@ -9,12 +9,12 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // _0500Daily                         scheduleTrigger
-// TrackedKeywords                    httpRequest                [alwaysOutput] [retry]
-// SearchForIt                        httpRequest                [onError→regular] [retry]
+// TrackedKeywords                    supabase                   [creds] [alwaysOutput] [retry]
+// SearchForIt                        httpRequest                [onError→regular] [creds] [retry]
 // FindOurPosition                    code
 // GotAResult                         if
-// RecordToday                        httpRequest                [retry]
-// UpdateTheKeyword                   httpRequest                [retry]
+// RecordToday                        supabase                   [creds] [retry]
+// UpdateTheKeyword                   supabase                   [creds] [retry]
 // GatherTheDrops                     code
 // Alert                              executeWorkflow
 // SearchFailedKeepYesterday          noOp
@@ -61,8 +61,7 @@ export class SeoKeywordRankTrackerWorkflow {
         content: `## SEO · Keyword rank tracker
 Records where the site ranks for each tracked keyword every day, and alerts when one falls five places or drops off the first page.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, SEARCH_API_KEY, SEARCH_BASE_URL
+**Platforms:** Supabase, SerpAPI
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/content\``,
     };
 
@@ -87,29 +86,20 @@ Records where the site ranks for each tracked keyword every day, and alerts when
     @node({
         id: '93568259-4da4-4912-aec0-7288e35a5379',
         name: 'Tracked keywords',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     TrackedKeywords = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/keywords',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'keywords',
+        returnAll: true,
     };
 
     @node({
@@ -118,29 +108,33 @@ Records where the site ranks for each tracked keyword every day, and alerts when
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [520, 180],
+        credentials: { serpApi: { id: '__CRED:serpapi__', name: 'SerpAPI' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SearchForIt = {
-        method: 'POST',
-        url: '={{ $env.SEARCH_BASE_URL }}/serp',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
+        method: 'GET',
+        url: "={{ 'https://serpapi.com/search.json' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'serpApi',
+        sendQuery: true,
+        queryParameters: {
             parameters: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.SEARCH_API_KEY }}",
+                    name: 'q',
+                    value: '={{ $json.keyword }}',
+                },
+                {
+                    name: 'num',
+                    value: "={{ '10' }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ query: $json.keyword, num: 30 }) }}',
+        options: {
+            timeout: 15000,
+        },
     };
 
     @node({
@@ -155,9 +149,9 @@ Records where the site ranks for each tracked keyword every day, and alerts when
 return $input.all().map((item, i) => {
   const k = kws[i]?.json;
   if (!k?.keyword) return null;
-  const results = item.json.results;
+  const results = item.json.organic_results;
   if (!Array.isArray(results)) return { json: { ...k, position: null, checked: false } };
-  const idx = results.findIndex((r) => String(r.url ?? "").includes(k.domain));
+  const idx = results.findIndex((r) => String(r.link ?? "").includes(k.domain));
   const position = idx === -1 ? null : idx + 1;
   const before = k.last_position ?? null;
   const fell = before !== null && (position === null || position - before >= 5);
@@ -201,71 +195,76 @@ return $input.all().map((item, i) => {
     @node({
         id: '7fb769f1-eae5-43e7-ad02-ccf615078f6b',
         name: 'Record today',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1300, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     RecordToday = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/rank_history',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'rank_history',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'keyword',
+                    fieldValue: '={{ $json.keyword }}',
+                },
+                {
+                    fieldId: 'position',
+                    fieldValue: '={{ $json.position }}',
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ keyword: $json.keyword, position: $json.position, at: $now.toISO() }) }}',
     };
 
     @node({
         id: 'e47b9f1c-9133-4c51-aef5-2819eb56261b',
         name: 'Update the keyword',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1560, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     UpdateTheKeyword = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/keywords',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'keywords',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'keyword',
+                    condition: 'eq',
+                    keyValue: "={{ $('Got a result?').item.json.keyword }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'keyword',
-                    value: "={{ 'eq.' + $('Got a result?').item.json.keyword }}",
+                    fieldId: 'last_position',
+                    fieldValue: "={{ $('Got a result?').item.json.position }}",
+                },
+                {
+                    fieldId: 'checked_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ last_position: $('Got a result?').item.json.position, checked_at: $now.toISO() }) }}",
     };
 
     @node({

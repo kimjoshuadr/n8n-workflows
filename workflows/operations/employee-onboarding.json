@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## People · New hire onboarding\nWhen someone is hired, creates their checklist, books their first-week meetings, tells the people who need to act, and sends the welcome email on the right morning.\n\n**Platforms:** none, this is logic only\n**Settings:** CALENDAR_API_KEY, CALENDAR_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
+        "content": "## People · New hire onboarding\nWhen someone is hired, creates their checklist, books their first-week meetings, tells the people who need to act, and sends the welcome email on the right morning.\n\n**Platforms:** BambooHR, Supabase, Google Calendar, SendGrid\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
       }
     },
     {
@@ -34,22 +34,68 @@
       "webhookId": "44ca58c7-e7c5-4bbd-a832-5923bf9dfcda"
     },
     {
-      "id": "1a62c906-18bd-447c-ac2f-9912c625a41d",
+      "id": "1df97c2a-f2ba-4be0-a209-7820c30f4841",
       "position": [
         260,
+        180
+      ],
+      "name": "Fetch the employee",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.bamboohr.com/api/gateway.php/acme/v1/employees/' + $json.body.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "bambooHrApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "={{ 'application/json' }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "={{ 'firstName,lastName,workEmail,jobTitle,supervisorEmail,hireDate,location' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "bambooHrApi": {
+          "id": "__CRED:bamboohr__",
+          "name": "BambooHR"
+        }
+      }
+    },
+    {
+      "id": "1a62c906-18bd-447c-ac2f-9912c625a41d",
+      "position": [
+        520,
         180
       ],
       "name": "Read the hire",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const h = $input.first().json.body ?? {};\nif (!h.email || !h.start_date) throw new Error(\"A hire needs an email and a start date\");\nreturn [{ json: { employee_id: String(h.id ?? h.email), email: String(h.email).toLowerCase(), name: h.name ?? \"New hire\", role: h.role ?? \"\", manager: h.manager_email ?? null, start_date: h.start_date, remote: h.remote === true, scope: \"hire\", key: String(h.id ?? h.email) } }];"
+        "jsCode": "const h = $input.first().json ?? {};\nif (!h.workEmail || !h.hireDate) throw new Error(\"A hire needs a work email and a hire date in BambooHR\");\nreturn [{ json: { employee_id: String(h.id), email: String(h.workEmail).toLowerCase(), name: [h.firstName, h.lastName].filter(Boolean).join(\" \") || \"New hire\", role: h.jobTitle ?? \"\", manager: h.supervisorEmail ?? null, start_date: h.hireDate, remote: /remote/i.test(h.location ?? \"\"), scope: \"hire\", key: String(h.id) } }];"
       }
     },
     {
       "id": "65548fa8-317c-4ea7-a95f-d6b42eaa3634",
       "position": [
-        520,
+        780,
         180
       ],
       "name": "Seen before?",
@@ -67,7 +113,7 @@
     {
       "id": "7170f6de-c6ea-4cea-a13f-bc9d478fd1f7",
       "position": [
-        780,
+        1040,
         180
       ],
       "name": "New hire?",
@@ -101,7 +147,7 @@
     {
       "id": "40b8a0dc-f966-4500-a35d-ffd255c93d5c",
       "position": [
-        1040,
+        1300,
         90
       ],
       "name": "Build the checklist",
@@ -114,106 +160,142 @@
     {
       "id": "00c9cf76-60fb-4b61-a133-14df519df8c2",
       "position": [
-        1300,
+        1560,
         180
       ],
       "name": "Save the task",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/onboarding_tasks",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "onboarding_tasks",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "owner",
+              "fieldValue": "={{ $json.owner }}"
+            },
+            {
+              "fieldId": "task",
+              "fieldValue": "={{ $json.task }}"
+            },
+            {
+              "fieldId": "due",
+              "fieldValue": "={{ $json.due }}"
+            },
+            {
+              "fieldId": "employee_id",
+              "fieldValue": "={{ $json.employee_id }}"
+            },
+            {
+              "fieldId": "employee",
+              "fieldValue": "={{ $json.employee }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "dcae3ec7-e95d-47e4-adbc-f00f76c29366",
       "position": [
-        1560,
+        1820,
         180
       ],
       "name": "Book first-day welcome",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CALENDAR_BASE_URL }}/bookings",
-        "options": {
-          "timeout": 15000
+        "resource": "event",
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "kim@example.com"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CALENDAR_API_KEY }}"
-            }
+        "start": "={{ $('New hire?').first().json.start_date + 'T09:30:00' }}",
+        "end": "={{ $('New hire?').first().json.start_date + 'T10:00:00' }}",
+        "additionalFields": {
+          "summary": "={{ 'Welcome, ' + $('New hire?').first().json.name }}",
+          "attendees": [
+            "={{ [$('New hire?').first().json.email, $('New hire?').first().json.manager].filter(Boolean).join(',') }}"
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ title: 'Welcome, ' + $('New hire?').first().json.name, start: $('New hire?').first().json.start_date + 'T09:30:00', attendees: [$('New hire?').first().json.email, $('New hire?').first().json.manager].filter(Boolean) }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
       "executeOnce": true,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "__CRED:googleCalendar__",
+          "name": "Google Calendar"
+        }
+      }
     },
     {
       "id": "6de40182-e2bc-4e5e-a6a3-53f294f5ebf2",
       "position": [
-        1820,
+        2080,
         180
       ],
       "name": "Schedule the welcome email",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ $('New hire?').first().json.email }}",
+        "dynamicTemplate": true,
+        "templateId": "={{ 'd-welcome-new-hire' }}",
+        "dynamicTemplateFields": {
+          "fields": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+              "key": "name",
+              "value": "={{ $('New hire?').first().json.name }}"
+            },
+            {
+              "key": "role",
+              "value": "={{ $('New hire?').first().json.role }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: $('New hire?').first().json.email, subject: 'Welcome aboard, ' + $('New hire?').first().json.name, template: 'welcome-new-hire', send_at: $('New hire?').first().json.start_date + 'T08:00:00', data: { role: $('New hire?').first().json.role } }) }}"
+        "additionalFields": {
+          "sendAt": "={{ $('New hire?').first().json.start_date + 'T08:00:00' }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "executeOnce": true
+      "executeOnce": true,
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "272112a1-ed06-441c-a9d3-18023bfc6f3e",
       "position": [
-        2080,
+        2340,
         180
       ],
       "name": "Team message",
@@ -226,7 +308,7 @@
     {
       "id": "5bec1bc9-bc60-400c-af8f-490bf7c8691a",
       "position": [
-        2340,
+        2600,
         180
       ],
       "name": "Tell the team",
@@ -244,7 +326,7 @@
     {
       "id": "e7aa6956-3546-4538-a9d7-551909492b49",
       "position": [
-        1040,
+        1300,
         270
       ],
       "name": "Already set up",
@@ -255,6 +337,17 @@
   ],
   "connections": {
     "Hire confirmed": {
+      "main": [
+        [
+          {
+            "node": "Fetch the employee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch the employee": {
       "main": [
         [
           {

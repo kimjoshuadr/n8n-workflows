@@ -6,42 +6,35 @@
 
 **What this does about it.** Each order is recorded once, stock is taken, the customer is kept informed and abandoned carts are followed up.
 
-3 workflows, 12 tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.
+3 workflows, 11 tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.
 
 ## Order ops · New order
 
 Takes a new order from the store, records it once, takes its items out of stock, confirms to the customer, and warns the team about anything running low.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Shop, Datastore, Email, Chat |
-| Nodes | 17 |
-| Calls | `idempotency-guard`, `notify`, `dead-letter`, `error-handler` |
-| Files | [`order-intake.json`](order-intake.json) · [`order-intake.workflow.ts`](order-intake.workflow.ts) |
+- **Starts from:** Shopify event
+- **Platforms:** <img src="../../assets/platforms/shopify.svg" width="16" height="16" alt=""> Shopify &nbsp;·&nbsp; <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 14
+- **Calls:** `idempotency-guard`, `notify`, `dead-letter`, `error-handler`
+- **Files:** [`order-intake.json`](order-intake.json) · [`order-intake.workflow.ts`](order-intake.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1ypkhn3(["Order created"])
-  n1uof1h8{"From the store?"}
-  n1e1tmj8(["Unauthorised"])
-  n1qknxu0(["Received"])
   ns0tdo["Read the order"]
   n1ja4syq[["Seen before?"]]
   n1b5lu3c{"New order?"}
   n15km3ql["Already handled"]
-  nqxt49v[/"Save the order"/]
+  nqxt49v["Save the order"]
   n143fbb7["One item per line"]
   n1g5ya8i[/"Take from stock"/]
   nb8df3h["What is running low?"]
   nqldyma{"Anything low?"}
   ndsvqkf[["Warn the team"]]
-  n1uy6t4s[/"Confirm to customer"/]
+  n1uy6t4s["Confirm to customer"]
   ntc51d3["Stock failure payload"]
   naa7b4d[["Park for replay"]]
-  n1ypkhn3 --> n1uof1h8
-  n1uof1h8 -->|yes| n1qknxu0
-  n1qknxu0 --> ns0tdo
+  n1ypkhn3 --> ns0tdo
   ns0tdo --> n1ja4syq
   n1ja4syq --> n1b5lu3c
   n1b5lu3c -->|yes| nqxt49v
@@ -50,7 +43,6 @@ flowchart LR
   n1g5ya8i --> nb8df3h
   nb8df3h --> nqldyma
   nqldyma --> ndsvqkf
-  n1uof1h8 -->|no| n1e1tmj8
   n1b5lu3c -->|no| n15km3ql
   nqxt49v --> n1uy6t4s
   n1g5ya8i -->|failed| ntc51d3
@@ -59,7 +51,7 @@ flowchart LR
 
 **How it runs**
 
-1. **The store reports an order.** The request must carry the shared secret. Anything else gets a 401 and goes no further.
+1. **Shopify reports an order.** The Shopify trigger checks the signature on every delivery, so nothing unsigned gets this far.
 2. **It is recorded once.** Stores resend webhooks when they are unsure. The order id is claimed first, so stock is never taken twice.
 3. **The customer hears straight away.** The confirmation does not wait for the stock work.
 4. **Each line comes out of stock.** One call per line item, retried three times.
@@ -71,30 +63,27 @@ flowchart LR
 - a new order is saved, confirmed and taken from stock
 - low stock warns the team
 - a resent order does not take stock twice
-- a request without the secret is refused
 - a stock outage parks the order
 
 ## Order ops · Shipping updates
 
 Turns a courier status into the right message for the customer, and tells a person when a parcel fails delivery.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Datastore, Email, Chat |
-| Nodes | 11 |
-| Calls | `notify`, `error-handler` |
-| Files | [`order-fulfilment.json`](order-fulfilment.json) · [`order-fulfilment.workflow.ts`](order-fulfilment.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 11
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`order-fulfilment.json`](order-fulfilment.json) · [`order-fulfilment.workflow.ts`](order-fulfilment.workflow.ts)
 
 ```mermaid
 flowchart LR
   nfvxc7c(["Shipment update"])
   nqxvd3v["Read the update"]
   n1l72954{"A status we act on?"}
-  njk85m7[/"Update the order"/]
+  njk85m7["Update the order"]
   nslv8du{"Changed?"}
   n1byek03{"Which status?"}
-  nsqmdqw[/"Email the customer"/]
+  nsqmdqw["Email the customer"]
   n61tzdj["Failed delivery message"]
   n1vkqv47[["Tell support"]]
   n1pcqira["Nothing to do"]
@@ -129,23 +118,21 @@ flowchart LR
 
 Every half hour, writes once to people who left a cart over an hour ago and have not ordered since.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, Email |
-| Nodes | 7 |
-| Calls | `error-handler` |
-| Files | [`cart-recovery.json`](cart-recovery.json) · [`cart-recovery.workflow.ts`](cart-recovery.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 7
+- **Calls:** `error-handler`
+- **Files:** [`cart-recovery.json`](cart-recovery.json) · [`cart-recovery.workflow.ts`](cart-recovery.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1d9t8q0(["Every 30 minutes"])
-  njdsbqc[/"Open carts"/]
+  njdsbqc["Open carts"]
   n1n8az33["Old enough, with an email"]
-  nqxmvr3[/"Ordered since?"/]
+  nqxmvr3["Ordered since?"]
   n1kbh4g0["Keep the ones who did not"]
-  n1uukhhu[/"Send the reminder"/]
-  n1absg40[/"Mark reminded"/]
+  n1uukhhu["Send the reminder"]
+  n1absg40["Mark reminded"]
   n1d9t8q0 --> njdsbqc
   njdsbqc --> n1n8az33
   n1n8az33 --> nqxmvr3

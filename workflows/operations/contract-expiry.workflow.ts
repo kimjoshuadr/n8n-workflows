@@ -9,10 +9,10 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Monday0900                         scheduleTrigger
-// ActiveContracts                    httpRequest                [alwaysOutput] [retry]
+// ActiveContracts                    supabase                   [creds] [alwaysOutput] [retry]
 // WhichWarningIsDue                  code
-// WarnTheOwner                       httpRequest                [retry]
-// RecordTheWarning                   httpRequest                [retry]
+// WarnTheOwner                       sendGrid                   [creds] [retry]
+// RecordTheWarning                   supabase                   [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -51,8 +51,7 @@ export class ContractsExpiryRemindersWorkflow {
         content: `## Contracts · Expiry reminders
 Warns the owner of each contract 60, 30 and 7 days before it ends, so renewals are a decision and never an accident.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** Supabase, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/operations\``,
     };
 
@@ -77,35 +76,28 @@ Warns the owner of each contract 60, 30 and 7 days before it ends, so renewals a
     @node({
         id: '88d0cbd0-8640-4b5c-a523-473a3b2ee1ef',
         name: 'Active contracts',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ActiveContracts = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/contracts',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'contracts',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'status',
-                    value: "={{ 'eq.active' }}",
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'active' }}",
                 },
             ],
         },
@@ -131,71 +123,80 @@ return $input.all().map((i) => i.json).filter((c) => c.ends_on && c.owner_email)
     @node({
         id: '275001f5-3bcb-47dd-a1c8-3bb2e7022143',
         name: 'Warn the owner',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
         position: [780, 90],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     WarnTheOwner = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: '={{ $json.owner_email }}',
+        dynamicTemplate: true,
+        templateId: "={{ 'd-contract-expiry' }}",
+        dynamicTemplateFields: {
+            fields: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
+                    key: 'name',
+                    value: '={{ $json.name }}',
+                },
+                {
+                    key: 'ends_on',
+                    value: '={{ $json.ends_on }}',
+                },
+                {
+                    key: 'auto_renews',
+                    value: '={{ $json.auto_renews === true }}',
+                },
+                {
+                    key: 'notice_days',
+                    value: '={{ $json.notice_days }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $json.owner_email, subject: $json.name + ' ends in ' + $json.days + ' days', template: 'contract-expiry', data: { name: $json.name, ends_on: $json.ends_on, auto_renews: $json.auto_renews === true, notice_days: $json.notice_days } }) }}",
+        additionalFields: {},
     };
 
     @node({
         id: '2ecddad7-4372-4f22-acd2-c41b5093bfbb',
         name: 'Record the warning',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [1040, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     RecordTheWarning = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/contracts',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'contracts',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Which warning is due?').item.json.id }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $('Which warning is due?').item.json.id }}",
+                    fieldId: 'last_warning',
+                    fieldValue: "={{ $('Which warning is due?').item.json.mark }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ last_warning: $('Which warning is due?').item.json.mark }) }}",
     };
 
     // =====================================================================

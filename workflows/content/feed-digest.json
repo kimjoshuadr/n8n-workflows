@@ -13,14 +13,14 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Content · Industry news digest\nEach Friday, reads the feeds you follow, drops what was already sent, and emails a short digest of what is new.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
+        "content": "## Content · Industry news digest\nEach Friday, reads the feeds you follow, drops what was already sent, and emails a short digest of what is new.\n\n**Platforms:** Supabase, Claude, SendGrid\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
       }
     },
     {
       "id": "cc9d4449-7460-44ef-a9f2-fa35b2b73ace",
       "position": [
         0,
-        180
+        220
       ],
       "name": "Friday 15:00",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -40,37 +40,33 @@
       "id": "177a9f15-bba1-4e84-af8d-87fa87c9c578",
       "position": [
         260,
-        180
+        220
       ],
       "name": "Feeds to read",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/feeds",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        }
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "feeds",
+        "returnAll": true
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "af78b7b8-9ef8-4c32-a03a-2aae5929a03e",
       "position": [
         520,
-        180
+        220
       ],
       "name": "Fetch the feed",
       "type": "n8n-nodes-base.httpRequest",
@@ -88,7 +84,7 @@
       "id": "b5b5a71e-36ae-40cf-a4cf-a539b9df84a0",
       "position": [
         780,
-        180
+        220
       ],
       "name": "Collect the items",
       "type": "n8n-nodes-base.code",
@@ -98,65 +94,50 @@
       }
     },
     {
-      "id": "0b5672e7-ce8f-4afa-aa63-7ee83469328b",
+      "id": "05df5be8-302d-4487-a531-153c7bfc50ee",
       "position": [
         1040,
-        180
+        220
       ],
-      "name": "Claim as seen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "Already seen",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/seen_items",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "on_conflict",
-              "value": "={{ 'url' }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ url: $json.url, title: $json.title, summary: $json.summary }) }}"
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "seen_items",
+        "returnAll": true
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "2eb7e7c6-d7ce-4959-acd8-37877e2c7ef5",
       "position": [
         1300,
-        180
+        220
       ],
       "name": "Only the new ones",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const fresh = $input.all().map((i) => i.json).filter((r) => r && r.url);\nreturn [{ json: { count: fresh.length, list: fresh.map((r) => \"- \" + r.title + \" (\" + r.url + \"): \" + r.summary).join(\"\\n\") } }];"
+        "jsCode": "const seen = new Set($input.all().map((i) => i.json.url).filter(Boolean));\nconst fresh = $(\"Collect the items\").all().map((i) => i.json).filter((r) => r.url && !seen.has(r.url));\nreturn [{ json: { count: fresh.length, rows: fresh, list: fresh.map((r) => \"- \" + r.title + \" (\" + r.url + \"): \" + r.summary).join(\"\\n\") } }];"
       }
     },
     {
       "id": "04fdcfe1-4e46-42f6-a010-4d958b1cf685",
       "position": [
         1560,
-        180
+        220
       ],
       "name": "Anything new?",
       "type": "n8n-nodes-base.if",
@@ -187,75 +168,143 @@
       }
     },
     {
-      "id": "2f1e68eb-7eb0-4d16-ae21-bc626f046626",
+      "id": "628c70eb-cbe1-4b3d-a89a-69b1edec1054",
       "position": [
         1820,
-        90
+        130
       ],
-      "name": "Write the digest",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "One row per item",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "jsCode": "return $input.first().json.rows.map((json) => ({ json }));"
+      }
+    },
+    {
+      "id": "d4cf86df-9008-4e6f-a86e-b30dc94dcfe2",
+      "position": [
+        2080,
+        220
+      ],
+      "name": "Remember them",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "seen_items",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.LLM_API_KEY }}"
+              "fieldId": "url",
+              "fieldValue": "={{ $json.url }}"
+            },
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $json.title }}"
+            },
+            {
+              "fieldId": "summary",
+              "fieldValue": "={{ $json.summary }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: $env.LLM_MODEL,\n  temperature: 0.2,\n  messages: [\n    { role: \"system\", content: \"[task:summarise] Write a short weekly digest from these items: one line per item saying why it matters, grouped under at most three headings. Keep every link. Add nothing that is not in the items.\" },\n    { role: \"user\", content: $json.list }\n  ]\n}) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "2f1e68eb-7eb0-4d16-ae21-bc626f046626",
+      "position": [
+        2340,
+        90
+      ],
+      "name": "Write the digest",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Only the new ones').first().json.list }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "[task:summarise] Write a short weekly digest from these items: one line per item saying why it matters, grouped under at most three headings. Keep every link. Add nothing that is not in the items.",
+          "maxIterations": 2
+        }
+      },
+      "executeOnce": true,
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "172a48a6-7bb4-4bb0-abc5-21ca3afb15bb",
+      "position": [
+        2340,
+        310
+      ],
+      "name": "Write the digest · Claude",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-5"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "__CRED:anthropic__",
+          "name": "Claude"
+        }
+      }
     },
     {
       "id": "1961c6f0-8d98-4f07-a0c4-0e729f31c566",
       "position": [
-        2080,
-        180
+        2600,
+        220
       ],
       "name": "Send the digest",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: 'team@example.com', subject: 'This week: ' + $('Only the new ones').first().json.count + ' things worth reading', text: $json.choices?.[0]?.message?.content ?? $('Only the new ones').first().json.list }) }}"
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ 'team@example.com' }}",
+        "subject": "={{ 'This week: ' + $('Only the new ones').first().json.count + ' things worth reading' }}",
+        "dynamicTemplate": false,
+        "contentType": "text/plain",
+        "contentValue": "={{ $json.output ?? $('Only the new ones').first().json.list }}",
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "executeOnce": true,
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "66d3f369-29ed-409e-a4e9-9b6197aa6b76",
       "position": [
         1820,
-        270
+        310
       ],
       "name": "Quiet week",
       "type": "n8n-nodes-base.noOp",
@@ -301,14 +350,14 @@
       "main": [
         [
           {
-            "node": "Claim as seen",
+            "node": "Already seen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Claim as seen": {
+    "Already seen": {
       "main": [
         [
           {
@@ -334,7 +383,7 @@
       "main": [
         [
           {
-            "node": "Write the digest",
+            "node": "One row per item",
             "type": "main",
             "index": 0
           }
@@ -348,12 +397,45 @@
         ]
       ]
     },
+    "One row per item": {
+      "main": [
+        [
+          {
+            "node": "Remember them",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remember them": {
+      "main": [
+        [
+          {
+            "node": "Write the digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Write the digest": {
       "main": [
         [
           {
             "node": "Send the digest",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the digest · Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write the digest",
+            "type": "ai_languageModel",
             "index": 0
           }
         ]

@@ -6,19 +6,17 @@
 
 **What this does about it.** Each ticket is triaged, answered by an agent that looks the facts up, judged by a second model, and audited overnight. Refunds follow a written policy and uncertain tickets reach a person with the facts attached.
 
-1 workflows, 14 tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.
+One canvas of 93 nodes, 14 tested behaviours. Import the [reliability kit](../../shared) first: these workflows call it.
 
 ## AI support desk · Triage, specialists and a judge
 
 A triage agent routes each Zendesk ticket to a specialist agent that can read Shopify, Stripe or the knowledge base. A separate judge checks every answer before it is sent, refunds are decided by a written policy in code, and anything uncertain reaches a person with the facts already gathered.
 
-| | |
-|---|---|
-| Starts from | undefined |
-| Platforms | Zendesk, OpenAI, Claude, Shopify, Supabase, Stripe, Pinecone, Slack, Typeform |
-| Nodes | 93 |
-| Calls | `idempotency-guard`, `notify`, `error-handler` |
-| Files | [`ai-support-desk.json`](ai-support-desk.json) · [`ai-support-desk.workflow.ts`](ai-support-desk.workflow.ts) |
+- **Starts from:** Zendesk event, Schedule, Typeform event
+- **Platforms:** <img src="../../assets/platforms/zendesk.svg" width="16" height="16" alt=""> Zendesk &nbsp;·&nbsp; <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI &nbsp;·&nbsp; <img src="../../assets/platforms/anthropic.svg" width="16" height="16" alt=""> Claude &nbsp;·&nbsp; <img src="../../assets/platforms/shopify.svg" width="16" height="16" alt=""> Shopify &nbsp;·&nbsp; <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/stripe.svg" width="16" height="16" alt=""> Stripe &nbsp;·&nbsp; <img src="../../assets/platforms/pinecone.svg" width="16" height="16" alt=""> Pinecone &nbsp;·&nbsp; <img src="../../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack &nbsp;·&nbsp; <img src="../../assets/platforms/typeform.svg" width="16" height="16" alt=""> Typeform
+- **Nodes:** 93
+- **Calls:** `idempotency-guard`, `notify`, `error-handler`
+- **Files:** [`ai-support-desk.json`](ai-support-desk.json) · [`ai-support-desk.workflow.ts`](ai-support-desk.workflow.ts)
 
 ```mermaid
 flowchart LR

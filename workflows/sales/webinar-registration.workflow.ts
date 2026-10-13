@@ -2,7 +2,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Events · Webinar registration and reminders
-// Nodes   : 15  |  Connections: 13
+// Nodes   : 16  |  Connections: 14
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
@@ -12,15 +12,16 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // ReadTheForm                        code
 // Valid                              if
 // Invalid                            respondToWebhook
-// LoadTheWebinar                     httpRequest                [alwaysOutput] [retry]
+// LoadTheWebinar                     supabase                   [creds] [alwaysOutput] [retry]
 // SeatsLeft                          if
-// Register                           httpRequest                [alwaysOutput] [retry]
-// NewlyRegistered                    if
-// CountTheSeat                       httpRequest                [retry]
-// SendTheInvite                      httpRequest                [retry]
+// Register                           supabase                   [onError→out(1)] [creds]
+// RegisteredAlready                  if
+// TryAgain                           respondToWebhook
+// CountTheSeat                       supabase                   [creds] [retry]
+// SendTheInvite                      sendGrid                   [creds] [retry]
 // Confirmed                          respondToWebhook
 // AlreadyRegistered                  respondToWebhook
-// AddToWaitlist                      httpRequest                [retry]
+// AddToWaitlist                      supabase                   [creds] [retry]
 // Waitlisted                         respondToWebhook
 //
 // ROUTING MAP
@@ -31,11 +32,12 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //        → LoadTheWebinar
 //          → SeatsLeft
 //            → Register
-//              → NewlyRegistered
-//                → CountTheSeat
-//                  → SendTheInvite
-//                    → Confirmed
-//               .out(1) → AlreadyRegistered
+//              → CountTheSeat
+//                → SendTheInvite
+//                  → Confirmed
+//             .out(1) → RegisteredAlready
+//                → AlreadyRegistered
+//               .out(1) → TryAgain
 //           .out(1) → AddToWaitlist
 //              → Waitlisted
 //       .out(1) → Invalid
@@ -69,8 +71,7 @@ export class EventsWebinarRegistrationAndRemindersWorkflow {
         content: `## Events · Webinar registration and reminders
 Registers someone for a webinar, sends the calendar invite, and reminds them a day and an hour before. Full sessions get a waitlist reply.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** Supabase, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/sales\``,
     };
 
@@ -80,7 +81,7 @@ Registers someone for a webinar, sends the calendar invite, and reminds them a d
         name: 'Registration',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 180],
+        position: [0, 270],
     })
     Registration = {
         httpMethod: 'POST',
@@ -94,7 +95,7 @@ Registers someone for a webinar, sends the calendar invite, and reminds them a d
         name: 'Read the form',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [260, 180],
+        position: [260, 270],
     })
     ReadTheForm = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -107,7 +108,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Valid?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [520, 180],
+        position: [520, 270],
     })
     Valid = {
         conditions: {
@@ -139,7 +140,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Invalid',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [780, 90],
+        position: [780, 180],
     })
     Invalid = {
         respondWith: 'json',
@@ -152,35 +153,28 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
     @node({
         id: 'f5a5fd9d-6142-41d4-afdc-9431895facb9',
         name: 'Load the webinar',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [780, 270],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [780, 360],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     LoadTheWebinar = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/webinars',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'webinars',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'id',
-                    value: "={{ 'eq.' + $json.webinar_id }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.webinar_id }}',
                 },
             ],
         },
@@ -191,7 +185,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Seats left?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1040, 180],
+        position: [1040, 270],
     })
     SeatsLeft = {
         conditions: {
@@ -221,52 +215,56 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
     @node({
         id: '5a5f949e-b610-4c2b-aafc-11893dadaadc',
         name: 'Register',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1300, 90],
-        alwaysOutputData: true,
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [1300, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
+        onError: 'continueErrorOutput',
     })
     Register = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/registrations',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'registrations',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'key',
+                    fieldValue:
+                        "={{ $('Read the form').first().json.webinar_id + ':' + $('Read the form').first().json.email }}",
+                },
+                {
+                    fieldId: 'webinar_id',
+                    fieldValue: "={{ $('Read the form').first().json.webinar_id }}",
+                },
+                {
+                    fieldId: 'email',
+                    fieldValue: "={{ $('Read the form').first().json.email }}",
+                },
+                {
+                    fieldId: 'name',
+                    fieldValue: "={{ $('Read the form').first().json.name }}",
+                },
+                {
+                    fieldId: 'reminded_day',
+                    fieldValue: '={{ false }}',
+                },
+                {
+                    fieldId: 'reminded_hour',
+                    fieldValue: '={{ false }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'on_conflict',
-                    value: "={{ 'key' }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ key: $('Read the form').first().json.webinar_id + ':' + $('Read the form').first().json.email, webinar_id: $('Read the form').first().json.webinar_id, email: $('Read the form').first().json.email, name: $('Read the form').first().json.name, reminded_day: false, reminded_hour: false }) }}",
     };
 
     @node({
-        id: 'ae900ee8-782e-41fd-a01a-868339b997fb',
-        name: 'Newly registered?',
+        id: 'b6e25c6d-ac45-4ebe-a974-d7bff37afbcf',
+        name: 'Registered already?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
         position: [1560, 90],
     })
-    NewlyRegistered = {
+    RegisteredAlready = {
         conditions: {
             options: {
                 caseSensitive: true,
@@ -276,8 +274,8 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
             },
             conditions: [
                 {
-                    id: '0f192728-634d-47cc-a52d-0f5eaa7461a2',
-                    leftValue: '={{ !!$json.id }}',
+                    id: '9f291673-cc31-41db-aa79-28029678fc00',
+                    leftValue: "={{ /duplicate key|23505/.test(String($json.error ?? '')) }}",
                     rightValue: '',
                     operator: {
                         type: 'boolean',
@@ -292,73 +290,94 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
     };
 
     @node({
+        id: '4906bd42-13fa-4320-af48-dfa69a248875',
+        name: 'Try again',
+        type: 'n8n-nodes-base.respondToWebhook',
+        version: 1.1,
+        position: [1820, 90],
+    })
+    TryAgain = {
+        respondWith: 'json',
+        responseBody:
+            "={{ JSON.stringify({ ok: false, error: 'Registration is unavailable for a moment. Please try again.' }) }}",
+        options: {
+            responseCode: 503,
+        },
+    };
+
+    @node({
         id: '39d1899e-d1cd-4cf0-a1ba-c4c5c3b8a480',
         name: 'Count the seat',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1820, 90],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [1560, 270],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     CountTheSeat = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/webinars',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'webinars',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Load the webinar').first().json.id }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $('Load the webinar').first().json.id }}",
+                    fieldId: 'registered',
+                    fieldValue: "={{ ($('Load the webinar').first().json.registered ?? 0) + 1 }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ registered: ($('Load the webinar').first().json.registered ?? 0) + 1 }) }}",
     };
 
     @node({
         id: '5ddd5294-a794-4b65-ab8d-b5b27a9c8270',
         name: 'Send the invite',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2080, 180],
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
+        position: [1820, 270],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SendTheInvite = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: "={{ $('Read the form').first().json.email }}",
+        dynamicTemplate: true,
+        templateId: "={{ 'd-webinar-confirmed' }}",
+        dynamicTemplateFields: {
+            fields: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
+                    key: 'title',
+                    value: "={{ $('Load the webinar').first().json.title }}",
+                },
+                {
+                    key: 'starts_at',
+                    value: "={{ $('Load the webinar').first().json.starts_at }}",
+                },
+                {
+                    key: 'join_url',
+                    value: "={{ $('Load the webinar').first().json.join_url }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $('Read the form').first().json.email, subject: 'You are in: ' + $('Load the webinar').first().json.title, template: 'webinar-confirmed', data: { starts_at: $('Load the webinar').first().json.starts_at, join_url: $('Load the webinar').first().json.join_url }, calendar_invite: true }) }}",
+        additionalFields: {},
     };
 
     @node({
@@ -366,7 +385,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Confirmed',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [2340, 180],
+        position: [2080, 270],
     })
     Confirmed = {
         respondWith: 'json',
@@ -381,7 +400,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Already registered',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [1820, 270],
+        position: [1820, 450],
     })
     AlreadyRegistered = {
         respondWith: 'json',
@@ -394,32 +413,35 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
     @node({
         id: 'be848488-61d4-47e6-ab84-78065c63d285',
         name: 'Add to waitlist',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1300, 270],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [1300, 360],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     AddToWaitlist = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/waitlist',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'waitlist',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'webinar_id',
+                    fieldValue: "={{ $('Read the form').first().json.webinar_id }}",
+                },
+                {
+                    fieldId: 'email',
+                    fieldValue: "={{ $('Read the form').first().json.email }}",
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ webinar_id: $('Read the form').first().json.webinar_id, email: $('Read the form').first().json.email, at: $now.toISO() }) }}",
     };
 
     @node({
@@ -427,7 +449,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Waitlisted',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [1560, 270],
+        position: [1560, 450],
     })
     Waitlisted = {
         respondWith: 'json',
@@ -450,11 +472,12 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         this.LoadTheWebinar.out(0).to(this.SeatsLeft.in(0));
         this.SeatsLeft.out(0).to(this.Register.in(0));
         this.SeatsLeft.out(1).to(this.AddToWaitlist.in(0));
-        this.Register.out(0).to(this.NewlyRegistered.in(0));
-        this.NewlyRegistered.out(0).to(this.CountTheSeat.in(0));
-        this.NewlyRegistered.out(1).to(this.AlreadyRegistered.in(0));
+        this.Register.out(0).to(this.CountTheSeat.in(0));
+        this.Register.out(1).to(this.RegisteredAlready.in(0));
         this.CountTheSeat.out(0).to(this.SendTheInvite.in(0));
         this.SendTheInvite.out(0).to(this.Confirmed.in(0));
         this.AddToWaitlist.out(0).to(this.Waitlisted.in(0));
+        this.RegisteredAlready.out(0).to(this.AlreadyRegistered.in(0));
+        this.RegisteredAlready.out(1).to(this.TryAgain.in(0));
     }
 }

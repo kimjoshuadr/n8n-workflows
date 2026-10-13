@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Payments · Daily reconciliation\nEach morning, compares yesterday's charges at the processor with the ledger and reports anything on one side and not the other.\n\n**Platforms:** none, this is logic only\n**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, PAYMENTS_API_KEY, PAYMENTS_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
+        "content": "## Payments · Daily reconciliation\nEach morning, compares yesterday's charges at the processor with the ledger and reports anything on one side and not the other.\n\n**Platforms:** Stripe, Supabase, Slack\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
       }
     },
     {
@@ -47,36 +47,39 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.PAYMENTS_BASE_URL }}/charges",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.PAYMENTS_API_KEY }}"
-            }
-          ]
-        },
+        "url": "={{ 'https://api.stripe.com/v1/charges' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
             {
-              "name": "created_gte",
+              "name": "created[gte]",
               "value": "={{ $now.minus({ days: 1 }).startOf('day').toSeconds() }}"
             },
             {
-              "name": "created_lt",
+              "name": "created[lt]",
               "value": "={{ $now.startOf('day').toSeconds() }}"
+            },
+            {
+              "name": "limit",
+              "value": "={{ '100' }}"
             }
           ]
+        },
+        "options": {
+          "timeout": 15000
         }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "stripeApi": {
+          "id": "__CRED:stripe__",
+          "name": "Stripe"
+        }
+      }
     },
     {
       "id": "632b65b5-be2c-4acd-a058-db7eae07c639",
@@ -85,33 +88,26 @@
         180
       ],
       "name": "Ledger lines",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/ledger",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "ledger",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "kind",
-              "value": "={{ 'eq.payment' }}"
+              "keyName": "kind",
+              "condition": "eq",
+              "keyValue": "={{ 'payment' }}"
             },
             {
-              "name": "at",
-              "value": "={{ 'gte.' + $now.minus({ days: 1 }).startOf('day').toISO() }}"
+              "keyName": "at",
+              "condition": "gte",
+              "keyValue": "={{ $now.minus({ days: 1 }).startOf('day').toISO() }}"
             }
           ]
         }
@@ -120,7 +116,13 @@
       "maxTries": 3,
       "waitBetweenTries": 1000,
       "alwaysOutputData": true,
-      "executeOnce": true
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "6c6469bd-515b-4991-a575-2aa0cf2cd9df",
@@ -176,30 +178,31 @@
         90
       ],
       "name": "Post all clear",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
-        "options": {
-          "timeout": 15000
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#finance' }}"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: '#finance', text: ':white_check_mark: Reconciled ' + $json.checked + ' charges, ' + $json.total + ' total. Ledger matches.' }) }}"
+        "text": "={{ ':white_check_mark: Reconciled ' + $json.checked + ' charges, ' + $json.total + ' total. Ledger matches.' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
     },
     {
       "id": "f651870d-db74-4847-ae11-2d8699a41978",
@@ -221,30 +224,51 @@
         180
       ],
       "name": "Record the issue",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/reconciliation_issues",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "reconciliation_issues",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "charge_id",
+              "fieldValue": "={{ $json.charge_id }}"
+            },
+            {
+              "fieldId": "kind",
+              "fieldValue": "={{ $json.kind }}"
+            },
+            {
+              "fieldId": "processor_amount",
+              "fieldValue": "={{ $json.processor_amount ?? null }}"
+            },
+            {
+              "fieldId": "ledger_amount",
+              "fieldValue": "={{ $json.ledger_amount ?? null }}"
+            },
+            {
+              "fieldId": "found_at",
+              "fieldValue": "={{ $json.found_at }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "bc5376cf-8aa8-4c91-a159-fb684999e867",
@@ -284,40 +308,43 @@
         180
       ],
       "name": "Check in",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/heartbeats",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "heartbeats",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "name",
+              "condition": "eq",
+              "keyValue": "={{ 'payment-reconcile' }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "name",
-              "value": "={{ 'eq.payment-reconcile' }}"
+              "fieldId": "last_seen",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ last_seen: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     }
   ],
   "connections": {

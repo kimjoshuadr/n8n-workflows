@@ -9,7 +9,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Event                              webhook
-// PostIt                             httpRequest                [retry]
+// PostIt                             slack                      [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -45,8 +45,7 @@ export class BlockEventToAChatMessageWorkflow {
         content: `## Block · Event to a chat message
 Turns any event into one readable chat message.
 
-**Platforms:** none, this is logic only
-**Settings:** CHAT_API_KEY, CHAT_BASE_URL
+**Platforms:** Slack
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/notify\``,
     };
 
@@ -68,32 +67,27 @@ Turns any event into one readable chat message.
     @node({
         id: '3e9d4ca4-0f9b-4783-a7e0-3d5785d3b519',
         name: 'Post it',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
         position: [260, 90],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     PostIt = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ $json.body.channel ?? '#general' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: "={{ ($json.body.title ? '*' + $json.body.title + '*\\n' : '') + String($json.body.text ?? '').slice(0, 3000) }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ channel: $json.body.channel ?? '#general', text: ($json.body.title ? '*' + $json.body.title + '*\\n' : '') + String($json.body.text ?? '').slice(0, 3000) }) }}",
     };
 
     // =====================================================================

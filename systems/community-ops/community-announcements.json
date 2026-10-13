@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Community ops · Scheduled announcements\nPosts announcements at the time they were scheduled for, once, and reports any that could not be posted.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/community-ops`"
+        "content": "## Community ops · Scheduled announcements\nPosts announcements at the time they were scheduled for, once, and reports any that could not be posted.\n\n**Platforms:** Supabase, Discord\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/community-ops`"
       }
     },
     {
@@ -43,33 +43,26 @@
         180
       ],
       "name": "Due announcements",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/announcements",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "announcements",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "status",
-              "value": "={{ 'eq.scheduled' }}"
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "={{ 'scheduled' }}"
             },
             {
-              "name": "send_at",
-              "value": "={{ 'lte.' + $now.toISO() }}"
+              "keyName": "send_at",
+              "condition": "lte",
+              "keyValue": "={{ $now.toISO() }}"
             }
           ]
         }
@@ -77,7 +70,13 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "93c7d4cd-691f-4efc-a129-1725bdbcea4b",
@@ -120,44 +119,48 @@
         90
       ],
       "name": "Claim it",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/announcements",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "announcements",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "id",
-              "value": "={{ 'eq.' + $json.id }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
             },
             {
-              "name": "status",
-              "value": "={{ 'eq.scheduled' }}"
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "={{ 'scheduled' }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'sending' }) }}"
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ 'sending' }}"
+            }
+          ]
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "4e9bed98-201b-4067-a15b-6dc31d676d3c",
@@ -200,118 +203,166 @@
         180
       ],
       "name": "Post it",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DISCORD_BASE_URL }}/channels/announcements/messages",
-        "options": {
-          "timeout": 15000
+        "authentication": "botToken",
+        "resource": "message",
+        "operation": "send",
+        "guildId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ '100000000000000001' }}"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DISCORD_API_KEY }}"
-            }
-          ]
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.channel_id }}"
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, content: $json.content, mention_everyone: $json.mention_everyone === true }) }}"
+        "content": "={{ $json.content }}",
+        "options": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueErrorOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "discordBotApi": {
+          "id": "__CRED:discord__",
+          "name": "Discord"
+        }
+      }
+    },
+    {
+      "id": "656b5821-8b52-44cf-a645-659353213818",
+      "position": [
+        1560,
+        180
+      ],
+      "name": "Posted?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "959be091-4f39-4086-a411-1b3fb6712f34",
+              "leftValue": "={{ !!$json.id && !$json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
     },
     {
       "id": "8c10dae4-67df-420a-a827-914fff88de0d",
       "position": [
-        1560,
+        1820,
         90
       ],
       "name": "Mark sent",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/announcements",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "announcements",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Claimed?').item.json.id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "id",
-              "value": "={{ 'eq.' + $('Claimed?').item.json.id }}"
+              "fieldId": "status",
+              "fieldValue": "={{ 'sent' }}"
+            },
+            {
+              "fieldId": "sent_at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'sent', sent_at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "bd231682-82ba-4c0d-a09f-a46fcc86076d",
       "position": [
-        1560,
+        1820,
         270
       ],
       "name": "Mark failed",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/announcements",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "announcements",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Claimed?').item.json.id }}"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "id",
-              "value": "={{ 'eq.' + $('Claimed?').item.json.id }}"
+              "fieldId": "status",
+              "fieldValue": "={{ 'failed' }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'failed' }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "b8c9a21d-f837-4a5a-a4bf-553c9cdccf9f",
       "position": [
-        1820,
+        2080,
         180
       ],
       "name": "Failure message",
@@ -324,7 +375,7 @@
     {
       "id": "846f044b-d042-484b-a597-9b0e21a47e6c",
       "position": [
-        2080,
+        2340,
         180
       ],
       "name": "Tell the team",
@@ -415,6 +466,17 @@
       ]
     },
     "Post it": {
+      "main": [
+        [
+          {
+            "node": "Posted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Posted?": {
       "main": [
         [
           {

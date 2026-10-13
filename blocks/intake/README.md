@@ -6,19 +6,17 @@
 
 The smallest useful workflow: receive a form post, keep the fields you named, store a row, answer the sender.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Datastore |
-| Nodes | 4 |
-| Calls | `error-handler` |
-| Files | [`block-webhook-to-table.json`](block-webhook-to-table.json) · [`block-webhook-to-table.workflow.ts`](block-webhook-to-table.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase
+- **Nodes:** 4
+- **Calls:** `error-handler`
+- **Files:** [`block-webhook-to-table.json`](block-webhook-to-table.json) · [`block-webhook-to-table.workflow.ts`](block-webhook-to-table.workflow.ts)
 
 ```mermaid
 flowchart LR
   nycnyc4(["Form posted"])
   n4zw59m["Keep known fields"]
-  nzn8x45[/"Store the row"/]
+  nzn8x45["Store the row"]
   n23b0ds(["Thanks"])
   nycnyc4 --> n4zw59m
   n4zw59m --> nzn8x45
@@ -33,13 +31,11 @@ flowchart LR
 
 Refuses any request that does not carry the secret header, before doing anything else.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | none, logic only |
-| Nodes | 4 |
-| Calls | `error-handler` |
-| Files | [`block-webhook-secret.json`](block-webhook-secret.json) · [`block-webhook-secret.workflow.ts`](block-webhook-secret.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** none, logic only
+- **Nodes:** 4
+- **Calls:** `error-handler`
+- **Files:** [`block-webhook-secret.json`](block-webhook-secret.json) · [`block-webhook-secret.workflow.ts`](block-webhook-secret.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -61,13 +57,11 @@ flowchart LR
 
 Checks a payload against simple rules and answers with exactly which fields were wrong, so the form can show it.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | none, logic only |
-| Nodes | 5 |
-| Calls | `error-handler` |
-| Files | [`block-validate-respond.json`](block-validate-respond.json) · [`block-validate-respond.workflow.ts`](block-validate-respond.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** none, logic only
+- **Nodes:** 5
+- **Calls:** `error-handler`
+- **Files:** [`block-validate-respond.json`](block-validate-respond.json) · [`block-validate-respond.workflow.ts`](block-validate-respond.workflow.ts)
 
 ```mermaid
 flowchart LR

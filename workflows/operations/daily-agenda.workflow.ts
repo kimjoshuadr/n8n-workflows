@@ -9,10 +9,10 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Weekdays0730                       scheduleTrigger
-// TodaySEvents                       httpRequest                [retry]
+// TodaySEvents                       googleCalendar             [creds] [alwaysOutput] [retry]
 // LayOutTheDay                       code
 // AnythingOn                         if
-// PostTheAgenda                      httpRequest                [retry]
+// PostTheAgenda                      slack                      [creds] [retry]
 // ClearDay                           noOp
 //
 // ROUTING MAP
@@ -53,8 +53,7 @@ export class CalendarMorningAgendaWorkflow {
         content: `## Calendar · Morning agenda
 Posts today's meetings each weekday morning, with gaps and clashes pointed out, and stays silent on an empty day.
 
-**Platforms:** none, this is logic only
-**Settings:** CALENDAR_API_KEY, CALENDAR_BASE_URL, CHAT_API_KEY, CHAT_BASE_URL
+**Platforms:** Google Calendar, Slack
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/operations\``,
     };
 
@@ -79,41 +78,27 @@ Posts today's meetings each weekday morning, with gaps and clashes pointed out, 
     @node({
         id: '237f2632-7cd7-450a-adf5-1cf4761dfd4d',
         name: "Today's events",
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.googleCalendar',
+        version: 1.3,
         position: [260, 180],
+        credentials: { googleCalendarOAuth2Api: { id: '__CRED:googleCalendar__', name: 'Google Calendar' } },
+        alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     TodaySEvents = {
-        method: 'GET',
-        url: '={{ $env.CALENDAR_BASE_URL }}/events',
-        options: {
-            timeout: 15000,
+        resource: 'event',
+        operation: 'getAll',
+        calendar: {
+            __rl: true,
+            mode: 'id',
+            value: 'kim@example.com',
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CALENDAR_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'from',
-                    value: "={{ $now.startOf('day').toISO() }}",
-                },
-                {
-                    name: 'to',
-                    value: "={{ $now.endOf('day').toISO() }}",
-                },
-            ],
-        },
+        returnAll: true,
+        timeMin: "={{ $now.startOf('day').toISO() }}",
+        timeMax: "={{ $now.endOf('day').toISO() }}",
+        options: {},
     };
 
     @node({
@@ -124,7 +109,9 @@ Posts today's meetings each weekday morning, with gaps and clashes pointed out, 
         position: [520, 180],
     })
     LayOutTheDay = {
-        jsCode: `const events = ($input.first().json.events ?? []).filter((e) => e.start && e.end && !e.declined).sort((a, b) => new Date(a.start) - new Date(b.start));
+        jsCode: `const events = $input.all().map((i) => i.json)
+  .map((e) => ({ title: e.summary ?? "(no title)", start: e.start?.dateTime, end: e.end?.dateTime, declined: (e.attendees ?? []).some((a) => a.self && a.responseStatus === "declined") }))
+  .filter((e) => e.start && e.end && !e.declined).sort((a, b) => new Date(a.start) - new Date(b.start));
 const hm = (iso) => new Date(iso).toISOString().slice(11, 16);
 const clashes = [];
 for (let i = 1; i < events.length; i++) if (new Date(events[i].start) < new Date(events[i - 1].end)) clashes.push(events[i - 1].title + " / " + events[i].title);
@@ -168,32 +155,27 @@ return [{ json: { count: events.length, clashes, hours: Math.round(minutes / 6) 
     @node({
         id: 'c10740c1-d42f-4c05-ad55-1c213a61958e',
         name: 'Post the agenda',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
         position: [1040, 90],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     PostTheAgenda = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '@me' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: "={{ ':calendar: ' + $json.count + ' meetings today, ' + $json.hours + 'h in total.\\n' + $json.text }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ channel: '@me', text: ':calendar: ' + $json.count + ' meetings today, ' + $json.hours + 'h in total.\\n' + $json.text }) }}",
     };
 
     @node({

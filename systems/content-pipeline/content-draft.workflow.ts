@@ -2,25 +2,28 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Content pipeline · Research and draft
-// Nodes   : 15  |  Connections: 13
+// Nodes   : 18  |  Connections: 13
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Weekdays0700                       scheduleTrigger
-// NextTopic                          httpRequest                [alwaysOutput] [retry]
+// NextTopic                          supabase                   [creds] [alwaysOutput] [retry]
 // IsThereOne                         if
-// ClaimTheTopic                      httpRequest                [retry]
-// Research                           httpRequest                [onError→regular] [retry]
+// ClaimTheTopic                      supabase                   [creds] [retry]
+// Research                           httpRequest                [onError→regular] [creds] [retry]
 // CollectSources                     code
-// Outline                            httpRequest                [retry]
+// Outline                            agent                      [AI] [onError→regular]
+// OutlineGpt                         lmChatOpenAi               [creds] [ai_languageModel]
+// OutlineShape                       outputParserStructured     [ai_outputParser]
 // ReadTheOutline                     code
 // UsableOutline                      if
-// WriteTheDraft                      httpRequest                [retry]
-// SaveTheDraft                       httpRequest                [retry]
-// AskForApproval                     httpRequest                [retry]
-// ReturnTheTopic                     httpRequest                [retry]
+// WriteTheDraft                      agent                      [AI] [onError→regular]
+// WriteTheDraftClaude                lmChatAnthropic            [creds] [ai_languageModel]
+// SaveTheDraft                       supabase                   [creds] [retry]
+// AskForApproval                     slack                      [creds] [retry]
+// ReturnTheTopic                     supabase                   [creds] [retry]
 // QueueIsEmpty                       noOp
 //
 // ROUTING MAP
@@ -39,6 +42,10 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //                        → AskForApproval
 //                   .out(1) → ReturnTheTopic
 //       .out(1) → QueueIsEmpty
+//
+// AI CONNECTIONS
+// Outline.uses({ ai_languageModel: OutlineGpt, ai_outputParser: OutlineShape })
+// WriteTheDraft.uses({ ai_languageModel: WriteTheDraftClaude })
 // </workflow-map>
 
 // =====================================================================
@@ -69,8 +76,7 @@ export class ContentPipelineResearchAndDraftWorkflow {
         content: `## Content pipeline · Research and draft
 Takes the next topic off the list, researches it, drafts the article, and asks a person to approve it. Nothing is published from here.
 
-**Platforms:** none, this is logic only
-**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SEARCH_API_KEY, SEARCH_BASE_URL
+**Platforms:** Supabase, SerpAPI, OpenAI, Claude, Slack
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/content-pipeline\``,
     };
 
@@ -79,7 +85,7 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
         name: 'Weekdays 07:00',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 180],
+        position: [0, 310],
     })
     Weekdays0700 = {
         rule: {
@@ -95,39 +101,29 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
     @node({
         id: '6314bcf4-9b57-446a-a723-b46098e2bcbc',
         name: 'Next topic',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [260, 180],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [260, 310],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     NextTopic = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/content_topics',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'content_topics',
+        returnAll: false,
+        limit: 1,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'status',
-                    value: "={{ 'eq.queued' }}",
-                },
-                {
-                    name: 'limit',
-                    value: "={{ '1' }}",
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'queued' }}",
                 },
             ],
         },
@@ -138,7 +134,7 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
         name: 'Is there one?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [520, 180],
+        position: [520, 310],
     })
     IsThereOne = {
         conditions: {
@@ -168,40 +164,38 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
     @node({
         id: '7d858916-a729-409f-abf6-41376f9d71e2',
         name: 'Claim the topic',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [780, 90],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [780, 220],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ClaimTheTopic = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/content_topics',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'content_topics',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.id }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $json.id }}",
+                    fieldId: 'status',
+                    fieldValue: "={{ 'drafting' }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ status: 'drafting' }) }}",
     };
 
     @node({
@@ -209,30 +203,34 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
         name: 'Research',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1040, 180],
+        position: [1040, 310],
+        credentials: { serpApi: { id: '__CRED:serpapi__', name: 'SerpAPI' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     Research = {
-        method: 'POST',
-        url: '={{ $env.SEARCH_BASE_URL }}/search',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
+        method: 'GET',
+        url: "={{ 'https://serpapi.com/search.json' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'serpApi',
+        sendQuery: true,
+        queryParameters: {
             parameters: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.SEARCH_API_KEY }}",
+                    name: 'q',
+                    value: "={{ $('Is there one?').first().json.topic }}",
+                },
+                {
+                    name: 'num',
+                    value: "={{ '10' }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ query: $('Is there one?').first().json.topic, max_results: 5 }) }}",
+        options: {
+            timeout: 15000,
+        },
     };
 
     @node({
@@ -240,50 +238,70 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
         name: 'Collect sources',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1300, 180],
+        position: [1300, 310],
     })
     CollectSources = {
         jsCode: `const t = $("Is there one?").first().json;
-const results = ($input.first().json.results ?? []).slice(0, 5);
-return [{ json: { topic_id: t.id, topic: t.topic, sources: results.map((r) => ({ title: r.title, url: r.url })), notes: results.map((r) => "- " + r.title + ": " + String(r.content ?? "").slice(0, 400)).join("\\n") } }];`,
+const results = ($input.first().json.organic_results ?? []).slice(0, 5);
+return [{ json: { topic_id: t.id, topic: t.topic, sources: results.map((r) => ({ title: r.title, url: r.link })), notes: results.map((r) => "- " + r.title + ": " + String(r.snippet ?? "").slice(0, 400)).join("\\n") } }];`,
     };
 
     @node({
         id: 'a642d55a-764b-4c6f-a2bd-7c8be9a76bf0',
         name: 'Outline',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1560, 180],
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
+        position: [1660, 180],
+        onError: 'continueRegularOutput',
     })
     Outline = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: "={{ 'Topic: ' + $json.topic + '\\n\\nResearch notes:\\n' + ($json.notes || '(none)') }}",
+        hasOutputParser: true,
         options: {
-            timeout: 15000,
+            systemMessage:
+                '[task:outline] Write an article outline as JSON: { title: string, sections: string[], keywords: string[] }. Use only facts found in the research notes.',
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
+    };
+
+    @node({
+        id: '3b5db886-3758-483f-abad-bce364628b7c',
+        name: 'Outline · GPT',
+        type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+        version: 1.2,
+        position: [1560, 400],
+        credentials: { openAiApi: { id: '__CRED:openai__', name: 'OpenAI' } },
+    })
+    OutlineGpt = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'gpt-4o-mini',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  response_format: { type: "json_object" },
-  messages: [
-    { role: "system", content: "[task:outline] Write an article outline as JSON: { title: string, sections: string[], keywords: string[] }. Use only facts found in the research notes." },
-    { role: "user", content: 'Topic: ' + $json.topic + '\\n\\nResearch notes:\\n' + ($json.notes || '(none)') }
+        options: {
+            temperature: 0,
+        },
+    };
+
+    @node({
+        id: 'd0834dbd-922a-437a-adbe-30816cd550ab',
+        name: 'Outline · shape',
+        type: '@n8n/n8n-nodes-langchain.outputParserStructured',
+        version: 1.3,
+        position: [1760, 400],
+    })
+    OutlineShape = {
+        schemaType: 'fromJson',
+        jsonSchemaExample: `{
+  "title": "The title",
+  "sections": [
+    "A section"
+  ],
+  "keywords": [
+    "a keyword"
   ]
-}) }}`,
+}`,
     };
 
     @node({
@@ -291,20 +309,15 @@ return [{ json: { topic_id: t.id, topic: t.topic, sources: results.map((r) => ({
         name: 'Read the outline',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1820, 180],
+        position: [2020, 310],
     })
     ReadTheOutline = {
         jsCode: `const before = $("Collect sources").all();
 const out = [];
 for (const [i, item] of $input.all().entries()) {
-  let reply = {"title":null,"sections":[],"keywords":[]};
-  let parse_error = false;
-  try {
-    reply = JSON.parse(item.json.choices[0].message.content);
-  } catch (e) {
-    parse_error = true;
-  }
-  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });
+  const answer = item.json.output;
+  const ok = answer && typeof answer === "object" && !Array.isArray(answer);
+  out.push({ json: { ...(before[i]?.json ?? {}), ...(ok ? answer : {"title":null,"sections":[],"keywords":[]}), parse_error: !ok } });
 }
 return out;`,
     };
@@ -314,7 +327,7 @@ return out;`,
         name: 'Usable outline?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [2080, 180],
+        position: [2280, 310],
     })
     UsableOutline = {
         conditions: {
@@ -344,139 +357,152 @@ return out;`,
     @node({
         id: '7d71d3bc-6809-43b8-ae2a-f11aa165edca',
         name: 'Write the draft',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2340, 90],
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
+        position: [2540, 90],
+        onError: 'continueRegularOutput',
     })
     WriteTheDraft = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: '={{ JSON.stringify({ title: $json.title, sections: $json.sections, sources: $json.sources }) }}',
+        hasOutputParser: false,
         options: {
-            timeout: 15000,
+            systemMessage:
+                '[task:draft] Write the article in Markdown from this outline. Plain language, no invented statistics, cite only the sources listed.',
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
+    };
+
+    @node({
+        id: '66bfb0f2-d70c-44de-ac06-dedce788c272',
+        name: 'Write the draft · Claude',
+        type: '@n8n/n8n-nodes-langchain.lmChatAnthropic',
+        version: 1.3,
+        position: [2540, 310],
+        credentials: { anthropicApi: { id: '__CRED:anthropic__', name: 'Claude' } },
+    })
+    WriteTheDraftClaude = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'claude-sonnet-4-5',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  messages: [
-    { role: "system", content: "[task:draft] Write the article in Markdown from this outline. Plain language, no invented statistics, cite only the sources listed." },
-    { role: "user", content: JSON.stringify({ title: $json.title, sections: $json.sections, sources: $json.sources }) }
-  ]
-}) }}`,
+        options: {
+            temperature: 0.2,
+        },
     };
 
     @node({
         id: '18d3527e-aff3-483c-a15c-2ce30a62dee4',
         name: 'Save the draft',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2600, 180],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [2800, 310],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SaveTheDraft = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/content_drafts',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'content_drafts',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'topic_id',
+                    fieldValue: "={{ $('Usable outline?').first().json.topic_id }}",
+                },
+                {
+                    fieldId: 'title',
+                    fieldValue: "={{ $('Usable outline?').first().json.title }}",
+                },
+                {
+                    fieldId: 'keywords',
+                    fieldValue: "={{ $('Usable outline?').first().json.keywords }}",
+                },
+                {
+                    fieldId: 'sources',
+                    fieldValue: "={{ $('Usable outline?').first().json.sources }}",
+                },
+                {
+                    fieldId: 'body',
+                    fieldValue: '={{ $json.output }}',
+                },
+                {
+                    fieldId: 'status',
+                    fieldValue: "={{ 'awaiting_approval' }}",
+                },
+                {
+                    fieldId: 'created_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ topic_id: $('Usable outline?').first().json.topic_id, title: $('Usable outline?').first().json.title, keywords: $('Usable outline?').first().json.keywords, sources: $('Usable outline?').first().json.sources, body: $json.choices[0].message.content, status: 'awaiting_approval', created_at: $now.toISO() }) }}",
     };
 
     @node({
         id: '1f860db6-5ddb-4767-a6ac-e203553b5a11',
         name: 'Ask for approval',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2860, 180],
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
+        position: [3060, 310],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     AskForApproval = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '#content' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: "={{ ':memo: Draft ready for review: \"' + $json.title + '\". Approve or reject draft ' + $json.id + '.' }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ channel: '#content', text: ':memo: Draft ready for review: \"' + $json.title + '\"', draft_id: $json.id, actions: ['approve', 'reject'] }) }}",
     };
 
     @node({
         id: '445a2090-f167-40c6-a5eb-f181b8dbe0f3',
         name: 'Return the topic',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2340, 270],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [2540, 530],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ReturnTheTopic = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/content_topics',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'content_topics',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: '={{ $json.topic_id }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $json.topic_id }}",
+                    fieldId: 'status',
+                    fieldValue: "={{ 'needs_brief' }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ status: 'needs_brief' }) }}",
     };
 
     @node({
@@ -484,7 +510,7 @@ return out;`,
         name: 'Queue is empty',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [780, 270],
+        position: [780, 400],
     })
     QueueIsEmpty = {};
 
@@ -507,5 +533,13 @@ return out;`,
         this.UsableOutline.out(1).to(this.ReturnTheTopic.in(0));
         this.WriteTheDraft.out(0).to(this.SaveTheDraft.in(0));
         this.SaveTheDraft.out(0).to(this.AskForApproval.in(0));
+
+        this.Outline.uses({
+            ai_languageModel: this.OutlineGpt.output,
+            ai_outputParser: this.OutlineShape.output,
+        });
+        this.WriteTheDraft.uses({
+            ai_languageModel: this.WriteTheDraftClaude.output,
+        });
     }
 }

@@ -2,21 +2,24 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Content · Industry news digest
-// Nodes   : 11  |  Connections: 9
+// Nodes   : 14  |  Connections: 11
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Friday1500                         scheduleTrigger
-// FeedsToRead                        httpRequest                [alwaysOutput] [retry]
+// FeedsToRead                        supabase                   [creds] [alwaysOutput] [retry]
 // FetchTheFeed                       httpRequest                [onError→regular]
 // CollectTheItems                    code
-// ClaimAsSeen                        httpRequest                [alwaysOutput] [retry]
+// AlreadySeen                        supabase                   [creds] [alwaysOutput] [executeOnce] [retry]
 // OnlyTheNewOnes                     code
 // AnythingNew                        if
-// WriteTheDigest                     httpRequest                [onError→regular] [retry]
-// SendTheDigest                      httpRequest                [retry]
+// OneRowPerItem                      code
+// RememberThem                       supabase                   [creds] [retry]
+// WriteTheDigest                     agent                      [AI] [onError→regular] [executeOnce]
+// WriteTheDigestClaude               lmChatAnthropic            [creds] [ai_languageModel]
+// SendTheDigest                      sendGrid                   [creds] [executeOnce] [retry]
 // QuietWeek                          noOp
 //
 // ROUTING MAP
@@ -25,12 +28,17 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //    → FeedsToRead
 //      → FetchTheFeed
 //        → CollectTheItems
-//          → ClaimAsSeen
+//          → AlreadySeen
 //            → OnlyTheNewOnes
 //              → AnythingNew
-//                → WriteTheDigest
-//                  → SendTheDigest
+//                → OneRowPerItem
+//                  → RememberThem
+//                    → WriteTheDigest
+//                      → SendTheDigest
 //               .out(1) → QuietWeek
+//
+// AI CONNECTIONS
+// WriteTheDigest.uses({ ai_languageModel: WriteTheDigestClaude })
 // </workflow-map>
 
 // =====================================================================
@@ -61,8 +69,7 @@ export class ContentIndustryNewsDigestWorkflow {
         content: `## Content · Industry news digest
 Each Friday, reads the feeds you follow, drops what was already sent, and emails a short digest of what is new.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** Supabase, Claude, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/content\``,
     };
 
@@ -71,7 +78,7 @@ Each Friday, reads the feeds you follow, drops what was already sent, and emails
         name: 'Friday 15:00',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 180],
+        position: [0, 220],
     })
     Friday1500 = {
         rule: {
@@ -87,29 +94,20 @@ Each Friday, reads the feeds you follow, drops what was already sent, and emails
     @node({
         id: '177a9f15-bba1-4e84-af8d-87fa87c9c578',
         name: 'Feeds to read',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [260, 180],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [260, 220],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     FeedsToRead = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/feeds',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'feeds',
+        returnAll: true,
     };
 
     @node({
@@ -117,7 +115,7 @@ Each Friday, reads the feeds you follow, drops what was already sent, and emails
         name: 'Fetch the feed',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [520, 180],
+        position: [520, 220],
         onError: 'continueRegularOutput',
     })
     FetchTheFeed = {
@@ -133,7 +131,7 @@ Each Friday, reads the feeds you follow, drops what was already sent, and emails
         name: 'Collect the items',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [780, 180],
+        position: [780, 220],
     })
     CollectTheItems = {
         jsCode: `const items = $input.all().flatMap((i) => i.json.items ?? []).filter((x) => x && x.url && x.title);
@@ -142,43 +140,23 @@ return unique.map((x) => ({ json: { url: x.url, title: x.title, summary: String(
     };
 
     @node({
-        id: '0b5672e7-ce8f-4afa-aa63-7ee83469328b',
-        name: 'Claim as seen',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1040, 180],
+        id: '05df5be8-302d-4487-a531-153c7bfc50ee',
+        name: 'Already seen',
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [1040, 220],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
+        executeOnce: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
-    ClaimAsSeen = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/seen_items',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'on_conflict',
-                    value: "={{ 'url' }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ url: $json.url, title: $json.title, summary: $json.summary }) }}',
+    AlreadySeen = {
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'seen_items',
+        returnAll: true,
     };
 
     @node({
@@ -186,11 +164,12 @@ return unique.map((x) => ({ json: { url: x.url, title: x.title, summary: String(
         name: 'Only the new ones',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1300, 180],
+        position: [1300, 220],
     })
     OnlyTheNewOnes = {
-        jsCode: `const fresh = $input.all().map((i) => i.json).filter((r) => r && r.url);
-return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + " (" + r.url + "): " + r.summary).join("\\n") } }];`,
+        jsCode: `const seen = new Set($input.all().map((i) => i.json.url).filter(Boolean));
+const fresh = $("Collect the items").all().map((i) => i.json).filter((r) => r.url && !seen.has(r.url));
+return [{ json: { count: fresh.length, rows: fresh, list: fresh.map((r) => "- " + r.title + " (" + r.url + "): " + r.summary).join("\\n") } }];`,
     };
 
     @node({
@@ -198,7 +177,7 @@ return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + "
         name: 'Anything new?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1560, 180],
+        position: [1560, 220],
     })
     AnythingNew = {
         conditions: {
@@ -226,72 +205,112 @@ return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + "
     };
 
     @node({
-        id: '2f1e68eb-7eb0-4d16-ae21-bc626f046626',
-        name: 'Write the digest',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1820, 90],
-        onError: 'continueRegularOutput',
+        id: '628c70eb-cbe1-4b3d-a89a-69b1edec1054',
+        name: 'One row per item',
+        type: 'n8n-nodes-base.code',
+        version: 2,
+        position: [1820, 130],
+    })
+    OneRowPerItem = {
+        jsCode: 'return $input.first().json.rows.map((json) => ({ json }));',
+    };
+
+    @node({
+        id: 'd4cf86df-9008-4e6f-a86e-b30dc94dcfe2',
+        name: 'Remember them',
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [2080, 220],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
-    WriteTheDigest = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+    RememberThem = {
+        resource: 'row',
+        operation: 'create',
+        tableId: 'seen_items',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
+                    fieldId: 'url',
+                    fieldValue: '={{ $json.url }}',
+                },
+                {
+                    fieldId: 'title',
+                    fieldValue: '={{ $json.title }}',
+                },
+                {
+                    fieldId: 'summary',
+                    fieldValue: '={{ $json.summary }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  messages: [
-    { role: "system", content: "[task:summarise] Write a short weekly digest from these items: one line per item saying why it matters, grouped under at most three headings. Keep every link. Add nothing that is not in the items." },
-    { role: "user", content: $json.list }
-  ]
-}) }}`,
+    };
+
+    @node({
+        id: '2f1e68eb-7eb0-4d16-ae21-bc626f046626',
+        name: 'Write the digest',
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
+        position: [2340, 90],
+        onError: 'continueRegularOutput',
+        executeOnce: true,
+    })
+    WriteTheDigest = {
+        promptType: 'define',
+        text: "={{ $('Only the new ones').first().json.list }}",
+        hasOutputParser: false,
+        options: {
+            systemMessage:
+                '[task:summarise] Write a short weekly digest from these items: one line per item saying why it matters, grouped under at most three headings. Keep every link. Add nothing that is not in the items.',
+            maxIterations: 2,
+        },
+    };
+
+    @node({
+        id: '172a48a6-7bb4-4bb0-abc5-21ca3afb15bb',
+        name: 'Write the digest · Claude',
+        type: '@n8n/n8n-nodes-langchain.lmChatAnthropic',
+        version: 1.3,
+        position: [2340, 310],
+        credentials: { anthropicApi: { id: '__CRED:anthropic__', name: 'Claude' } },
+    })
+    WriteTheDigestClaude = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'claude-sonnet-4-5',
+        },
+        options: {
+            temperature: 0.2,
+        },
     };
 
     @node({
         id: '1961c6f0-8d98-4f07-a0c4-0e729f31c566',
         name: 'Send the digest',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2080, 180],
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
+        position: [2600, 220],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
+        executeOnce: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SendTheDigest = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: 'team@example.com', subject: 'This week: ' + $('Only the new ones').first().json.count + ' things worth reading', text: $json.choices?.[0]?.message?.content ?? $('Only the new ones').first().json.list }) }}",
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: "={{ 'team@example.com' }}",
+        subject: "={{ 'This week: ' + $('Only the new ones').first().json.count + ' things worth reading' }}",
+        dynamicTemplate: false,
+        contentType: 'text/plain',
+        contentValue: "={{ $json.output ?? $('Only the new ones').first().json.list }}",
+        additionalFields: {},
     };
 
     @node({
@@ -299,7 +318,7 @@ return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + "
         name: 'Quiet week',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1820, 270],
+        position: [1820, 310],
     })
     QuietWeek = {};
 
@@ -312,11 +331,17 @@ return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + "
         this.Friday1500.out(0).to(this.FeedsToRead.in(0));
         this.FeedsToRead.out(0).to(this.FetchTheFeed.in(0));
         this.FetchTheFeed.out(0).to(this.CollectTheItems.in(0));
-        this.CollectTheItems.out(0).to(this.ClaimAsSeen.in(0));
-        this.ClaimAsSeen.out(0).to(this.OnlyTheNewOnes.in(0));
+        this.CollectTheItems.out(0).to(this.AlreadySeen.in(0));
+        this.AlreadySeen.out(0).to(this.OnlyTheNewOnes.in(0));
         this.OnlyTheNewOnes.out(0).to(this.AnythingNew.in(0));
-        this.AnythingNew.out(0).to(this.WriteTheDigest.in(0));
+        this.AnythingNew.out(0).to(this.OneRowPerItem.in(0));
         this.AnythingNew.out(1).to(this.QuietWeek.in(0));
+        this.OneRowPerItem.out(0).to(this.RememberThem.in(0));
+        this.RememberThem.out(0).to(this.WriteTheDigest.in(0));
         this.WriteTheDigest.out(0).to(this.SendTheDigest.in(0));
+
+        this.WriteTheDigest.uses({
+            ai_languageModel: this.WriteTheDigestClaude.output,
+        });
     }
 }

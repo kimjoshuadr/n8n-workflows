@@ -12,13 +12,11 @@
 
 Welcomes a new member, gives them the starter role, records them, and flags accounts created minutes ago for a moderator to look at.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Discord, Datastore, Chat |
-| Nodes | 13 |
-| Calls | `idempotency-guard`, `notify`, `error-handler` |
-| Files | [`community-onboarding.json`](community-onboarding.json) · [`community-onboarding.workflow.ts`](community-onboarding.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/discord.svg" width="16" height="16" alt=""> Discord
+- **Nodes:** 13
+- **Calls:** `idempotency-guard`, `notify`, `error-handler`
+- **Files:** [`community-onboarding.json`](community-onboarding.json) · [`community-onboarding.workflow.ts`](community-onboarding.workflow.ts)
 
 ```mermaid
 flowchart LR
@@ -27,12 +25,12 @@ flowchart LR
   nauhg90{"A person?"}
   n1ja4syq[["Seen before?"]]
   n151u8u{"First join?"}
-  n1gmr6p1[/"Save the member"/]
+  n1gmr6p1["Save the member"]
   n1y0mjyq{"Brand new account?"}
   n20moti["Review message"]
   n15is060[["Ask a moderator"]]
-  n1mu36bz[/"Give starter role"/]
-  n112nutd[/"Welcome them"/]
+  n1mu36bz["Give starter role"]
+  n112nutd["Welcome them"]
   n1v01rpv["Ignore bots"]
   n1u1h2lf["Rejoined"]
   n1wc3he0 --> nmzmep8
@@ -67,24 +65,24 @@ flowchart LR
 
 Checks each message, removes clear scams, sends borderline ones to moderators, and never removes anything when the model is unavailable.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | LLM, Discord, Datastore, Chat |
-| Nodes | 12 |
-| Calls | `notify`, `error-handler` |
-| Files | [`community-moderation.json`](community-moderation.json) · [`community-moderation.workflow.ts`](community-moderation.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI &nbsp;·&nbsp; <img src="../../assets/platforms/discord.svg" width="16" height="16" alt=""> Discord &nbsp;·&nbsp; <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase
+- **Nodes:** 14
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`community-moderation.json`](community-moderation.json) · [`community-moderation.workflow.ts`](community-moderation.workflow.ts)
 
 ```mermaid
 flowchart LR
   ntse8nz(["Message posted"])
   n2grn5h["Read the message"]
-  n1vc1kvv[/"Judge it"/]
+  n1vc1kvv[["Judge it"]]
+  nsyc3zx("Judge it · GPT")
+  n1g6vvmb("Judge it · shape")
   n1riexmv["Read the verdict"]
   n1ekp1l0{"What to do?"}
-  n6sabii[/"Delete the message"/]
+  n6sabii["Delete the message"]
   n137b0xg[/"Time the author out"/]
-  n1mplts8[/"Log the action"/]
+  n1mplts8["Log the action"]
   n61hr9c["Removed message"]
   n20moti["Review message"]
   n1iyws7q[["Tell moderators"]]
@@ -101,6 +99,8 @@ flowchart LR
   n1ekp1l0 -->|no| n20moti
   n20moti --> n1iyws7q
   n1ekp1l0 -->|no| nv0a53v
+  nsyc3zx -.-> n1vc1kvv
+  n1g6vvmb -.-> n1vc1kvv
 ```
 
 **How it runs**
@@ -123,24 +123,23 @@ flowchart LR
 
 Posts announcements at the time they were scheduled for, once, and reports any that could not be posted.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, Discord, Chat |
-| Nodes | 11 |
-| Calls | `notify`, `error-handler` |
-| Files | [`community-announcements.json`](community-announcements.json) · [`community-announcements.workflow.ts`](community-announcements.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/discord.svg" width="16" height="16" alt=""> Discord
+- **Nodes:** 12
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`community-announcements.json`](community-announcements.json) · [`community-announcements.workflow.ts`](community-announcements.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1pdql2g(["Every 5 minutes"])
-  n1efj2c9[/"Due announcements"/]
+  n1efj2c9["Due announcements"]
   n1x75dpi{"Any due?"}
-  ng7nr92[/"Claim it"/]
+  ng7nr92["Claim it"]
   ng7p697{"Claimed?"}
-  n9q64kk[/"Post it"/]
-  n1sxbt1g[/"Mark sent"/]
-  nmbehd5[/"Mark failed"/]
+  n9q64kk["Post it"]
+  n9q7jkp{"Posted?"}
+  n1sxbt1g["Mark sent"]
+  nmbehd5["Mark failed"]
   n1u1ajxm["Failure message"]
   n8m5mk4[["Tell the team"]]
   nnsfmoq["Nothing due"]
@@ -149,9 +148,10 @@ flowchart LR
   n1x75dpi -->|yes| ng7nr92
   ng7nr92 --> ng7p697
   ng7p697 --> n9q64kk
-  n9q64kk --> n1sxbt1g
+  n9q64kk --> n9q7jkp
+  n9q7jkp -->|yes| n1sxbt1g
   n1x75dpi -->|no| nnsfmoq
-  n9q64kk -->|failed| nmbehd5
+  n9q7jkp -->|no| nmbehd5
   nmbehd5 --> n1u1ajxm
   n1u1ajxm --> n8m5mk4
 ```

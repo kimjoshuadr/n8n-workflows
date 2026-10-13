@@ -2,7 +2,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Lead intake · Capture and qualify
-// Nodes   : 22  |  Connections: 20
+// Nodes   : 24  |  Connections: 20
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
@@ -16,15 +16,17 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // SeenToday                          executeWorkflow
 // NewEnquiry                         if
 // IgnoreTheRepeat                    noOp
-// ScoreTheFit                        httpRequest                [onError→regular] [retry]
+// ScoreTheFit                        agent                      [AI] [onError→regular]
+// ScoreTheFitGpt                     lmChatOpenAi               [creds] [ai_languageModel]
+// ScoreTheFitShape                   outputParserStructured     [ai_outputParser]
 // ReadTheVerdict                     code
-// SaveTheLead                        httpRequest                [retry]
+// SaveTheLead                        supabase                   [creds] [retry]
 // WhichPath                          switch
-// CreateCrmContact                   httpRequest                [onError→out(1)] [retry]
-// SendBookingLink                    httpRequest                [retry]
+// CreateCrmContact                   hubspot                    [onError→out(1)] [creds] [retry]
+// SendBookingLink                    sendGrid                   [creds] [retry]
 // TellSales                          executeWorkflow
 // ParkForReplay                      executeWorkflow
-// SendNurtureEmail                   httpRequest                [retry]
+// SendNurtureEmail                   sendGrid                   [creds] [retry]
 // AskAPersonToLook                   executeWorkflow
 // SalesMessage                       code
 // ReviewMessage                      code
@@ -53,6 +55,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //                        → AskAPersonToLook
 //             .out(1) → IgnoreTheRepeat
 //       .out(1) → Reject
+//
+// AI CONNECTIONS
+// ScoreTheFit.uses({ ai_languageModel: ScoreTheFitGpt, ai_outputParser: ScoreTheFitShape })
 // </workflow-map>
 
 // =====================================================================
@@ -83,8 +88,7 @@ export class LeadIntakeCaptureAndQualifyWorkflow {
         content: `## Lead intake · Capture and qualify
 Takes an enquiry from any form, rejects junk, ignores repeats, has a model score the fit, then files it in the CRM and sends the right first reply.
 
-**Platforms:** none, this is logic only
-**Settings:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** OpenAI, Supabase, HubSpot, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/lead-intake\``,
     };
 
@@ -94,7 +98,7 @@ Takes an enquiry from any form, rejects junk, ignores repeats, has a model score
         name: 'Enquiry form',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 270],
+        position: [0, 310],
     })
     EnquiryForm = {
         httpMethod: 'POST',
@@ -108,7 +112,7 @@ Takes an enquiry from any form, rejects junk, ignores repeats, has a model score
         name: 'Validate and normalise',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [260, 270],
+        position: [260, 310],
     })
     ValidateAndNormalise = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -134,7 +138,7 @@ return [{ json: {
         name: 'Valid?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [520, 270],
+        position: [520, 310],
     })
     Valid = {
         conditions: {
@@ -166,7 +170,7 @@ return [{ json: {
         name: 'Reject',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [780, 180],
+        position: [780, 220],
     })
     Reject = {
         respondWith: 'json',
@@ -181,7 +185,7 @@ return [{ json: {
         name: 'Accept',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [780, 360],
+        position: [780, 400],
     })
     Accept = {
         respondWith: 'json',
@@ -196,7 +200,7 @@ return [{ json: {
         name: 'Seen today?',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1040, 270],
+        position: [1040, 310],
     })
     SeenToday = {
         workflowId: {
@@ -212,7 +216,7 @@ return [{ json: {
         name: 'New enquiry?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1300, 270],
+        position: [1300, 310],
     })
     NewEnquiry = {
         conditions: {
@@ -244,47 +248,65 @@ return [{ json: {
         name: 'Ignore the repeat',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1560, 180],
+        position: [1660, 90],
     })
     IgnoreTheRepeat = {};
 
     @node({
         id: 'cc820227-ebdb-4dbc-a4cf-ef476f8846d5',
         name: 'Score the fit',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1560, 360],
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
+        position: [1660, 270],
         onError: 'continueRegularOutput',
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
     })
     ScoreTheFit = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: "={{ 'From: ' + $json.name + ($json.company ? ' at ' + $json.company : '') + '\\n\\n' + $json.message }}",
+        hasOutputParser: true,
         options: {
-            timeout: 15000,
+            systemMessage:
+                '[task:qualify-lead] You qualify inbound enquiries for a services business. Reply with JSON: { score: 0-100, fit: boolean, reason: string, missing: string[] }. Judge only what the message says.',
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
+    };
+
+    @node({
+        id: 'a3c7396a-3504-4a78-a58e-f2404ff9a4e1',
+        name: 'Score the fit · GPT',
+        type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+        version: 1.2,
+        position: [1560, 490],
+        credentials: { openAiApi: { id: '__CRED:openai__', name: 'OpenAI' } },
+    })
+    ScoreTheFitGpt = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'gpt-4o-mini',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  response_format: { type: "json_object" },
-  messages: [
-    { role: "system", content: "[task:qualify-lead] You qualify inbound enquiries for a services business. Reply with JSON: { score: 0-100, fit: boolean, reason: string, missing: string[] }. Judge only what the message says." },
-    { role: "user", content: 'From: ' + $json.name + ($json.company ? ' at ' + $json.company : '') + '\\n\\n' + $json.message }
+        options: {
+            temperature: 0,
+        },
+    };
+
+    @node({
+        id: 'ca4b0f2a-7e81-464d-a071-f0ad6805dc74',
+        name: 'Score the fit · shape',
+        type: '@n8n/n8n-nodes-langchain.outputParserStructured',
+        version: 1.3,
+        position: [1760, 490],
+    })
+    ScoreTheFitShape = {
+        schemaType: 'fromJson',
+        jsonSchemaExample: `{
+  "score": 70,
+  "fit": true,
+  "reason": "Why, in one sentence.",
+  "missing": [
+    "budget"
   ]
-}) }}`,
+}`,
     };
 
     @node({
@@ -292,20 +314,15 @@ return [{ json: {
         name: 'Read the verdict',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1820, 270],
+        position: [2020, 310],
     })
     ReadTheVerdict = {
         jsCode: `const before = $("New enquiry?").all();
 const out = [];
 for (const [i, item] of $input.all().entries()) {
-  let reply = {"score":null,"fit":null,"reason":"Model reply could not be read"};
-  let parse_error = false;
-  try {
-    reply = JSON.parse(item.json.choices[0].message.content);
-  } catch (e) {
-    parse_error = true;
-  }
-  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });
+  const answer = item.json.output;
+  const ok = answer && typeof answer === "object" && !Array.isArray(answer);
+  out.push({ json: { ...(before[i]?.json ?? {}), ...(ok ? answer : {"score":null,"fit":null,"reason":"Model reply could not be read"}), parse_error: !ok } });
 }
 return out;`,
     };
@@ -313,32 +330,71 @@ return out;`,
     @node({
         id: '1fd176ed-891d-42d2-a506-e7f5fafff42a',
         name: 'Save the lead',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2080, 270],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [2280, 310],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SaveTheLead = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/leads',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'leads',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'email',
+                    fieldValue: '={{ $json.email }}',
+                },
+                {
+                    fieldId: 'name',
+                    fieldValue: '={{ $json.name }}',
+                },
+                {
+                    fieldId: 'company',
+                    fieldValue: '={{ $json.company }}',
+                },
+                {
+                    fieldId: 'message',
+                    fieldValue: '={{ $json.message }}',
+                },
+                {
+                    fieldId: 'source',
+                    fieldValue: '={{ $json.source }}',
+                },
+                {
+                    fieldId: 'score',
+                    fieldValue: '={{ $json.score }}',
+                },
+                {
+                    fieldId: 'fit',
+                    fieldValue: '={{ $json.fit }}',
+                },
+                {
+                    fieldId: 'reason',
+                    fieldValue: '={{ $json.reason }}',
+                },
+                {
+                    fieldId: 'status',
+                    fieldValue: "={{ $json.fit === true ? 'qualified' : $json.fit === false ? 'nurture' : 'review' }}",
+                },
+                {
+                    fieldId: 'follow_ups',
+                    fieldValue: '={{ 0 }}',
+                },
+                {
+                    fieldId: 'booked',
+                    fieldValue: '={{ false }}',
+                },
+                {
+                    fieldId: 'received_at',
+                    fieldValue: '={{ $json.received_at }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ email: $json.email, name: $json.name, company: $json.company, message: $json.message, source: $json.source, score: $json.score, fit: $json.fit, reason: $json.reason, status: $json.fit === true ? 'qualified' : $json.fit === false ? 'nurture' : 'review', follow_ups: 0, booked: false, received_at: $json.received_at }) }}",
     };
 
     @node({
@@ -346,7 +402,7 @@ return out;`,
         name: 'Which path?',
         type: 'n8n-nodes-base.switch',
         version: 3.2,
-        position: [2340, 270],
+        position: [2540, 310],
     })
     WhichPath = {
         rules: {
@@ -411,64 +467,56 @@ return out;`,
     @node({
         id: 'a1550c62-a3e9-4c64-a632-b5d902f9843d',
         name: 'Create CRM contact',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2600, 90],
+        type: 'n8n-nodes-base.hubspot',
+        version: 2.1,
+        position: [2800, 130],
+        credentials: { hubspotAppToken: { id: '__CRED:hubspot__', name: 'HubSpot' } },
         onError: 'continueErrorOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     CreateCrmContact = {
-        method: 'POST',
-        url: '={{ $env.CRM_BASE_URL }}/crm/v3/objects/contacts',
-        options: {
-            timeout: 15000,
+        authentication: 'appToken',
+        resource: 'contact',
+        operation: 'upsert',
+        email: "={{ $('Read the verdict').first().json.email }}",
+        additionalFields: {
+            firstName: "={{ $('Read the verdict').first().json.name }}",
+            companyName: "={{ $('Read the verdict').first().json.company ?? '' }}",
+            lifeCycleStage: "={{ 'salesqualifiedlead' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CRM_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ properties: { email: $('Read the verdict').first().json.email, firstname: $('Read the verdict').first().json.name, company: $('Read the verdict').first().json.company, lead_score: $('Read the verdict').first().json.score, lifecyclestage: 'salesqualifiedlead' } }) }}",
+        options: {},
     };
 
     @node({
         id: '5860cb02-4698-49cf-a6d1-8e9d7882a9c5',
         name: 'Send booking link',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2860, 90],
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
+        position: [3060, 130],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SendBookingLink = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: "={{ $('Read the verdict').first().json.email }}",
+        dynamicTemplate: true,
+        templateId: "={{ 'd-booking-link' }}",
+        dynamicTemplateFields: {
+            fields: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
+                    key: 'name',
+                    value: "={{ $('Read the verdict').first().json.name }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $('Read the verdict').first().json.email, subject: 'Thanks, ' + $('Read the verdict').first().json.name + '. Pick a time', template: 'booking-link', data: { name: $('Read the verdict').first().json.name } }) }}",
+        additionalFields: {},
     };
 
     @node({
@@ -476,7 +524,7 @@ return out;`,
         name: 'Tell sales',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [3380, 270],
+        position: [3580, 310],
     })
     TellSales = {
         workflowId: {
@@ -492,7 +540,7 @@ return out;`,
         name: 'Park for replay',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [3120, 180],
+        position: [3320, 220],
     })
     ParkForReplay = {
         workflowId: {
@@ -506,32 +554,35 @@ return out;`,
     @node({
         id: '7580ab32-bf68-492d-a401-ba882e17b120',
         name: 'Send nurture email',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [2600, 270],
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
+        position: [2800, 310],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SendNurtureEmail = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: "={{ $('Read the verdict').first().json.email }}",
+        dynamicTemplate: true,
+        templateId: "={{ 'd-nurture-1' }}",
+        dynamicTemplateFields: {
+            fields: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
+                    key: 'name',
+                    value: "={{ $('Read the verdict').first().json.name }}",
+                },
+                {
+                    key: 'missing',
+                    value: "={{ $('Read the verdict').first().json.missing }}",
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: $('Read the verdict').first().json.email, subject: 'Thanks for getting in touch', template: 'nurture-1', data: { name: $('Read the verdict').first().json.name, missing: $('Read the verdict').first().json.missing } }) }}",
+        additionalFields: {},
     };
 
     @node({
@@ -539,7 +590,7 @@ return out;`,
         name: 'Ask a person to look',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2860, 270],
+        position: [3060, 310],
     })
     AskAPersonToLook = {
         workflowId: {
@@ -555,7 +606,7 @@ return out;`,
         name: 'Sales message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [3120, 360],
+        position: [3320, 400],
     })
     SalesMessage = {
         jsCode: `const l = $("Read the verdict").first().json;
@@ -567,7 +618,7 @@ return [{ json: { text: "New qualified lead: " + l.name + (l.company ? " (" + l.
         name: 'Review message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2600, 450],
+        position: [2800, 490],
     })
     ReviewMessage = {
         jsCode: `const l = $("Read the verdict").first().json;
@@ -579,7 +630,7 @@ return [{ json: { text: "A lead needs a human look (" + l.email + "): " + l.reas
         name: 'Dead letter payload',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2860, 450],
+        position: [3060, 490],
     })
     DeadLetterPayload = {
         jsCode: `const l = $("Read the verdict").first().json;
@@ -612,5 +663,10 @@ return [{ json: { source: "lead-capture", reason: "CRM contact could not be crea
         this.SalesMessage.out(0).to(this.TellSales.in(0));
         this.DeadLetterPayload.out(0).to(this.ParkForReplay.in(0));
         this.ReviewMessage.out(0).to(this.AskAPersonToLook.in(0));
+
+        this.ScoreTheFit.uses({
+            ai_languageModel: this.ScoreTheFitGpt.output,
+            ai_outputParser: this.ScoreTheFitShape.output,
+        });
     }
 }

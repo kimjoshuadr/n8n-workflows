@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Block · Convert a currency amount\nConverts an amount with today's rate, rounds like money, and says so when the rate could not be fetched instead of returning a wrong number.\n\n**Platforms:** none, this is logic only\n**Settings:** RATES_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+        "content": "## Block · Convert a currency amount\nConverts an amount with today's rate, rounds like money, and says so when the rate could not be fetched instead of returning a wrong number.\n\n**Platforms:** Stripe\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
       }
     },
     {
@@ -40,28 +40,23 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.RATES_BASE_URL }}/latest",
+        "url": "={{ 'https://api.stripe.com/v1/exchange_rates/' + String($json.from).toLowerCase() }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
         "options": {
           "timeout": 15000
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "from",
-              "value": "={{ $json.from }}"
-            },
-            {
-              "name": "to",
-              "value": "={{ $json.to }}"
-            }
-          ]
         }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "stripeApi": {
+          "id": "__CRED:stripe__",
+          "name": "Stripe"
+        }
+      }
     },
     {
       "id": "f0da4299-28e6-4bb4-af0c-d9a913e8d62b",
@@ -73,7 +68,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const req = $(\"When called\").first().json;\nconst rate = $input.first().json.rates?.[req.to];\nif (typeof rate !== \"number\") return [{ json: { ...req, converted: null, ok: false, reason: \"No rate available for \" + req.from + \" to \" + req.to } }];\nreturn [{ json: { ...req, rate, converted: Math.round(req.amount * rate * 100) / 100, ok: true } }];"
+        "jsCode": "const req = $(\"When called\").first().json;\nconst rate = $input.first().json.rates?.[String(req.to).toLowerCase()];\nif (typeof rate !== \"number\") return [{ json: { ...req, converted: null, ok: false, reason: \"No rate available for \" + req.from + \" to \" + req.to } }];\nreturn [{ json: { ...req, rate, converted: Math.round(req.amount * rate * 100) / 100, ok: true } }];"
       }
     }
   ],

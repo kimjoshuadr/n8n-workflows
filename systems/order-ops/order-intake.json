@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Order ops · New order\nTakes a new order from the store, records it once, takes its items out of stock, confirms to the customer, and warns the team about anything running low.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
+        "content": "## Order ops · New order\nTakes a new order from the store, records it once, takes its items out of stock, confirms to the customer, and warns the team about anything running low.\n\n**Platforms:** Shopify, Supabase, SendGrid\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
       }
     },
     {
@@ -23,101 +23,37 @@
         180
       ],
       "name": "Order created",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.shopifyTrigger",
+      "typeVersion": 1,
       "parameters": {
-        "httpMethod": "POST",
-        "path": "order-created",
-        "responseMode": "responseNode",
-        "options": {}
+        "authentication": "accessToken",
+        "topic": "orders/create"
       },
-      "webhookId": "03427abe-6365-492a-a7ce-ab3daf2128ed"
-    },
-    {
-      "id": "ffb10e7f-4bdd-4a22-a901-37129cfe791b",
-      "position": [
-        260,
-        180
-      ],
-      "name": "From the store?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "fbc14570-bfc3-439e-a0db-82ba8a508c23",
-              "leftValue": "={{ $json.headers['x-webhook-secret'] === $env.SHOP_API_KEY }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "acdfd98a-2bec-47f4-a79c-818cabc96e9e",
-      "position": [
-        520,
-        90
-      ],
-      "name": "Unauthorised",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ ok: false }) }}",
-        "options": {
-          "responseCode": 401
-        }
-      }
-    },
-    {
-      "id": "0bbefa30-9fa8-4379-aaef-79ed7104eb31",
-      "position": [
-        520,
-        270
-      ],
-      "name": "Received",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
-        "options": {
-          "responseCode": 200
+      "webhookId": "ba75f716-9226-4635-a13e-b6ee1ff3dc3b",
+      "credentials": {
+        "shopifyAccessTokenApi": {
+          "id": "__CRED:shopify__",
+          "name": "Shopify"
         }
       }
     },
     {
       "id": "412e6bc2-f528-496a-a29c-f6ad22f9639f",
       "position": [
-        780,
+        260,
         180
       ],
       "name": "Read the order",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const o = $(\"Order created\").first().json.body ?? {};\nconst lines = (o.line_items ?? []).map((l) => ({ sku: String(l.sku), title: l.title, quantity: Number(l.quantity ?? 1), price: Number(l.price ?? 0) }));\nif (!o.id || !lines.length) throw new Error(\"Order has no id or no line items\");\nreturn [{ json: { order_id: String(o.id), email: String(o.email ?? \"\").toLowerCase(), customer: o.customer?.first_name ?? \"there\", currency: o.currency ?? \"USD\", total: lines.reduce((s, l) => s + l.price * l.quantity, 0), lines, scope: \"order\", key: String(o.id) } }];"
+        "jsCode": "const o = $(\"Order created\").first().json ?? {};\nconst lines = (o.line_items ?? []).map((l) => ({ sku: String(l.sku), title: l.title, quantity: Number(l.quantity ?? 1), price: Number(l.price ?? 0) }));\nif (!o.id || !lines.length) throw new Error(\"Order has no id or no line items\");\nreturn [{ json: { order_id: String(o.id), email: String(o.email ?? \"\").toLowerCase(), customer: o.customer?.first_name ?? \"there\", currency: o.currency ?? \"USD\", total: lines.reduce((s, l) => s + l.price * l.quantity, 0), lines, scope: \"order\", key: String(o.id) } }];"
       }
     },
     {
       "id": "fbdbb6e8-80be-47db-a1ca-d73cc6e69219",
       "position": [
-        1040,
+        520,
         180
       ],
       "name": "Seen before?",
@@ -135,7 +71,7 @@
     {
       "id": "d373d0f6-019d-4fe9-ad72-b5c0c6fce154",
       "position": [
-        1300,
+        780,
         180
       ],
       "name": "New order?",
@@ -169,7 +105,7 @@
     {
       "id": "ac0b0063-a396-4721-ae59-bdfe7a64f22b",
       "position": [
-        1560,
+        1040,
         90
       ],
       "name": "Already handled",
@@ -180,39 +116,64 @@
     {
       "id": "aef03a4a-86e2-4430-a437-6db3c673ce6c",
       "position": [
-        1560,
+        1040,
         270
       ],
       "name": "Save the order",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/orders",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "orders",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "order_id",
+              "fieldValue": "={{ $json.order_id }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.email }}"
+            },
+            {
+              "fieldId": "total",
+              "fieldValue": "={{ $json.total }}"
+            },
+            {
+              "fieldId": "currency",
+              "fieldValue": "={{ $json.currency }}"
+            },
+            {
+              "fieldId": "lines",
+              "fieldValue": "={{ $json.lines }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ 'paid' }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ order_id: $json.order_id, email: $json.email, total: $json.total, currency: $json.currency, lines: $json.lines, status: 'paid', created_at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "4f2935f7-e7e4-4c8b-a0cf-64b2f5a6883a",
       "position": [
-        1820,
+        1300,
         90
       ],
       "name": "One item per line",
@@ -225,7 +186,7 @@
     {
       "id": "fffc4284-4dee-4e19-a621-58d9e1b9e7bd",
       "position": [
-        2080,
+        1560,
         180
       ],
       "name": "Take from stock",
@@ -233,32 +194,31 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SHOP_BASE_URL }}/inventory_levels/adjust",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.SHOP_API_KEY }}"
-            }
-          ]
-        },
+        "url": "={{ 'https://acme-store.myshopify.com/admin/api/2025-01' + '/inventory_levels/adjust.json' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "shopifyAccessTokenApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ sku: $json.sku, available_adjustment: -$json.quantity }) }}"
+        "jsonBody": "={{ JSON.stringify({ sku: $json.sku, available_adjustment: -$json.quantity }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "shopifyAccessTokenApi": {
+          "id": "__CRED:shopify__",
+          "name": "Shopify"
+        }
+      }
     },
     {
       "id": "7e13d170-9ffb-402a-a058-fe6e355013da",
       "position": [
-        2340,
+        1820,
         90
       ],
       "name": "What is running low?",
@@ -271,7 +231,7 @@
     {
       "id": "009ffea0-ce7e-4e68-abf4-8f0aa7d3c022",
       "position": [
-        2600,
+        2080,
         90
       ],
       "name": "Anything low?",
@@ -305,7 +265,7 @@
     {
       "id": "ec573f0a-d530-455d-ab22-68d2bc56d010",
       "position": [
-        2860,
+        2340,
         180
       ],
       "name": "Warn the team",
@@ -323,39 +283,52 @@
     {
       "id": "991c63e2-d785-4358-ad19-0d208e3a6370",
       "position": [
-        1820,
+        1300,
         270
       ],
       "name": "Confirm to customer",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ $('New order?').first().json.email }}",
+        "dynamicTemplate": true,
+        "templateId": "={{ 'd-order-confirmation' }}",
+        "dynamicTemplateFields": {
+          "fields": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
+              "key": "name",
+              "value": "={{ $('New order?').first().json.customer }}"
+            },
+            {
+              "key": "lines",
+              "value": "={{ $('New order?').first().json.lines }}"
+            },
+            {
+              "key": "total",
+              "value": "={{ $('New order?').first().json.total }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: $('New order?').first().json.email, subject: 'Order ' + $('New order?').first().json.order_id + ' confirmed', template: 'order-confirmation', data: { name: $('New order?').first().json.customer, lines: $('New order?').first().json.lines, total: $('New order?').first().json.total } }) }}"
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "45c11ce1-b33f-41de-a7cc-f7d4587fb60c",
       "position": [
-        2340,
+        1820,
         270
       ],
       "name": "Stock failure payload",
@@ -368,7 +341,7 @@
     {
       "id": "574b9e51-0991-40fe-ab59-8e18023544d7",
       "position": [
-        2600,
+        2080,
         270
       ],
       "name": "Park for replay",
@@ -386,35 +359,6 @@
   ],
   "connections": {
     "Order created": {
-      "main": [
-        [
-          {
-            "node": "From the store?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "From the store?": {
-      "main": [
-        [
-          {
-            "node": "Received",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Unauthorised",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Received": {
       "main": [
         [
           {

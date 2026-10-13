@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## CRM · Enrich new contacts\nFills in company, role and size for a new CRM contact from an enrichment service, and never overwrites what a person already typed.\n\n**Platforms:** none, this is logic only\n**Settings:** CRM_API_KEY, CRM_BASE_URL, ENRICH_API_KEY, ENRICH_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
+        "content": "## CRM · Enrich new contacts\nFills in company, role and size for a new CRM contact from an enrichment service, and never overwrites what a person already typed.\n\n**Platforms:** Clearbit, HubSpot\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
       }
     },
     {
@@ -87,49 +87,73 @@
         90
       ],
       "name": "Look them up",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.clearbit",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.ENRICH_BASE_URL }}/people/match",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.ENRICH_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: $json.email }) }}"
+        "resource": "person",
+        "operation": "enrich",
+        "email": "={{ $json.email }}",
+        "additionalFields": {}
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000,
-      "onError": "continueErrorOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "clearbitApi": {
+          "id": "__CRED:clearbit__",
+          "name": "Clearbit"
+        }
+      }
+    },
+    {
+      "id": "d423b654-803a-4575-a37f-6ca3fb141bbb",
+      "position": [
+        1040,
+        180
+      ],
+      "name": "Found them?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6724cdbe-ebbc-4299-ac6d-5baba92784b6",
+              "leftValue": "={{ !$json.error && !!$json.employment }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
     },
     {
       "id": "e66297c5-d75d-4c87-ad60-7354d3b80d2c",
       "position": [
-        1040,
+        1300,
         90
       ],
       "name": "Only the blanks",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const c = $(\"Work email?\").first().json;\nconst found = $input.first().json.person ?? {};\nconst candidate = { company: found.organization?.name, jobtitle: found.title, company_size: found.organization?.estimated_num_employees, linkedin: found.linkedin_url };\nconst updates = Object.fromEntries(Object.entries(candidate).filter(([k, v]) => v != null && v !== \"\" && !c.existing[k]));\nreturn [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } }];"
+        "jsCode": "const c = $(\"Work email?\").first().json;\nconst found = $input.first().json ?? {};\nconst candidate = { company: found.employment?.name, jobtitle: found.employment?.title, linkedin: found.linkedin?.handle ? \"https://www.linkedin.com/\" + found.linkedin.handle : null };\nconst updates = Object.fromEntries(Object.entries(candidate).filter(([k, v]) => v != null && v !== \"\" && !c.existing[k]));\nreturn [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } }];"
       }
     },
     {
       "id": "7dd1ef6d-3583-4c07-abca-9581957b5c5a",
       "position": [
-        1300,
+        1560,
         180
       ],
       "name": "Anything to add?",
@@ -163,34 +187,33 @@
     {
       "id": "fe7d5277-3d60-4ffb-a1bb-5b0743428b71",
       "position": [
-        1560,
+        1820,
         90
       ],
       "name": "Update the contact",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CRM_BASE_URL }}/crm/v3/objects/contacts/update",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
-            }
-          ]
-        },
+        "method": "PATCH",
+        "url": "={{ 'https://api.hubapi.com/crm/v3/objects/contacts/' + $json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ id: $json.id, properties: $json.updates }) }}"
+        "jsonBody": "={{ JSON.stringify({ properties: $json.updates }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
     },
     {
       "id": "32373b80-e9a8-4da9-ad66-3469fdd98232",
@@ -206,7 +229,7 @@
     {
       "id": "cbe7d520-a5dd-4819-adcc-6a4a88c2572d",
       "position": [
-        1560,
+        1820,
         270
       ],
       "name": "Nothing new",
@@ -217,7 +240,7 @@
     {
       "id": "3452b43c-aa3b-4950-a9e6-f33aeb9f623f",
       "position": [
-        1040,
+        1300,
         270
       ],
       "name": "Lookup failed, left as is",
@@ -268,6 +291,17 @@
       ]
     },
     "Look them up": {
+      "main": [
+        [
+          {
+            "node": "Found them?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found them?": {
       "main": [
         [
           {

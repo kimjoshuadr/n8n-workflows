@@ -2,7 +2,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Community ops · Message moderation
-// Nodes   : 13  |  Connections: 12
+// Nodes   : 15  |  Connections: 12
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
@@ -10,12 +10,14 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // MessagePosted                      webhook
 // ReadTheMessage                     code
-// JudgeIt                            httpRequest                [onError→regular] [retry]
+// JudgeIt                            agent                      [AI] [onError→regular]
+// JudgeItGpt                         lmChatOpenAi               [creds] [ai_languageModel]
+// JudgeItShape                       outputParserStructured     [ai_outputParser]
 // ReadTheVerdict                     code
 // WhatToDo                           switch
-// DeleteTheMessage                   httpRequest                [retry]
-// TimeTheAuthorOut                   httpRequest                [onError→regular] [retry]
-// LogTheAction                       httpRequest                [retry]
+// DeleteTheMessage                   discord                    [creds] [retry]
+// TimeTheAuthorOut                   httpRequest                [onError→regular] [creds] [retry]
+// LogTheAction                       supabase                   [creds] [retry]
 // RemovedMessage                     code
 // ReviewMessage                      code
 // TellModerators                     executeWorkflow
@@ -36,6 +38,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //           .out(1) → ReviewMessage
 //              → TellModerators (↩ loop)
 //           .out(2) → LeaveIt
+//
+// AI CONNECTIONS
+// JudgeIt.uses({ ai_languageModel: JudgeItGpt, ai_outputParser: JudgeItShape })
 // </workflow-map>
 
 // =====================================================================
@@ -66,8 +71,7 @@ export class CommunityOpsMessageModerationWorkflow {
         content: `## Community ops · Message moderation
 Checks each message, removes clear scams, sends borderline ones to moderators, and never removes anything when the model is unavailable.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** OpenAI, Discord, Supabase
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/community-ops\``,
     };
 
@@ -105,40 +109,54 @@ return [{ json: { message_id: String(m.id), channel_id: String(m.channel_id), us
     @node({
         id: 'f207acb2-b765-4972-aaf0-3b903b66e2ba',
         name: 'Judge it',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [520, 270],
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
+        position: [620, 140],
         onError: 'continueRegularOutput',
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
     })
     JudgeIt = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: '={{ $json.content }}',
+        hasOutputParser: true,
         options: {
-            timeout: 15000,
+            systemMessage:
+                "[task:moderate] You moderate a community server. Reply with JSON: { action: 'allow'|'review'|'remove', reason: string }. Remove only clear scams, phishing links and threats. Use review for insults and anything you are unsure about. Disagreement and criticism are allowed.",
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
+    };
+
+    @node({
+        id: '1eaf493c-5ccf-4d85-ab7b-965410461062',
+        name: 'Judge it · GPT',
+        type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+        version: 1.2,
+        position: [520, 360],
+        credentials: { openAiApi: { id: '__CRED:openai__', name: 'OpenAI' } },
+    })
+    JudgeItGpt = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'gpt-4o-mini',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  response_format: { type: "json_object" },
-  messages: [
-    { role: "system", content: "[task:moderate] You moderate a community server. Reply with JSON: { action: 'allow'|'review'|'remove', reason: string }. Remove only clear scams, phishing links and threats. Use review for insults and anything you are unsure about. Disagreement and criticism are allowed." },
-    { role: "user", content: $json.content }
-  ]
-}) }}`,
+        options: {
+            temperature: 0,
+        },
+    };
+
+    @node({
+        id: '720ca1dd-1af5-482f-af87-5825184e8430',
+        name: 'Judge it · shape',
+        type: '@n8n/n8n-nodes-langchain.outputParserStructured',
+        version: 1.3,
+        position: [720, 360],
+    })
+    JudgeItShape = {
+        schemaType: 'fromJson',
+        jsonSchemaExample: `{
+  "action": "allow",
+  "reason": "Why."
+}`,
     };
 
     @node({
@@ -146,20 +164,15 @@ return [{ json: { message_id: String(m.id), channel_id: String(m.channel_id), us
         name: 'Read the verdict',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [780, 270],
+        position: [980, 270],
     })
     ReadTheVerdict = {
         jsCode: `const before = $("Read the message").all();
 const out = [];
 for (const [i, item] of $input.all().entries()) {
-  let reply = {"action":"review","reason":"The model was unavailable, so a person should look."};
-  let parse_error = false;
-  try {
-    reply = JSON.parse(item.json.choices[0].message.content);
-  } catch (e) {
-    parse_error = true;
-  }
-  out.push({ json: { ...(before[i]?.json ?? {}), ...reply, parse_error } });
+  const answer = item.json.output;
+  const ok = answer && typeof answer === "object" && !Array.isArray(answer);
+  out.push({ json: { ...(before[i]?.json ?? {}), ...(ok ? answer : {"action":"review","reason":"The model was unavailable, so a person should look."}), parse_error: !ok } });
 }
 return out;`,
     };
@@ -169,7 +182,7 @@ return out;`,
         name: 'What to do?',
         type: 'n8n-nodes-base.switch',
         version: 3.2,
-        position: [1040, 270],
+        position: [1240, 270],
     })
     WhatToDo = {
         rules: {
@@ -234,31 +247,29 @@ return out;`,
     @node({
         id: '2cc4b682-85e5-4cf0-a678-272cd16265e0',
         name: 'Delete the message',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1300, 90],
+        type: 'n8n-nodes-base.discord',
+        version: 2,
+        position: [1500, 90],
+        credentials: { discordBotApi: { id: '__CRED:discord__', name: 'Discord' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     DeleteTheMessage = {
-        method: 'POST',
-        url: '={{ $env.DISCORD_BASE_URL }}/channels/messages/delete',
-        options: {
-            timeout: 15000,
+        authentication: 'botToken',
+        resource: 'message',
+        operation: 'deleteMessage',
+        guildId: {
+            __rl: true,
+            mode: 'id',
+            value: "={{ '100000000000000001' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DISCORD_API_KEY }}",
-                },
-            ],
+        channelId: {
+            __rl: true,
+            mode: 'id',
+            value: '={{ $json.channel_id }}',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ channel_id: $json.channel_id, message_id: $json.message_id }) }}',
+        messageId: '={{ $json.message_id }}',
     };
 
     @node({
@@ -266,61 +277,70 @@ return out;`,
         name: 'Time the author out',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1560, 270],
+        position: [1760, 270],
+        credentials: { discordBotApi: { id: '__CRED:discord__', name: 'Discord' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     TimeTheAuthorOut = {
-        method: 'POST',
-        url: '={{ $env.DISCORD_BASE_URL }}/guilds/members/timeout',
+        method: 'PATCH',
+        url: "={{ 'https://discord.com/api/v10/guilds/100000000000000001/members/' + $('What to do?').first().json.user_id }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'discordBotApi',
+        sendBody: true,
+        specifyBody: 'json',
+        jsonBody: '={{ JSON.stringify({ communication_disabled_until: $now.plus({ minutes: 60 }).toISO() }) }}',
         options: {
             timeout: 15000,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DISCORD_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ user_id: $('What to do?').first().json.user_id, minutes: 60 }) }}",
     };
 
     @node({
         id: '42eba279-1d64-4fc0-a50d-b8316047edf6',
         name: 'Log the action',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1820, 270],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [2020, 270],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     LogTheAction = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/moderation_log',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'moderation_log',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'message_id',
+                    fieldValue: "={{ $('What to do?').first().json.message_id }}",
+                },
+                {
+                    fieldId: 'user_id',
+                    fieldValue: "={{ $('What to do?').first().json.user_id }}",
+                },
+                {
+                    fieldId: 'action',
+                    fieldValue: "={{ 'removed' }}",
+                },
+                {
+                    fieldId: 'reason',
+                    fieldValue: "={{ $('What to do?').first().json.reason }}",
+                },
+                {
+                    fieldId: 'content',
+                    fieldValue: "={{ $('What to do?').first().json.content }}",
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ message_id: $('What to do?').first().json.message_id, user_id: $('What to do?').first().json.user_id, action: 'removed', reason: $('What to do?').first().json.reason, content: $('What to do?').first().json.content, at: $now.toISO() }) }}",
     };
 
     @node({
@@ -328,7 +348,7 @@ return out;`,
         name: 'Removed message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2080, 270],
+        position: [2280, 270],
     })
     RemovedMessage = {
         jsCode: `const m = $("What to do?").first().json;
@@ -340,7 +360,7 @@ return [{ json: { channel: "#mods", level: "info", text: "Removed a message from
         name: 'Review message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1300, 270],
+        position: [1500, 270],
     })
     ReviewMessage = {
         jsCode: `const m = $input.first().json;
@@ -352,7 +372,7 @@ return [{ json: { channel: "#mods", level: "warn", text: "Please look at a messa
         name: 'Tell moderators',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2340, 270],
+        position: [2540, 270],
     })
     TellModerators = {
         workflowId: {
@@ -368,7 +388,7 @@ return [{ json: { channel: "#mods", level: "warn", text: "Please look at a messa
         name: 'Leave it',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1300, 450],
+        position: [1500, 450],
     })
     LeaveIt = {};
 
@@ -390,5 +410,10 @@ return [{ json: { channel: "#mods", level: "warn", text: "Please look at a messa
         this.LogTheAction.out(0).to(this.RemovedMessage.in(0));
         this.RemovedMessage.out(0).to(this.TellModerators.in(0));
         this.ReviewMessage.out(0).to(this.TellModerators.in(0));
+
+        this.JudgeIt.uses({
+            ai_languageModel: this.JudgeItGpt.output,
+            ai_outputParser: this.JudgeItShape.output,
+        });
     }
 }

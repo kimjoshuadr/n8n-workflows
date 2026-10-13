@@ -2,19 +2,20 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Support agent · Weekly gap report
-// Nodes   : 8  |  Connections: 6
+// Nodes   : 9  |  Connections: 6
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Monday0800                         scheduleTrigger
-// UnansweredLastWeek                 httpRequest                [alwaysOutput] [retry]
+// UnansweredLastWeek                 supabase                   [creds] [alwaysOutput] [retry]
 // GatherTheQuestions                 code
 // AnyGaps                            if
-// GroupIntoTopics                    httpRequest                [retry]
-// PostTheReport                      httpRequest                [retry]
-// PostAllClear                       httpRequest                [retry]
+// GroupIntoTopics                    agent                      [AI] [onError→regular]
+// GroupIntoTopicsClaude              lmChatAnthropic            [creds] [ai_languageModel]
+// PostTheReport                      slack                      [creds] [retry]
+// PostAllClear                       slack                      [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -25,6 +26,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //          → GroupIntoTopics
 //            → PostTheReport
 //         .out(1) → PostAllClear
+//
+// AI CONNECTIONS
+// GroupIntoTopics.uses({ ai_languageModel: GroupIntoTopicsClaude })
 // </workflow-map>
 
 // =====================================================================
@@ -55,8 +59,7 @@ export class SupportAgentWeeklyGapReportWorkflow {
         content: `## Support agent · Weekly gap report
 Every Monday, reads what the agent could not answer last week and tells the team which help articles are missing.
 
-**Platforms:** none, this is logic only
-**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** Supabase, Claude, Slack
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/support-agent\``,
     };
 
@@ -65,7 +68,7 @@ Every Monday, reads what the agent could not answer last week and tells the team
         name: 'Monday 08:00',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 180],
+        position: [0, 310],
     })
     Monday0800 = {
         rule: {
@@ -81,39 +84,33 @@ Every Monday, reads what the agent could not answer last week and tells the team
     @node({
         id: '670118fd-c33c-425b-a4ce-bf135d4af0a5',
         name: 'Unanswered last week',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [260, 180],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [260, 310],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     UnansweredLastWeek = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/support_log',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'support_log',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'answered',
-                    value: "={{ 'eq.false' }}",
+                    keyName: 'answered',
+                    condition: 'eq',
+                    keyValue: "={{ 'false' }}",
                 },
                 {
-                    name: 'at',
-                    value: "={{ 'gte.' + $now.minus({ days: 7 }).toISO() }}",
+                    keyName: 'at',
+                    condition: 'gte',
+                    keyValue: '={{ $now.minus({ days: 7 }).toISO() }}',
                 },
             ],
         },
@@ -124,7 +121,7 @@ Every Monday, reads what the agent could not answer last week and tells the team
         name: 'Gather the questions',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [520, 180],
+        position: [520, 310],
     })
     GatherTheQuestions = {
         jsCode: `const qs = $input.all().map((i) => i.json.question).filter(Boolean);
@@ -136,7 +133,7 @@ return [{ json: { count: qs.length, questions: qs.slice(0, 80).map((q) => "- " +
         name: 'Any gaps?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [780, 180],
+        position: [780, 310],
     })
     AnyGaps = {
         conditions: {
@@ -166,100 +163,91 @@ return [{ json: { count: qs.length, questions: qs.slice(0, 80).map((q) => "- " +
     @node({
         id: '7d797618-81eb-4794-a9c9-5663c0c21007',
         name: 'Group into topics',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
         position: [1040, 90],
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
+        onError: 'continueRegularOutput',
     })
     GroupIntoTopics = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: '={{ $json.questions }}',
+        hasOutputParser: false,
         options: {
-            timeout: 15000,
+            systemMessage:
+                '[task:summarise] Group these unanswered support questions into at most five topics. For each, give the topic, how many questions, and the help article that would have answered them. Plain text.',
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
+    };
+
+    @node({
+        id: '62ab8cb1-3a3f-4dca-a950-8bc48868cdbc',
+        name: 'Group into topics · Claude',
+        type: '@n8n/n8n-nodes-langchain.lmChatAnthropic',
+        version: 1.3,
+        position: [1040, 310],
+        credentials: { anthropicApi: { id: '__CRED:anthropic__', name: 'Claude' } },
+    })
+    GroupIntoTopicsClaude = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'claude-sonnet-4-5',
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  messages: [
-    { role: "system", content: "[task:summarise] Group these unanswered support questions into at most five topics. For each, give the topic, how many questions, and the help article that would have answered them. Plain text." },
-    { role: "user", content: $json.questions }
-  ]
-}) }}`,
+        options: {
+            temperature: 0.2,
+        },
     };
 
     @node({
         id: '8b53cf61-0843-4d92-aa2f-b44070a00f4f',
         name: 'Post the report',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1300, 180],
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
+        position: [1300, 310],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     PostTheReport = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '#support' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: "={{ ':books: ' + $('Gather the questions').first().json.count + ' questions went to a person last week.\\n' + $json.output }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ channel: '#support', text: ':books: ' + $('Gather the questions').first().json.count + ' questions went to a person last week.\\n' + $json.choices[0].message.content }) }}",
     };
 
     @node({
         id: '73384992-fd9b-42be-aa60-427db5c956b3',
         name: 'Post all clear',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1040, 270],
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
+        position: [1040, 530],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     PostAllClear = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '#support' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: "={{ ':white_check_mark: The agent answered everything it was asked last week.' }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ channel: '#support', text: ':white_check_mark: The agent answered everything it was asked last week.' }) }}",
     };
 
     // =====================================================================
@@ -274,5 +262,9 @@ return [{ json: { count: qs.length, questions: qs.slice(0, 80).map((q) => "- " +
         this.AnyGaps.out(0).to(this.GroupIntoTopics.in(0));
         this.AnyGaps.out(1).to(this.PostAllClear.in(0));
         this.GroupIntoTopics.out(0).to(this.PostTheReport.in(0));
+
+        this.GroupIntoTopics.uses({
+            ai_languageModel: this.GroupIntoTopicsClaude.output,
+        });
     }
 }

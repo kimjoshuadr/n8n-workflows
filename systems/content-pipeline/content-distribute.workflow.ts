@@ -2,20 +2,24 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Content pipeline · Share what was published
-// Nodes   : 11  |  Connections: 10
+// Nodes   : 15  |  Connections: 12
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Hourly                             scheduleTrigger
-// PublishedNotShared                 httpRequest                [alwaysOutput] [retry]
+// PublishedNotShared                 supabase                   [creds] [alwaysOutput] [retry]
 // AnythingNew                        if
 // EachArticle                        splitInBatches
-// WriteThePosts                      httpRequest                [onError→regular] [retry]
-// OneItemPerNetwork                  code
-// ScheduleThePost                    httpRequest                [onError→regular] [retry]
-// MarkShared                         httpRequest                [retry]
+// WriteThePosts                      agent                      [AI] [onError→regular]
+// WriteThePostsGpt                   lmChatOpenAi               [creds] [ai_languageModel]
+// WriteThePostsShape                 outputParserStructured     [ai_outputParser]
+// CutEachPostToLength                code
+// PostToLinkedin                     linkedIn                   [onError→regular] [creds] [retry]
+// PostToX                            twitter                    [onError→regular] [creds] [retry]
+// PostToFacebook                     facebookGraphApi           [onError→regular] [creds] [retry]
+// MarkShared                         supabase                   [creds] [retry]
 // NothingNew                         noOp
 // Done                               noOp
 //
@@ -27,11 +31,16 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //        → EachArticle
 //          → Done
 //         .out(1) → WriteThePosts
-//            → OneItemPerNetwork
-//              → ScheduleThePost
-//                → MarkShared
-//                  → EachArticle (↩ loop)
+//            → CutEachPostToLength
+//              → PostToLinkedin
+//                → PostToX
+//                  → PostToFacebook
+//                    → MarkShared
+//                      → EachArticle (↩ loop)
 //       .out(1) → NothingNew
+//
+// AI CONNECTIONS
+// WriteThePosts.uses({ ai_languageModel: WriteThePostsGpt, ai_outputParser: WriteThePostsShape })
 // </workflow-map>
 
 // =====================================================================
@@ -62,8 +71,7 @@ export class ContentPipelineShareWhatWasPublishedWorkflow {
         content: `## Content pipeline · Share what was published
 Every hour, writes a post per network for anything newly published and schedules it. One network failing does not stop the others.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SOCIAL_API_KEY, SOCIAL_BASE_URL
+**Platforms:** Supabase, OpenAI, LinkedIn, X, Facebook
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/content-pipeline\``,
     };
 
@@ -72,7 +80,7 @@ Every hour, writes a post per network for anything newly published and schedules
         name: 'Hourly',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 180],
+        position: [0, 310],
     })
     Hourly = {
         rule: {
@@ -88,39 +96,33 @@ Every hour, writes a post per network for anything newly published and schedules
     @node({
         id: 'd817ebe2-d13c-4dc0-ab13-f027000f2d9a',
         name: 'Published, not shared',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [260, 180],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [260, 310],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     PublishedNotShared = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/content_drafts',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'content_drafts',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'status',
-                    value: "={{ 'eq.published' }}",
+                    keyName: 'status',
+                    condition: 'eq',
+                    keyValue: "={{ 'published' }}",
                 },
                 {
-                    name: 'shared',
-                    value: "={{ 'eq.false' }}",
+                    keyName: 'shared',
+                    condition: 'eq',
+                    keyValue: "={{ 'false' }}",
                 },
             ],
         },
@@ -131,7 +133,7 @@ Every hour, writes a post per network for anything newly published and schedules
         name: 'Anything new?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [520, 180],
+        position: [520, 310],
     })
     AnythingNew = {
         conditions: {
@@ -163,7 +165,7 @@ Every hour, writes a post per network for anything newly published and schedules
         name: 'Each article',
         type: 'n8n-nodes-base.splitInBatches',
         version: 3,
-        position: [780, 90],
+        position: [780, 220],
     })
     EachArticle = {
         batchSize: 1,
@@ -173,125 +175,181 @@ Every hour, writes a post per network for anything newly published and schedules
     @node({
         id: 'c1c10a8f-f873-4cba-a408-0c73981fe02a',
         name: 'Write the posts',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1040, 90],
+        type: '@n8n/n8n-nodes-langchain.agent',
+        version: 3.1,
+        position: [1140, 90],
         onError: 'continueRegularOutput',
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
     })
     WriteThePosts = {
-        method: 'POST',
-        url: '={{ $env.LLM_BASE_URL }}/chat/completions',
+        promptType: 'define',
+        text: "={{ $json.title + '\\n\\n' + String($json.body).slice(0, 1500) }}",
+        hasOutputParser: true,
         options: {
-            timeout: 15000,
+            systemMessage:
+                '[task:social] Write one post per network for this article. Reply with JSON: { x: string (max 260 chars), linkedin: string, facebook: string }. No hashtags stuffing, no invented claims.',
+            maxIterations: 2,
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.LLM_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  model: $env.LLM_MODEL,
-  temperature: 0.2,
-  response_format: { type: "json_object" },
-  messages: [
-    { role: "system", content: "[task:social] Write one post per network for this article. Reply with JSON: { x: string (max 260 chars), linkedin: string, facebook: string }. No hashtags stuffing, no invented claims." },
-    { role: "user", content: $json.title + '\\n\\n' + String($json.body).slice(0, 1500) }
-  ]
-}) }}`,
     };
 
     @node({
-        id: '59b33689-10df-428f-a8c2-a1774b912f31',
-        name: 'One item per network',
+        id: 'bdba154d-59fb-4b23-a3f8-4184b7c6c49c',
+        name: 'Write the posts · GPT',
+        type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+        version: 1.2,
+        position: [1040, 310],
+        credentials: { openAiApi: { id: '__CRED:openai__', name: 'OpenAI' } },
+    })
+    WriteThePostsGpt = {
+        model: {
+            __rl: true,
+            mode: 'id',
+            value: 'gpt-4o-mini',
+        },
+        options: {
+            temperature: 0,
+        },
+    };
+
+    @node({
+        id: '1768495c-e8b2-47f6-a7ec-4eda11bf7ac8',
+        name: 'Write the posts · shape',
+        type: '@n8n/n8n-nodes-langchain.outputParserStructured',
+        version: 1.3,
+        position: [1240, 310],
+    })
+    WriteThePostsShape = {
+        schemaType: 'fromJson',
+        jsonSchemaExample: `{
+  "x": "The X post",
+  "linkedin": "The LinkedIn post",
+  "facebook": "The Facebook post"
+}`,
+    };
+
+    @node({
+        id: 'f5de6dc0-bf3c-4b6c-a458-d84c59afa8de',
+        name: 'Cut each post to length',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1300, 180],
+        position: [1500, 310],
     })
-    OneItemPerNetwork = {
+    CutEachPostToLength = {
         jsCode: `const a = $("Each article").first().json;
-let posts = {};
-try { posts = JSON.parse($input.first().json.choices[0].message.content); } catch (e) {}
+const o = $input.first().json.output ?? {};
 const fallback = "New on the blog: " + a.title;
-return ["x", "linkedin", "facebook"].map((network) => ({ json: { draft_id: a.id, network, text: String(posts[network] || fallback).slice(0, network === "x" ? 260 : 2000) } }));`,
+const post = (network, max) => String(typeof o[network] === "string" && o[network].trim() ? o[network] : fallback).slice(0, max);
+return [{ json: { draft_id: a.id, x: post("x", 260), linkedin: post("linkedin", 2000), facebook: post("facebook", 2000) } }];`,
     };
 
     @node({
-        id: '2306ed84-5499-4b7e-a44b-7b5532034fa9',
-        name: 'Schedule the post',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1560, 180],
+        id: '6de2d4b3-6c68-4be0-a5f0-17060508ec2b',
+        name: 'Post to LinkedIn',
+        type: 'n8n-nodes-base.linkedIn',
+        version: 1,
+        position: [1760, 310],
+        credentials: { linkedInOAuth2Api: { id: '__CRED:linkedin__', name: 'LinkedIn' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
-    ScheduleThePost = {
-        method: 'POST',
-        url: '={{ $env.SOCIAL_BASE_URL }}/updates/create',
+    PostToLinkedin = {
+        resource: 'post',
+        operation: 'create',
+        postAs: 'organization',
+        organization: '1234567',
+        text: "={{ $('Cut each post to length').first().json.linkedin }}",
+        additionalFields: {},
+    };
+
+    @node({
+        id: 'f5402db7-d4be-4551-a0ac-a0012d3e519c',
+        name: 'Post to X',
+        type: 'n8n-nodes-base.twitter',
+        version: 2,
+        position: [2020, 310],
+        credentials: { twitterOAuth2Api: { id: '__CRED:x__', name: 'X' } },
+        onError: 'continueRegularOutput',
+        retryOnFail: true,
+        maxTries: 3,
+        waitBetweenTries: 1000,
+    })
+    PostToX = {
+        resource: 'tweet',
+        operation: 'create',
+        text: "={{ $('Cut each post to length').first().json.x }}",
+        additionalFields: {},
+    };
+
+    @node({
+        id: '72a54932-d0a8-4e87-a1c7-f2c8e03e71e5',
+        name: 'Post to Facebook',
+        type: 'n8n-nodes-base.facebookGraphApi',
+        version: 1,
+        position: [2280, 310],
+        credentials: { facebookGraphApi: { id: '__CRED:facebook__', name: 'Facebook' } },
+        onError: 'continueRegularOutput',
+        retryOnFail: true,
+        maxTries: 3,
+        waitBetweenTries: 1000,
+    })
+    PostToFacebook = {
+        hostUrl: 'graph.facebook.com',
+        httpRequestMethod: 'POST',
+        graphApiVersion: 'v23.0',
+        node: 'acme-page',
+        edge: 'feed',
         options: {
-            timeout: 15000,
+            queryParameters: {
+                parameter: [
+                    {
+                        name: 'message',
+                        value: "={{ $('Cut each post to length').first().json.facebook }}",
+                    },
+                ],
+            },
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.SOCIAL_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ network: $json.network, text: $json.text }) }}',
     };
 
     @node({
         id: 'f6063fae-3d9d-465a-a446-c1d7489e7cea',
         name: 'Mark shared',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1820, 180],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [2540, 310],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkShared = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/content_drafts',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'content_drafts',
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    keyName: 'id',
+                    condition: 'eq',
+                    keyValue: "={{ $('Each article').first().json.id }}",
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'id',
-                    value: "={{ 'eq.' + $('Each article').first().json.id }}",
+                    fieldId: 'shared',
+                    fieldValue: '={{ true }}',
+                },
+                {
+                    fieldId: 'shared_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ shared: true, shared_at: $now.toISO() }) }}',
     };
 
     @node({
@@ -299,7 +357,7 @@ return ["x", "linkedin", "facebook"].map((network) => ({ json: { draft_id: a.id,
         name: 'Nothing new',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [780, 270],
+        position: [780, 400],
     })
     NothingNew = {};
 
@@ -308,7 +366,7 @@ return ["x", "linkedin", "facebook"].map((network) => ({ json: { draft_id: a.id,
         name: 'Done',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1040, 270],
+        position: [1140, 530],
     })
     Done = {};
 
@@ -324,9 +382,16 @@ return ["x", "linkedin", "facebook"].map((network) => ({ json: { draft_id: a.id,
         this.AnythingNew.out(1).to(this.NothingNew.in(0));
         this.EachArticle.out(0).to(this.Done.in(0));
         this.EachArticle.out(1).to(this.WriteThePosts.in(0));
-        this.WriteThePosts.out(0).to(this.OneItemPerNetwork.in(0));
-        this.OneItemPerNetwork.out(0).to(this.ScheduleThePost.in(0));
-        this.ScheduleThePost.out(0).to(this.MarkShared.in(0));
+        this.WriteThePosts.out(0).to(this.CutEachPostToLength.in(0));
+        this.CutEachPostToLength.out(0).to(this.PostToLinkedin.in(0));
+        this.PostToLinkedin.out(0).to(this.PostToX.in(0));
+        this.PostToX.out(0).to(this.PostToFacebook.in(0));
+        this.PostToFacebook.out(0).to(this.MarkShared.in(0));
         this.MarkShared.out(0).to(this.EachArticle.in(0));
+
+        this.WriteThePosts.uses({
+            ai_languageModel: this.WriteThePostsGpt.output,
+            ai_outputParser: this.WriteThePostsShape.output,
+        });
     }
 }

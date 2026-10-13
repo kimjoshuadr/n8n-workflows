@@ -9,9 +9,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
-// LastCopy                           httpRequest                [alwaysOutput] [retry]
+// LastCopy                           supabase                   [creds] [alwaysOutput] [retry]
 // Compare                            code
-// StoreThisCopy                      httpRequest                [retry]
+// StoreThisCopy                      httpRequest                [creds] [retry]
 // Answer                             set
 //
 // ROUTING MAP
@@ -51,8 +51,7 @@ export class BlockHasThisChangedSinceLastTimeWorkflow {
         content: `## Block · Has this changed since last time?
 Compares a record with the copy stored last run and reports which fields changed, so downstream work only happens on a real change.
 
-**Platforms:** none, this is logic only
-**Settings:** DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/data\``,
     };
 
@@ -70,35 +69,28 @@ Compares a record with the copy stored last run and reports which fields changed
     @node({
         id: '5fb4ec90-8354-4a87-a45d-c8790a5615ab',
         name: 'Last copy',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
         position: [260, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     LastCopy = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/snapshots',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'snapshots',
+        returnAll: true,
+        filterType: 'manual',
+        matchType: 'allFilters',
+        filters: {
+            conditions: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'key',
-                    value: "={{ 'eq.' + $json.key }}",
+                    keyName: 'key',
+                    condition: 'eq',
+                    keyValue: '={{ $json.key }}',
                 },
             ],
         },
@@ -125,26 +117,22 @@ return [{ json: { key: now.key, data: now.data, first_seen: before === null, cha
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
         position: [780, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     StoreThisCopy = {
         method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/snapshots',
-        options: {
-            timeout: 15000,
-        },
+        url: "={{ 'https://acme.supabase.co/rest/v1/snapshots' }}",
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'supabaseApi',
         sendHeaders: true,
         headerParameters: {
             parameters: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-                {
                     name: 'Prefer',
-                    value: 'resolution=merge-duplicates',
+                    value: "={{ 'resolution=merge-duplicates,return=representation' }}",
                 },
             ],
         },
@@ -160,6 +148,9 @@ return [{ json: { key: now.key, data: now.data, first_seen: before === null, cha
         sendBody: true,
         specifyBody: 'json',
         jsonBody: '={{ JSON.stringify({ key: $json.key, data: $json.data }) }}',
+        options: {
+            timeout: 15000,
+        },
     };
 
     @node({

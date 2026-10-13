@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Block · Failed call to dead letter\nThe pattern for any write that must not be lost: try, and if it still fails after retries, park the payload.\n\n**Platforms:** none, this is logic only\n**Settings:** CRM_API_KEY, CRM_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
+        "content": "## Block · Failed call to dead letter\nThe pattern for any write that must not be lost: try, and if it still fails after retries, park the payload.\n\n**Platforms:** HubSpot\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
       }
     },
     {
@@ -40,27 +40,26 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.CRM_BASE_URL }}/records",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CRM_API_KEY }}"
-            }
-          ]
-        },
+        "url": "={{ 'https://api.hubapi.com/crm/v3/objects/contacts' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify({ properties: $json }) }}",
+        "options": {
+          "timeout": 15000
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "__CRED:hubspot__",
+          "name": "HubSpot"
+        }
+      }
     },
     {
       "id": "c680c7f1-b0b3-4157-aa36-c6641f2ae8da",
@@ -96,7 +95,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "return [{ json: { source: \"block-error-to-dead-letter\", reason: \"CRM write failed after retries\", payload: $(\"When called\").first().json } }];"
+        "jsCode": "return [{ json: { source: \"block-error-to-dead-letter\", reason: \"HubSpot write failed after retries\", payload: $(\"When called\").first().json } }];"
       }
     },
     {

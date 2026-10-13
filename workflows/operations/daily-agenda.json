@@ -13,7 +13,7 @@
       "parameters": {
         "width": 640,
         "height": 230,
-        "content": "## Calendar · Morning agenda\nPosts today's meetings each weekday morning, with gaps and clashes pointed out, and stays silent on an empty day.\n\n**Platforms:** none, this is logic only\n**Settings:** CALENDAR_API_KEY, CALENDAR_BASE_URL, CHAT_API_KEY, CHAT_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
+        "content": "## Calendar · Morning agenda\nPosts today's meetings each weekday morning, with gaps and clashes pointed out, and stays silent on an empty day.\n\n**Platforms:** Google Calendar, Slack\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
       }
     },
     {
@@ -43,40 +43,31 @@
         180
       ],
       "name": "Today's events",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.CALENDAR_BASE_URL }}/events",
-        "options": {
-          "timeout": 15000
+        "resource": "event",
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "kim@example.com"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CALENDAR_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "from",
-              "value": "={{ $now.startOf('day').toISO() }}"
-            },
-            {
-              "name": "to",
-              "value": "={{ $now.endOf('day').toISO() }}"
-            }
-          ]
-        }
+        "returnAll": true,
+        "timeMin": "={{ $now.startOf('day').toISO() }}",
+        "timeMax": "={{ $now.endOf('day').toISO() }}",
+        "options": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "__CRED:googleCalendar__",
+          "name": "Google Calendar"
+        }
+      }
     },
     {
       "id": "e084fd54-3a9f-493f-abc6-04b9b9525606",
@@ -88,7 +79,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const events = ($input.first().json.events ?? []).filter((e) => e.start && e.end && !e.declined).sort((a, b) => new Date(a.start) - new Date(b.start));\nconst hm = (iso) => new Date(iso).toISOString().slice(11, 16);\nconst clashes = [];\nfor (let i = 1; i < events.length; i++) if (new Date(events[i].start) < new Date(events[i - 1].end)) clashes.push(events[i - 1].title + \" / \" + events[i].title);\nconst minutes = events.reduce((s, e) => s + (new Date(e.end) - new Date(e.start)) / 60000, 0);\nconst lines = events.map((e) => hm(e.start) + \"-\" + hm(e.end) + \"  \" + e.title);\nreturn [{ json: { count: events.length, clashes, hours: Math.round(minutes / 6) / 10, text: lines.join(\"\\n\") + (clashes.length ? \"\\nClash: \" + clashes.join(\"; \") : \"\") } }];"
+        "jsCode": "const events = $input.all().map((i) => i.json)\n  .map((e) => ({ title: e.summary ?? \"(no title)\", start: e.start?.dateTime, end: e.end?.dateTime, declined: (e.attendees ?? []).some((a) => a.self && a.responseStatus === \"declined\") }))\n  .filter((e) => e.start && e.end && !e.declined).sort((a, b) => new Date(a.start) - new Date(b.start));\nconst hm = (iso) => new Date(iso).toISOString().slice(11, 16);\nconst clashes = [];\nfor (let i = 1; i < events.length; i++) if (new Date(events[i].start) < new Date(events[i - 1].end)) clashes.push(events[i - 1].title + \" / \" + events[i].title);\nconst minutes = events.reduce((s, e) => s + (new Date(e.end) - new Date(e.start)) / 60000, 0);\nconst lines = events.map((e) => hm(e.start) + \"-\" + hm(e.end) + \"  \" + e.title);\nreturn [{ json: { count: events.length, clashes, hours: Math.round(minutes / 6) / 10, text: lines.join(\"\\n\") + (clashes.length ? \"\\nClash: \" + clashes.join(\"; \") : \"\") } }];"
       }
     },
     {
@@ -132,30 +123,31 @@
         90
       ],
       "name": "Post the agenda",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
-        "options": {
-          "timeout": 15000
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '@me' }}"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: '@me', text: ':calendar: ' + $json.count + ' meetings today, ' + $json.hours + 'h in total.\\n' + $json.text }) }}"
+        "text": "={{ ':calendar: ' + $json.count + ' meetings today, ' + $json.hours + 'h in total.\\n' + $json.text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
     },
     {
       "id": "69f1be33-5bfe-49a6-a838-6ef69c2c902e",

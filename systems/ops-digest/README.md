@@ -12,27 +12,26 @@
 
 Every Monday, gathers the week's numbers from sales, orders, support and the site, compares them with the week before, and sends one readable summary.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, Analytics, LLM, Chat, Email |
-| Nodes | 11 |
-| Calls | `error-handler` |
-| Files | [`weekly-digest.json`](weekly-digest.json) · [`weekly-digest.workflow.ts`](weekly-digest.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/posthog.svg" width="16" height="16" alt=""> PostHog &nbsp;·&nbsp; <img src="../../assets/platforms/anthropic.svg" width="16" height="16" alt=""> Claude &nbsp;·&nbsp; <img src="../../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 12
+- **Calls:** `error-handler`
+- **Files:** [`weekly-digest.json`](weekly-digest.json) · [`weekly-digest.workflow.ts`](weekly-digest.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1pl2ppi(["Monday 08:30"])
-  n4iy9xs[/"Leads"/]
-  n1ywqmrw[/"Orders"/]
-  n1kjyeo8[/"Support"/]
+  n4iy9xs["Leads"]
+  n1ywqmrw["Orders"]
+  n1kjyeo8["Support"]
   nrusp7[/"Site traffic"/]
   n1caa1x9["Work out the week"]
-  niart9r[/"Write the summary"/]
+  niart9r[["Write the summary"]]
+  n10i4h20("Write the summary · Claude")
   nvx0wwb["Compose"]
-  n16picrs[/"Post to the channel"/]
-  n1u167cp[/"Email the owner"/]
-  nuc14dg[/"Check in"/]
+  n16picrs["Post to the channel"]
+  n1u167cp["Email the owner"]
+  nuc14dg["Check in"]
   n1pl2ppi --> n4iy9xs
   n4iy9xs --> n1ywqmrw
   n1ywqmrw --> n1kjyeo8
@@ -43,6 +42,7 @@ flowchart LR
   nvx0wwb --> n16picrs
   n16picrs --> n1u167cp
   n1u167cp --> nuc14dg
+  n10i4h20 -.-> niart9r
 ```
 
 **How it runs**
@@ -63,20 +63,18 @@ flowchart LR
 
 Checks each watched number hourly and alerts when it crosses its line, and again when it recovers. It does not repeat itself in between.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, Chat |
-| Nodes | 6 |
-| Calls | `notify`, `error-handler` |
-| Files | [`threshold-alerts.json`](threshold-alerts.json) · [`threshold-alerts.workflow.ts`](threshold-alerts.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase
+- **Nodes:** 6
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`threshold-alerts.json`](threshold-alerts.json) · [`threshold-alerts.workflow.ts`](threshold-alerts.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1vk30ig(["Hourly"])
-  nnf0dvu[/"Watched metrics"/]
+  nnf0dvu["Watched metrics"]
   nei77ic["Which changed state?"]
-  n1hcaqwm[/"Remember the state"/]
+  n1hcaqwm["Remember the state"]
   n1wtqti0["Alert text"]
   n4d13md[["Alert"]]
   n1vk30ig --> nnf0dvu

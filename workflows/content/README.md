@@ -6,41 +6,45 @@
 
 Each Friday, reads the feeds you follow, drops what was already sent, and emails a short digest of what is new.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, LLM, Email |
-| Nodes | 10 |
-| Calls | `error-handler` |
-| Files | [`feed-digest.json`](feed-digest.json) · [`feed-digest.workflow.ts`](feed-digest.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/anthropic.svg" width="16" height="16" alt=""> Claude &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 13
+- **Calls:** `error-handler`
+- **Files:** [`feed-digest.json`](feed-digest.json) · [`feed-digest.workflow.ts`](feed-digest.workflow.ts)
 
 ```mermaid
 flowchart LR
   n18s4xj0(["Friday 15:00"])
-  n1s8aw21[/"Feeds to read"/]
+  n1s8aw21["Feeds to read"]
   nsg4hoa[/"Fetch the feed"/]
   n45a4k4["Collect the items"]
-  nroz94u[/"Claim as seen"/]
+  nt0lp7u["Already seen"]
   n1pfmd3d["Only the new ones"]
   nqlf16e{"Anything new?"}
-  nw95j6j[/"Write the digest"/]
-  n1fo2yuc[/"Send the digest"/]
+  n108p84d["One row per item"]
+  n1t8u3uw["Remember them"]
+  nw95j6j[["Write the digest"]]
+  n1ij4y24("Write the digest · Claude")
+  n1fo2yuc["Send the digest"]
   nrfpjgn["Quiet week"]
   n18s4xj0 --> n1s8aw21
   n1s8aw21 --> nsg4hoa
   nsg4hoa --> n45a4k4
-  n45a4k4 --> nroz94u
-  nroz94u --> n1pfmd3d
+  n45a4k4 --> nt0lp7u
+  nt0lp7u --> n1pfmd3d
   n1pfmd3d --> nqlf16e
-  nqlf16e -->|yes| nw95j6j
+  nqlf16e -->|yes| n108p84d
+  n108p84d --> n1t8u3uw
+  n1t8u3uw --> nw95j6j
   nw95j6j --> n1fo2yuc
   nqlf16e -->|no| nrfpjgn
+  n1ij4y24 -.-> nw95j6j
 ```
 
 **How it runs**
 
 1. **It reads your feeds.** One dead feed does not stop the others.
-2. **Seen once, sent once.** Each link is claimed in the datastore. Only links that were new this run go forward.
+2. **Seen once, sent once.** The links already sent are read from Supabase. Only the ones that are new go forward, and they are remembered before the digest is written.
 3. **A digest, or the plain list.** If the model is down the raw list is sent instead of nothing.
 
 **Tested behaviour**
@@ -53,23 +57,21 @@ flowchart LR
 
 Every Sunday night, visits each page in the sitemap list and reports the ones that no longer load, with the status each returned.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, Chat |
-| Nodes | 7 |
-| Calls | `error-handler` |
-| Files | [`broken-link-check.json`](broken-link-check.json) · [`broken-link-check.workflow.ts`](broken-link-check.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack
+- **Nodes:** 7
+- **Calls:** `error-handler`
+- **Files:** [`broken-link-check.json`](broken-link-check.json) · [`broken-link-check.workflow.ts`](broken-link-check.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1269xrk(["Sunday 23:00"])
-  n1igvk6e[/"Pages to check"/]
+  n1igvk6e["Pages to check"]
   naz6rju[/"Visit the page"/]
   n1nt6bm1["Find the broken ones"]
   n5t9cun{"Any broken?"}
-  n11hjev5[/"Report them"/]
-  ne7wg2o[/"Save the run"/]
+  n11hjev5["Report them"]
+  ne7wg2o["Save the run"]
   n1269xrk --> n1igvk6e
   n1igvk6e --> naz6rju
   naz6rju --> n1nt6bm1
@@ -94,23 +96,21 @@ flowchart LR
 
 Records where the site ranks for each tracked keyword every day, and alerts when one falls five places or drops off the first page.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Datastore, Search, Chat |
-| Nodes | 10 |
-| Calls | `notify`, `error-handler` |
-| Files | [`rank-tracker.json`](rank-tracker.json) · [`rank-tracker.workflow.ts`](rank-tracker.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/serpapi.svg" width="16" height="16" alt=""> SerpAPI
+- **Nodes:** 10
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`rank-tracker.json`](rank-tracker.json) · [`rank-tracker.workflow.ts`](rank-tracker.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1tsktpj(["05:00 daily"])
-  n6lznd3[/"Tracked keywords"/]
+  n6lznd3["Tracked keywords"]
   n16h3wk3[/"Search for it"/]
   ny403el["Find our position"]
   n613mw8{"Got a result?"}
-  n1a40jtl[/"Record today"/]
-  n1h9sgqy[/"Update the keyword"/]
+  n1a40jtl["Record today"]
+  n1h9sgqy["Update the keyword"]
   ntvwxmf["Gather the drops"]
   n4d13md[["Alert"]]
   n1ji63nt["Search failed, keep yesterday"]
@@ -142,42 +142,48 @@ flowchart LR
 
 Checks hourly for new mentions of the brand, and raises the negative ones straight away with the text and the link.
 
-| | |
-|---|---|
-| Starts from | Schedule |
-| Platforms | Search, Datastore, LLM, Chat |
-| Nodes | 10 |
-| Calls | `notify`, `error-handler` |
-| Files | [`mention-monitor.json`](mention-monitor.json) · [`mention-monitor.workflow.ts`](mention-monitor.workflow.ts) |
+- **Starts from:** Schedule
+- **Platforms:** <img src="../../assets/platforms/serpapi.svg" width="16" height="16" alt=""> SerpAPI &nbsp;·&nbsp; <img src="../../assets/platforms/supabase.svg" width="16" height="16" alt=""> Supabase &nbsp;·&nbsp; <img src="../../assets/platforms/openai.svg" width="16" height="16" alt=""> OpenAI
+- **Nodes:** 14
+- **Calls:** `notify`, `error-handler`
+- **Files:** [`mention-monitor.json`](mention-monitor.json) · [`mention-monitor.workflow.ts`](mention-monitor.workflow.ts)
 
 ```mermaid
 flowchart LR
   n1vk30ig(["Hourly"])
   n1dynvht[/"Search for mentions"/]
   nvoe1yz["One item per mention"]
-  nroz94u[/"Claim as seen"/]
+  nt0lp7u["Already seen"]
+  nnurvb["Keep the unseen"]
+  n1675dzr["Remember it"]
   n13knbuk{"New mention?"}
-  ng2ej44[/"Read the tone"/]
+  ng2ej44[["Read the tone"]]
+  nld6z7q("Read the tone · GPT")
+  n5ycsgs("Read the tone · shape")
   n1riexmv["Read the verdict"]
   ncon8ff{"Needs attention?"}
   nq77zl1["Write the alert"]
   n6wxc06[["Raise it"]]
   n1vk30ig --> n1dynvht
   n1dynvht --> nvoe1yz
-  nvoe1yz --> nroz94u
-  nroz94u --> n13knbuk
+  nvoe1yz --> nt0lp7u
+  nt0lp7u --> nnurvb
+  nnurvb --> n1675dzr
+  n1675dzr --> n13knbuk
   n13knbuk --> ng2ej44
   ng2ej44 --> n1riexmv
   n1riexmv --> ncon8ff
   ncon8ff --> nq77zl1
   nq77zl1 --> n6wxc06
+  nld6z7q -.-> ng2ej44
+  n5ycsgs -.-> ng2ej44
 ```
 
 **How it runs**
 
-1. **New mentions, hourly.** The search window overlaps the last run on purpose, and each link is claimed so overlap costs nothing.
+1. **New mentions, hourly.** The search overlaps the last run on purpose. Links already seen are read from Supabase and dropped, so overlap costs nothing.
 2. **A model reads the tone.** A mention it could not read is treated as needing attention, not as fine.
-3. **Negative ones are raised with the link.** Positive and neutral mentions are kept in the datastore and nobody is interrupted.
+3. **Negative ones are raised with the link.** Positive and neutral mentions are kept in Supabase and nobody is interrupted.
 
 **Tested behaviour**
 

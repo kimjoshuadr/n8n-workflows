@@ -6,18 +6,16 @@
 
 Turns any event into one readable chat message.
 
-| | |
-|---|---|
-| Starts from | Webhook |
-| Platforms | Chat |
-| Nodes | 2 |
-| Calls | `error-handler` |
-| Files | [`block-webhook-to-chat.json`](block-webhook-to-chat.json) · [`block-webhook-to-chat.workflow.ts`](block-webhook-to-chat.workflow.ts) |
+- **Starts from:** Webhook
+- **Platforms:** <img src="../../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack
+- **Nodes:** 2
+- **Calls:** `error-handler`
+- **Files:** [`block-webhook-to-chat.json`](block-webhook-to-chat.json) · [`block-webhook-to-chat.workflow.ts`](block-webhook-to-chat.workflow.ts)
 
 ```mermaid
 flowchart LR
   n4fenrn(["Event"])
-  n9q64kk[/"Post it"/]
+  n9q64kk["Post it"]
   n4fenrn --> n9q64kk
 ```
 
@@ -29,20 +27,18 @@ flowchart LR
 
 Sends the same message by chat, email and SMS, where each channel failing leaves the other two untouched.
 
-| | |
-|---|---|
-| Starts from | Called by another workflow |
-| Platforms | Chat, Email, SMS |
-| Nodes | 5 |
-| Calls | `error-handler` |
-| Files | [`block-fan-out.json`](block-fan-out.json) · [`block-fan-out.workflow.ts`](block-fan-out.workflow.ts) |
+- **Starts from:** Called by another workflow
+- **Platforms:** <img src="../../assets/platforms/slack.svg" width="16" height="16" alt=""> Slack &nbsp;·&nbsp; <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid &nbsp;·&nbsp; <img src="../../assets/platforms/twilio.svg" width="16" height="16" alt=""> Twilio
+- **Nodes:** 5
+- **Calls:** `error-handler`
+- **Files:** [`block-fan-out.json`](block-fan-out.json) · [`block-fan-out.workflow.ts`](block-fan-out.workflow.ts)
 
 ```mermaid
 flowchart LR
   nxyuboc(["When called"])
-  n53jsv[/"Chat"/]
-  n4f8tsl[/"Email"/]
-  n68cy[/"SMS"/]
+  n53jsv["Chat"]
+  n4f8tsl["Email"]
+  n68cy["SMS"]
   n13tziz["Report"]
   nxyuboc --> n53jsv
   n53jsv --> n4f8tsl
@@ -59,20 +55,18 @@ flowchart LR
 
 One place to send an email from: fills a template, refuses to send with a placeholder left unfilled.
 
-| | |
-|---|---|
-| Starts from | Called by another workflow |
-| Platforms | Email |
-| Nodes | 6 |
-| Calls | `error-handler` |
-| Files | [`block-template-email.json`](block-template-email.json) · [`block-template-email.workflow.ts`](block-template-email.workflow.ts) |
+- **Starts from:** Called by another workflow
+- **Platforms:** <img src="../../assets/platforms/sendgrid.svg" width="16" height="16" alt=""> SendGrid
+- **Nodes:** 6
+- **Calls:** `error-handler`
+- **Files:** [`block-template-email.json`](block-template-email.json) · [`block-template-email.workflow.ts`](block-template-email.workflow.ts)
 
 ```mermaid
 flowchart LR
   nxyuboc(["When called"])
   n129u45b["Fill the template"]
   nfzn63a{"Ready to send?"}
-  n5dpnz[/"Send"/]
+  n5dpnz["Send"]
   n5dpof["Sent"]
   np71n6z["Held back"]
   nxyuboc --> n129u45b
