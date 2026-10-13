@@ -43,15 +43,16 @@ export class BlockHasThisChangedSinceLastTimeWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Has this changed since last time?
 Compares a record with the copy stored last run and reports which fields changed, so downstream work only happens on a real change.
 
-**Needs:** DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/data\``,
     };
 
@@ -60,7 +61,7 @@ Compares a record with the copy stored last run and reports which fields changed
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -71,7 +72,7 @@ Compares a record with the copy stored last run and reports which fields changed
         name: 'Last copy',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -108,7 +109,7 @@ Compares a record with the copy stored last run and reports which fields changed
         name: 'Compare',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 90],
     })
     Compare = {
         jsCode: `const now = $("When called").first().json;
@@ -123,7 +124,7 @@ return [{ json: { key: now.key, data: now.data, first_seen: before === null, cha
         name: 'Store this copy',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -166,7 +167,7 @@ return [{ json: { key: now.key, data: now.data, first_seen: before === null, cha
         name: 'Answer',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [960, 0],
+        position: [1040, 90],
     })
     Answer = {
         assignments: {

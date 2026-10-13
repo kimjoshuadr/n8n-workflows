@@ -75,15 +75,16 @@ export class LeadIntakeCaptureAndQualifyWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -480],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Lead intake · Capture and qualify
 Takes an enquiry from any form, rejects junk, ignores repeats, has a model score the fit, then files it in the CRM and sends the right first reply.
 
-**Needs:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** none, this is logic only
+**Settings:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/lead-intake\``,
     };
 
@@ -93,7 +94,7 @@ Takes an enquiry from any form, rejects junk, ignores repeats, has a model score
         name: 'Enquiry form',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 270],
     })
     EnquiryForm = {
         httpMethod: 'POST',
@@ -107,7 +108,7 @@ Takes an enquiry from any form, rejects junk, ignores repeats, has a model score
         name: 'Validate and normalise',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 270],
     })
     ValidateAndNormalise = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -133,7 +134,7 @@ return [{ json: {
         name: 'Valid?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 270],
     })
     Valid = {
         conditions: {
@@ -165,7 +166,7 @@ return [{ json: {
         name: 'Reject',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [720, -90],
+        position: [780, 180],
     })
     Reject = {
         respondWith: 'json',
@@ -180,7 +181,7 @@ return [{ json: {
         name: 'Accept',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [720, 90],
+        position: [780, 360],
     })
     Accept = {
         respondWith: 'json',
@@ -195,7 +196,7 @@ return [{ json: {
         name: 'Seen today?',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [960, 0],
+        position: [1040, 270],
     })
     SeenToday = {
         workflowId: {
@@ -211,7 +212,7 @@ return [{ json: {
         name: 'New enquiry?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1200, 0],
+        position: [1300, 270],
     })
     NewEnquiry = {
         conditions: {
@@ -243,7 +244,7 @@ return [{ json: {
         name: 'Ignore the repeat',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1440, -90],
+        position: [1560, 180],
     })
     IgnoreTheRepeat = {};
 
@@ -252,7 +253,7 @@ return [{ json: {
         name: 'Score the fit',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 90],
+        position: [1560, 360],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -291,7 +292,7 @@ return [{ json: {
         name: 'Read the verdict',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, 0],
+        position: [1820, 270],
     })
     ReadTheVerdict = {
         jsCode: `const before = $("New enquiry?").all();
@@ -314,7 +315,7 @@ return out;`,
         name: 'Save the lead',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1920, 0],
+        position: [2080, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -345,7 +346,7 @@ return out;`,
         name: 'Which path?',
         type: 'n8n-nodes-base.switch',
         version: 3.2,
-        position: [2160, 0],
+        position: [2340, 270],
     })
     WhichPath = {
         rules: {
@@ -412,7 +413,7 @@ return out;`,
         name: 'Create CRM contact',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2400, -180],
+        position: [2600, 90],
         onError: 'continueErrorOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -444,7 +445,7 @@ return out;`,
         name: 'Send booking link',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2640, -180],
+        position: [2860, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -475,7 +476,7 @@ return out;`,
         name: 'Tell sales',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [3120, 0],
+        position: [3380, 270],
     })
     TellSales = {
         workflowId: {
@@ -491,7 +492,7 @@ return out;`,
         name: 'Park for replay',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2880, -90],
+        position: [3120, 180],
     })
     ParkForReplay = {
         workflowId: {
@@ -507,7 +508,7 @@ return out;`,
         name: 'Send nurture email',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2400, 0],
+        position: [2600, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -538,7 +539,7 @@ return out;`,
         name: 'Ask a person to look',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2640, 0],
+        position: [2860, 270],
     })
     AskAPersonToLook = {
         workflowId: {
@@ -554,7 +555,7 @@ return out;`,
         name: 'Sales message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2880, 90],
+        position: [3120, 360],
     })
     SalesMessage = {
         jsCode: `const l = $("Read the verdict").first().json;
@@ -566,7 +567,7 @@ return [{ json: { text: "New qualified lead: " + l.name + (l.company ? " (" + l.
         name: 'Review message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2400, 180],
+        position: [2600, 450],
     })
     ReviewMessage = {
         jsCode: `const l = $("Read the verdict").first().json;
@@ -578,7 +579,7 @@ return [{ json: { text: "A lead needs a human look (" + l.email + "): " + l.reas
         name: 'Dead letter payload',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2640, 180],
+        position: [2860, 450],
     })
     DeadLetterPayload = {
         jsCode: `const l = $("Read the verdict").first().json;

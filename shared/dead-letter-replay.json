@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Reliability · Dead letter replay\nEvery fifteen minutes, sends parked work back to where it came from. Gives up after five attempts and says so.\n\n**Needs:** ALERT_CHANNEL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
+        "width": 640,
+        "height": 230,
+        "content": "## Reliability · Dead letter replay\nEvery fifteen minutes, sends parked work back to where it came from. Gives up after five attempts and tells Slack.\n\n**Platforms:** Supabase, Slack\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
       }
     },
     {
       "id": "6ecb0768-be6a-4159-a068-fb9249e95080",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Every 15 minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,51 +39,36 @@
     {
       "id": "6a15b899-4292-4e3e-a405-18955e12daa3",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Fetch pending",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/dead_letters",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "status",
-              "value": "={{ 'eq.pending' }}"
-            },
-            {
-              "name": "limit",
-              "value": "={{ '50' }}"
-            }
-          ]
-        }
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "dead_letters",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ 'status=eq.pending&limit=50' }}"
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "0c44ea74-afca-4e70-ad7a-3ff08337ff46",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Anything parked?",
       "type": "n8n-nodes-base.if",
@@ -116,8 +101,8 @@
     {
       "id": "c5a6514a-7420-408c-a335-87a1788a469c",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "One at a time",
       "type": "n8n-nodes-base.splitInBatches",
@@ -130,8 +115,8 @@
     {
       "id": "bfcc7750-e770-4975-a5c6-377cae385ed5",
       "position": [
-        960,
-        -90
+        1040,
+        90
       ],
       "name": "Replay",
       "type": "n8n-nodes-base.httpRequest",
@@ -151,49 +136,48 @@
     {
       "id": "6f01597d-3c98-4da9-ae45-030a01f29c64",
       "position": [
-        1200,
-        -90
+        1300,
+        90
       ],
       "name": "Mark replayed",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/dead_letters",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "dead_letters",
+        "filterType": "string",
+        "filterString": "={{ 'id=eq.' + $('One at a time').item.json.id }}",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "status",
+              "fieldValue": "={{ 'replayed' }}"
+            },
+            {
+              "fieldId": "replayed_at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "id",
-              "value": "={{ 'eq.' + $('One at a time').item.json.id }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'replayed', replayed_at: $now.toISO() }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "67836a8c-6504-4ce2-ac59-61302733c1a3",
       "position": [
-        1200,
-        90
+        1300,
+        270
       ],
       "name": "Count the attempt",
       "type": "n8n-nodes-base.code",
@@ -205,49 +189,48 @@
     {
       "id": "3b850c43-2ea9-4152-a0be-a0641276bcc8",
       "position": [
-        1440,
-        0
+        1560,
+        180
       ],
       "name": "Record the attempt",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.DB_BASE_URL }}/dead_letters",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "update",
+        "tableId": "dead_letters",
+        "filterType": "string",
+        "filterString": "={{ 'id=eq.' + $json.id }}",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "attempts",
+              "fieldValue": "={{ $json.attempts }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
             }
           ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "id",
-              "value": "={{ 'eq.' + $json.id }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ attempts: $json.attempts, status: $json.status }) }}"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "ec7c9f2e-de30-4425-ab48-9b405ba33dee",
       "position": [
-        1680,
-        0
+        1820,
+        180
       ],
       "name": "Given up?",
       "type": "n8n-nodes-base.if",
@@ -280,41 +263,42 @@
     {
       "id": "03924ad1-204a-44ab-a577-a6aff4c8d80f",
       "position": [
-        1920,
-        0
+        2080,
+        180
       ],
       "name": "Escalate",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
-        "options": {
-          "timeout": 15000
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#ops-alerts' }}"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: $env.ALERT_CHANNEL, text: ':red_circle: Gave up replaying an item from ' + $('Count the attempt').item.json.source + ' after 5 attempts. It needs a person.' }) }}"
+        "text": "={{ ':red_circle: Gave up replaying an item from ' + $('Count the attempt').item.json.source + ' after 5 attempts. It needs a person.' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
     },
     {
       "id": "97169698-2ba2-4889-a68a-c87ed3d1d9fe",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Nothing to do",
       "type": "n8n-nodes-base.noOp",
@@ -324,8 +308,8 @@
     {
       "id": "1575c803-49ba-44ae-ac96-cc9c062eb19f",
       "position": [
-        960,
-        90
+        1040,
+        270
       ],
       "name": "All replayed",
       "type": "n8n-nodes-base.noOp",

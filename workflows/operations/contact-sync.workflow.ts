@@ -50,15 +50,16 @@ export class DataCrmToEmailListSyncWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Data · CRM to email list sync
 Copies contacts changed since the last run from the CRM to the email platform, page by page, and only moves its bookmark forward when a run finishes.
 
-**Needs:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/operations\``,
     };
 
@@ -67,7 +68,7 @@ Copies contacts changed since the last run from the CRM to the email platform, p
         name: 'Every 15 minutes',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     Every15Minutes = {
         rule: {
@@ -85,7 +86,7 @@ Copies contacts changed since the last run from the CRM to the email platform, p
         name: 'Read the bookmark',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -122,7 +123,7 @@ Copies contacts changed since the last run from the CRM to the email platform, p
         name: 'Start from',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 90],
     })
     StartFrom = {
         jsCode: 'return [{ json: { since: $input.first().json.value ?? "1970-01-01T00:00:00Z", started_at: new Date().toISOString() } }];',
@@ -133,7 +134,7 @@ Copies contacts changed since the last run from the CRM to the email platform, p
         name: 'Changed contacts',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -163,7 +164,7 @@ Copies contacts changed since the last run from the CRM to the email platform, p
         name: 'Shape for the list',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [960, 0],
+        position: [1040, 90],
     })
     ShapeForTheList = {
         jsCode: `const rows = ($input.first().json.results ?? []).filter((c) => c.email);
@@ -175,7 +176,7 @@ return [{ json: { count: rows.length, contacts: rows.map((c) => ({ email: String
         name: 'Anything changed?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1200, 0],
+        position: [1300, 90],
     })
     AnythingChanged = {
         conditions: {
@@ -207,7 +208,7 @@ return [{ json: { count: rows.length, contacts: rows.map((c) => ({ email: String
         name: 'Upsert to the list',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -237,7 +238,7 @@ return [{ json: { count: rows.length, contacts: rows.map((c) => ({ email: String
         name: 'Move the bookmark',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, 0],
+        position: [1820, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

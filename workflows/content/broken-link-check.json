@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## SEO · Broken link check\nEvery Sunday night, visits each page in the sitemap list and reports the ones that no longer load, with the status each returned.\n\n**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
+        "width": 640,
+        "height": 230,
+        "content": "## SEO · Broken link check\nEvery Sunday night, visits each page in the sitemap list and reports the ones that no longer load, with the status each returned.\n\n**Platforms:** none, this is logic only\n**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
       }
     },
     {
       "id": "64bf7497-7acb-4077-ac69-ddb08c528331",
       "position": [
         0,
-        0
+        90
       ],
       "name": "Sunday 23:00",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "8fa0038a-a8b3-4563-aa94-abf2505256d6",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Pages to check",
       "type": "n8n-nodes-base.httpRequest",
@@ -69,8 +69,8 @@
     {
       "id": "f6a14775-0815-4ee8-a343-bc8acbc85627",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Visit the page",
       "type": "n8n-nodes-base.httpRequest",
@@ -93,8 +93,8 @@
     {
       "id": "690182e4-2c28-4f58-a0fd-666bed0f6d85",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Find the broken ones",
       "type": "n8n-nodes-base.code",
@@ -106,8 +106,8 @@
     {
       "id": "450bc51c-1ede-4a2f-ae89-2fbba4be183c",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Any broken?",
       "type": "n8n-nodes-base.if",
@@ -140,8 +140,8 @@
     {
       "id": "8b399977-3748-4f85-a978-495a85a9dd35",
       "position": [
-        1200,
-        0
+        1300,
+        90
       ],
       "name": "Report them",
       "type": "n8n-nodes-base.httpRequest",
@@ -172,8 +172,8 @@
     {
       "id": "457c27ef-751e-4d52-a4d3-dd43cc695c91",
       "position": [
-        1440,
-        0
+        1560,
+        90
       ],
       "name": "Save the run",
       "type": "n8n-nodes-base.httpRequest",

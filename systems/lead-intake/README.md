@@ -15,7 +15,8 @@ Takes an enquiry from any form, rejects junk, ignores repeats, has a model score
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | LLM, CRM, Email, Chat, Datastore |
+| Platforms | LLM, CRM, Email, Chat, Datastore |
+| Nodes | 21 |
 | Calls | `idempotency-guard`, `notify`, `dead-letter`, `error-handler` |
 | Files | [`lead-capture.json`](lead-capture.json) · [`lead-capture.workflow.ts`](lead-capture.workflow.ts) |
 
@@ -90,7 +91,8 @@ Each morning, writes to qualified leads who have not booked. Three nudges, two d
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Email |
+| Platforms | Datastore, Email |
+| Nodes | 8 |
 | Calls | `error-handler` |
 | Files | [`lead-follow-up.json`](lead-follow-up.json) · [`lead-follow-up.workflow.ts`](lead-follow-up.workflow.ts) |
 
@@ -134,7 +136,8 @@ When a call is booked, moves the lead forward everywhere at once: the lead recor
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Calendar, Datastore, CRM, Chat |
+| Platforms | Calendar, Datastore, CRM, Chat |
+| Nodes | 12 |
 | Calls | `idempotency-guard`, `notify`, `error-handler` |
 | Files | [`lead-booking-sync.json`](lead-booking-sync.json) · [`lead-booking-sync.workflow.ts`](lead-booking-sync.workflow.ts) |
 

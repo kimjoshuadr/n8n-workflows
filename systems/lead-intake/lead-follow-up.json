@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Lead intake · Follow up the unbooked\nEach morning, writes to qualified leads who have not booked. Three nudges, two days apart, then the lead is marked cold and left alone.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/lead-intake`"
+        "width": 640,
+        "height": 230,
+        "content": "## Lead intake · Follow up the unbooked\nEach morning, writes to qualified leads who have not booked. Three nudges, two days apart, then the lead is marked cold and left alone.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/lead-intake`"
       }
     },
     {
       "id": "fc6eff86-5da9-4143-acd2-26d5040e967c",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Every morning",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "6a9921e9-7fa6-45c6-ac0b-cfb0ec3a0779",
       "position": [
-        240,
-        -90
+        260,
+        90
       ],
       "name": "Unbooked leads",
       "type": "n8n-nodes-base.httpRequest",
@@ -82,8 +82,8 @@
     {
       "id": "61e3f413-9ae6-437e-a724-f2f2648ffa16",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Who is due?",
       "type": "n8n-nodes-base.code",
@@ -95,8 +95,8 @@
     {
       "id": "e434ad25-0e23-4e43-a77c-47f6e56e389e",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Nudges left?",
       "type": "n8n-nodes-base.if",
@@ -129,8 +129,8 @@
     {
       "id": "7db1d3b9-5dba-4640-ab26-33f25dbc4bd2",
       "position": [
-        960,
-        -90
+        1040,
+        90
       ],
       "name": "Send the nudge",
       "type": "n8n-nodes-base.httpRequest",
@@ -161,8 +161,8 @@
     {
       "id": "28ef7e12-6f90-4c26-aee4-f1a41f98ec10",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "Record the nudge",
       "type": "n8n-nodes-base.httpRequest",
@@ -202,8 +202,8 @@
     {
       "id": "ecd9d818-37af-490c-ae0f-f099acb906af",
       "position": [
-        960,
-        90
+        1040,
+        270
       ],
       "name": "Mark cold",
       "type": "n8n-nodes-base.httpRequest",
@@ -243,8 +243,8 @@
     {
       "id": "a9dbff5c-ca38-4410-a3e2-7e657defbe85",
       "position": [
-        240,
-        90
+        260,
+        270
       ],
       "name": "Check in",
       "type": "n8n-nodes-base.httpRequest",

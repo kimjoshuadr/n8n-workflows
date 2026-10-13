@@ -55,15 +55,16 @@ export class OrderOpsShippingUpdatesWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Order ops · Shipping updates
 Turns a courier status into the right message for the customer, and tells a person when a parcel fails delivery.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/order-ops\``,
     };
 
@@ -73,7 +74,7 @@ Turns a courier status into the right message for the customer, and tells a pers
         name: 'Shipment update',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     ShipmentUpdate = {
         httpMethod: 'POST',
@@ -87,7 +88,7 @@ Turns a courier status into the right message for the customer, and tells a pers
         name: 'Read the update',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     ReadTheUpdate = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -100,7 +101,7 @@ return [{ json: { order_id: String(b.order_id), status: map[b.status] ?? null, r
         name: 'A status we act on?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     AStatusWeActOn = {
         conditions: {
@@ -132,7 +133,7 @@ return [{ json: { order_id: String(b.order_id), status: map[b.status] ?? null, r
         name: 'Update the order',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, -90],
+        position: [780, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -176,7 +177,7 @@ return [{ json: { order_id: String(b.order_id), status: map[b.status] ?? null, r
         name: 'Changed?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     Changed = {
         conditions: {
@@ -208,7 +209,7 @@ return [{ json: { order_id: String(b.order_id), status: map[b.status] ?? null, r
         name: 'Which status?',
         type: 'n8n-nodes-base.switch',
         version: 3.2,
-        position: [1200, -90],
+        position: [1300, 90],
     })
     WhichStatus = {
         rules: {
@@ -250,7 +251,7 @@ return [{ json: { order_id: String(b.order_id), status: map[b.status] ?? null, r
         name: 'Email the customer',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, -90],
+        position: [1560, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -281,7 +282,7 @@ return [{ json: { order_id: String(b.order_id), status: map[b.status] ?? null, r
         name: 'Failed delivery message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1440, 90],
+        position: [1560, 270],
     })
     FailedDeliveryMessage = {
         jsCode: `const o = $input.first().json;
@@ -293,7 +294,7 @@ return [{ json: { text: "Delivery failed for order " + o.order_id + " (" + o.ema
         name: 'Tell support',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1680, 0],
+        position: [1820, 180],
     })
     TellSupport = {
         workflowId: {
@@ -309,7 +310,7 @@ return [{ json: { text: "Delivery failed for order " + o.order_id + " (" + o.ema
         name: 'Nothing to do',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1200, 90],
+        position: [1300, 270],
     })
     NothingToDo = {};
 
@@ -318,7 +319,7 @@ return [{ json: { text: "Delivery failed for order " + o.order_id + " (" + o.ema
         name: 'Ignored status',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [720, 90],
+        position: [780, 270],
     })
     IgnoredStatus = {};
 

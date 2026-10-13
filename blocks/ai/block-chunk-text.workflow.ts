@@ -37,15 +37,15 @@ export class BlockSplitADocumentIntoOverlappingChunksWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Split a document into overlapping chunks
 Cuts long text into chunks that end on sentence boundaries and overlap by whole sentences, ready for embedding or a model's context window.
 
-**Needs:** nothing external
+**Platforms:** none, this is logic only
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/ai\``,
     };
 
@@ -54,7 +54,7 @@ Cuts long text into chunks that end on sentence boundaries and overlap by whole 
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -65,7 +65,7 @@ Cuts long text into chunks that end on sentence boundaries and overlap by whole 
         name: 'Chunk',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 90],
     })
     Chunk = {
         jsCode: `const { text = "", size = 800, overlap = 100, id = "doc" } = $input.first().json;

@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Reliability · Error handler\nCatches a failure in any workflow, logs it, and alerts once per distinct error per hour so a broken loop cannot flood the channel.\n\n**Needs:** ALERT_CHANNEL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
+        "width": 640,
+        "height": 230,
+        "content": "## Reliability · Error handler\nCatches a failure in any workflow, logs it to Supabase, and alerts Slack once per distinct error per hour so a broken loop cannot flood the channel.\n\n**Platforms:** Supabase, Slack\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
       }
     },
     {
       "id": "dce5f972-b3db-473f-adb8-7414b84ad45b",
       "position": [
         0,
-        0
+        180
       ],
       "name": "On workflow error",
       "type": "n8n-nodes-base.errorTrigger",
@@ -30,8 +30,8 @@
     {
       "id": "99310d67-a0d8-47ab-a8e1-df3139244ad2",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Describe the failure",
       "type": "n8n-nodes-base.code",
@@ -43,56 +43,94 @@
     {
       "id": "d2475f31-7b58-4456-a438-515d78ab10c9",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Log the error",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/workflow_errors",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "workflow_errors",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "workflow",
+              "fieldValue": "={{ $json.workflow }}"
             },
             {
-              "name": "Prefer",
-              "value": "resolution=ignore-duplicates,return=representation"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+              "fieldId": "node",
+              "fieldValue": "={{ $json.node }}"
+            },
             {
-              "name": "on_conflict",
-              "value": "={{ 'fingerprint' }}"
+              "fieldId": "message",
+              "fieldValue": "={{ $json.message }}"
+            },
+            {
+              "fieldId": "execution_id",
+              "fieldValue": "={{ $json.execution_id }}"
+            },
+            {
+              "fieldId": "fingerprint",
+              "fieldValue": "={{ $json.fingerprint }}"
+            },
+            {
+              "fieldId": "at",
+              "fieldValue": "={{ $json.at }}"
             }
           ]
+        }
+      },
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "id": "c8d93d0f-8888-4d65-a12f-33ac1fd0c634",
+      "position": [
+        780,
+        90
+      ],
+      "name": "Alert the team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#ops-alerts' }}"
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "text": "={{ ':rotating_light: ' + $('Describe the failure').first().json.workflow + ' failed at \"' + $('Describe the failure').first().json.node + '\": ' + $('Describe the failure').first().json.message }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
     },
     {
-      "id": "5485f3d1-55dd-4cfa-af7c-1c94460243ff",
+      "id": "4228acb3-0754-44f0-a012-4e1eb27f27d8",
       "position": [
-        720,
-        0
+        780,
+        270
       ],
-      "name": "First time this hour?",
+      "name": "Seen this hour?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "parameters": {
@@ -105,8 +143,8 @@
           },
           "conditions": [
             {
-              "id": "1b52a6e5-2630-4b58-a577-9ce45358a32c",
-              "leftValue": "={{ !!$json.id }}",
+              "id": "1bdc4999-ccb8-41e9-af7a-e9a19ae7f1ec",
+              "leftValue": "={{ /duplicate key|23505/.test(String($json.error ?? '')) }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -121,47 +159,48 @@
       }
     },
     {
-      "id": "c8d93d0f-8888-4d65-a12f-33ac1fd0c634",
-      "position": [
-        960,
-        -90
-      ],
-      "name": "Alert the team",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  channel: $env.ALERT_CHANNEL,\n  text: ':rotating_light: ' + $('Describe the failure').first().json.workflow + ' failed at \"' + $('Describe the failure').first().json.node + '\": ' + $('Describe the failure').first().json.message\n}) }}"
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000
-    },
-    {
       "id": "70793f10-e5f6-42c6-ae4d-08413c8b661b",
       "position": [
-        960,
+        1040,
         90
       ],
       "name": "Already alerted",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "parameters": {}
+    },
+    {
+      "id": "6f134486-cf8a-47ef-a248-883dfb8464cc",
+      "position": [
+        1040,
+        270
+      ],
+      "name": "Alert anyway",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#ops-alerts' }}"
+        },
+        "text": "={{ ':rotating_light: ' + $('Describe the failure').first().json.workflow + ' failed at \"' + $('Describe the failure').first().json.node + '\": ' + $('Describe the failure').first().json.message + ' (and the error log could not be written)' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
     }
   ],
   "connections": {
@@ -191,17 +230,6 @@
       "main": [
         [
           {
-            "node": "First time this hour?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "First time this hour?": {
-      "main": [
-        [
-          {
             "node": "Alert the team",
             "type": "main",
             "index": 0
@@ -209,7 +237,25 @@
         ],
         [
           {
+            "node": "Seen this hour?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seen this hour?": {
+      "main": [
+        [
+          {
             "node": "Already alerted",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert anyway",
             "type": "main",
             "index": 0
           }

@@ -9,7 +9,8 @@ Every ten minutes, finds tickets about to miss their first-response time, warns 
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Helpdesk, Chat |
+| Platforms | Helpdesk, Chat |
+| Nodes | 6 |
 | Calls | `notify`, `error-handler` |
 | Files | [`sla-watch.json`](sla-watch.json) · [`sla-watch.workflow.ts`](sla-watch.workflow.ts) |
 
@@ -46,7 +47,8 @@ Sorts the shared inbox: answers the handful of questions that have a fixed answe
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | LLM, Email, Helpdesk |
+| Platforms | LLM, Email, Helpdesk |
+| Nodes | 10 |
 | Calls | `error-handler` |
 | Files | [`email-autoresponder.json`](email-autoresponder.json) · [`email-autoresponder.workflow.ts`](email-autoresponder.workflow.ts) |
 

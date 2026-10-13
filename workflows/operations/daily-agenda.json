@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Calendar · Morning agenda\nPosts today's meetings each weekday morning, with gaps and clashes pointed out, and stays silent on an empty day.\n\n**Needs:** CALENDAR_API_KEY, CALENDAR_BASE_URL, CHAT_API_KEY, CHAT_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
+        "width": 640,
+        "height": 230,
+        "content": "## Calendar · Morning agenda\nPosts today's meetings each weekday morning, with gaps and clashes pointed out, and stays silent on an empty day.\n\n**Platforms:** none, this is logic only\n**Settings:** CALENDAR_API_KEY, CALENDAR_BASE_URL, CHAT_API_KEY, CHAT_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
       }
     },
     {
       "id": "1dc86708-c584-4810-a8dd-58d4f98b88cc",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Weekdays 07:30",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "237f2632-7cd7-450a-adf5-1cf4761dfd4d",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Today's events",
       "type": "n8n-nodes-base.httpRequest",
@@ -81,8 +81,8 @@
     {
       "id": "e084fd54-3a9f-493f-abc6-04b9b9525606",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Lay out the day",
       "type": "n8n-nodes-base.code",
@@ -94,8 +94,8 @@
     {
       "id": "127c1634-01d9-40c8-a5cd-bb365b53db74",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Anything on?",
       "type": "n8n-nodes-base.if",
@@ -128,8 +128,8 @@
     {
       "id": "c10740c1-d42f-4c05-ad55-1c213a61958e",
       "position": [
-        960,
-        -90
+        1040,
+        90
       ],
       "name": "Post the agenda",
       "type": "n8n-nodes-base.httpRequest",
@@ -160,8 +160,8 @@
     {
       "id": "69f1be33-5bfe-49a6-a838-6ef69c2c902e",
       "position": [
-        960,
-        90
+        1040,
+        270
       ],
       "name": "Clear day",
       "type": "n8n-nodes-base.noOp",

@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Yesterday, in the business's time zone\nWorks out the start and end of 'yesterday' or 'last week' in a named time zone, which is where most reporting bugs come from.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Yesterday, in the business's time zone\nWorks out the start and end of 'yesterday' or 'last week' in a named time zone, which is where most reporting bugs come from.\n\n**Platforms:** none, this is logic only\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
       }
     },
     {
       "id": "ecabe2a8-aa01-4d73-a0c9-4c24de4029b1",
       "position": [
         0,
-        0
+        90
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "36c6925c-c358-4890-a608-46b34193941d",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Window",
       "type": "n8n-nodes-base.code",

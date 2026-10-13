@@ -9,7 +9,8 @@ Pulls the supplier's stock feed every two hours and updates the store only for p
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Supplier, Datastore, Shop, Chat |
+| Platforms | Supplier, Datastore, Shop, Chat |
+| Nodes | 10 |
 | Calls | `notify`, `error-handler` |
 | Files | [`inventory-sync.json`](inventory-sync.json) · [`inventory-sync.workflow.ts`](inventory-sync.workflow.ts) |
 
@@ -55,7 +56,8 @@ Refunds small amounts on recent orders automatically, and sends anything larger,
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Datastore, Payments, Email, Chat |
+| Platforms | Datastore, Payments, Email, Chat |
+| Nodes | 18 |
 | Calls | `notify`, `error-handler` |
 | Files | [`refund-approval.json`](refund-approval.json) · [`refund-approval.workflow.ts`](refund-approval.workflow.ts) |
 
@@ -120,7 +122,8 @@ Tells subscribers a week before an annual renewal, once, with the amount and the
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Email |
+| Platforms | Datastore, Email |
+| Nodes | 5 |
 | Calls | `error-handler` |
 | Files | [`renewal-reminder.json`](renewal-reminder.json) · [`renewal-reminder.workflow.ts`](renewal-reminder.workflow.ts) |
 
@@ -155,7 +158,8 @@ Reads a supplier invoice with a model, checks the arithmetic and the duplicate h
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | LLM, Datastore, Chat |
+| Platforms | LLM, Datastore, Chat |
+| Nodes | 11 |
 | Calls | `notify`, `error-handler` |
 | Files | [`invoice-intake.json`](invoice-intake.json) · [`invoice-intake.workflow.ts`](invoice-intake.workflow.ts) |
 

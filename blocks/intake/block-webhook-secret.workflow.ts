@@ -41,15 +41,16 @@ export class BlockWebhookWithASharedSecretWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Webhook with a shared secret
 Refuses any request that does not carry the secret header, before doing anything else.
 
-**Needs:** SHOP_API_KEY
+**Platforms:** none, this is logic only
+**Settings:** SHOP_API_KEY
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/intake\``,
     };
 
@@ -59,7 +60,7 @@ Refuses any request that does not carry the secret header, before doing anything
         name: 'Incoming',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     Incoming = {
         httpMethod: 'POST',
@@ -73,7 +74,7 @@ Refuses any request that does not carry the secret header, before doing anything
         name: 'Has the secret?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [240, 0],
+        position: [260, 180],
     })
     HasTheSecret = {
         conditions: {
@@ -105,7 +106,7 @@ Refuses any request that does not carry the secret header, before doing anything
         name: 'OK',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [480, -90],
+        position: [520, 90],
     })
     Ok = {
         respondWith: 'json',
@@ -120,7 +121,7 @@ Refuses any request that does not carry the secret header, before doing anything
         name: 'Refused',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [480, 90],
+        position: [520, 270],
     })
     Refused = {
         respondWith: 'json',

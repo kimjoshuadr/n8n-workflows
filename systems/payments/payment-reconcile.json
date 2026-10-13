@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Payments · Daily reconciliation\nEach morning, compares yesterday's charges at the processor with the ledger and reports anything on one side and not the other.\n\n**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, PAYMENTS_API_KEY, PAYMENTS_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
+        "width": 640,
+        "height": 230,
+        "content": "## Payments · Daily reconciliation\nEach morning, compares yesterday's charges at the processor with the ledger and reports anything on one side and not the other.\n\n**Platforms:** none, this is logic only\n**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, PAYMENTS_API_KEY, PAYMENTS_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
       }
     },
     {
       "id": "7d600885-f91c-4cc3-af82-fbd7ba4b927c",
       "position": [
         0,
-        0
+        180
       ],
       "name": "06:00 daily",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "c5917dc6-e8fc-478c-aee8-ae164a00f7dd",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Processor charges",
       "type": "n8n-nodes-base.httpRequest",
@@ -81,8 +81,8 @@
     {
       "id": "632b65b5-be2c-4acd-a058-db7eae07c639",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Ledger lines",
       "type": "n8n-nodes-base.httpRequest",
@@ -125,8 +125,8 @@
     {
       "id": "6c6469bd-515b-4991-a575-2aa0cf2cd9df",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Compare",
       "type": "n8n-nodes-base.code",
@@ -138,8 +138,8 @@
     {
       "id": "1ac26b73-71a4-402f-a332-4804406f7c4f",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Books agree?",
       "type": "n8n-nodes-base.if",
@@ -172,8 +172,8 @@
     {
       "id": "5e722fa8-bb0e-49f9-a03c-dc00632cb69c",
       "position": [
-        1200,
-        -90
+        1300,
+        90
       ],
       "name": "Post all clear",
       "type": "n8n-nodes-base.httpRequest",
@@ -204,8 +204,8 @@
     {
       "id": "f651870d-db74-4847-ae11-2d8699a41978",
       "position": [
-        1200,
-        90
+        1300,
+        270
       ],
       "name": "One item per issue",
       "type": "n8n-nodes-base.code",
@@ -217,8 +217,8 @@
     {
       "id": "5aec6bc4-13fd-4e1a-a9d4-15b8d2ece623",
       "position": [
-        1440,
-        0
+        1560,
+        180
       ],
       "name": "Record the issue",
       "type": "n8n-nodes-base.httpRequest",
@@ -249,8 +249,8 @@
     {
       "id": "bc5376cf-8aa8-4c91-a159-fb684999e867",
       "position": [
-        1680,
-        0
+        1820,
+        180
       ],
       "name": "Mismatch message",
       "type": "n8n-nodes-base.code",
@@ -262,8 +262,8 @@
     {
       "id": "af4a34ba-439e-4109-aba9-7dc7789a4510",
       "position": [
-        1920,
-        0
+        2080,
+        180
       ],
       "name": "Alert finance",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -280,8 +280,8 @@
     {
       "id": "72c516a4-1e98-46a0-ac10-4f4bf0c09399",
       "position": [
-        2160,
-        0
+        2340,
+        180
       ],
       "name": "Check in",
       "type": "n8n-nodes-base.httpRequest",

@@ -37,15 +37,15 @@ export class BlockCsvTextToRowsWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · CSV text to rows
 Parses CSV text properly, including quoted commas and blank lines, into one item per row.
 
-**Needs:** nothing external
+**Platforms:** none, this is logic only
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/data\``,
     };
 
@@ -54,7 +54,7 @@ Parses CSV text properly, including quoted commas and blank lines, into one item
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -65,7 +65,7 @@ Parses CSV text properly, including quoted commas and blank lines, into one item
         name: 'Parse',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 90],
     })
     Parse = {
         jsCode: `const text = String($input.first().json.csv ?? "").replace(/^\\uFEFF/, "");

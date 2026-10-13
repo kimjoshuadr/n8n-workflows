@@ -9,7 +9,8 @@ Turns any event into one readable chat message.
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Chat |
+| Platforms | Chat |
+| Nodes | 2 |
 | Calls | `error-handler` |
 | Files | [`block-webhook-to-chat.json`](block-webhook-to-chat.json) · [`block-webhook-to-chat.workflow.ts`](block-webhook-to-chat.workflow.ts) |
 
@@ -31,7 +32,8 @@ Sends the same message by chat, email and SMS, where each channel failing leaves
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | Chat, Email, SMS |
+| Platforms | Chat, Email, SMS |
+| Nodes | 5 |
 | Calls | `error-handler` |
 | Files | [`block-fan-out.json`](block-fan-out.json) · [`block-fan-out.workflow.ts`](block-fan-out.workflow.ts) |
 
@@ -60,7 +62,8 @@ One place to send an email from: fills a template, refuses to send with a placeh
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | Email |
+| Platforms | Email |
+| Nodes | 6 |
 | Calls | `error-handler` |
 | Files | [`block-template-email.json`](block-template-email.json) · [`block-template-email.workflow.ts`](block-template-email.workflow.ts) |
 

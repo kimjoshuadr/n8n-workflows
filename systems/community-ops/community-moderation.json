@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -480
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Community ops · Message moderation\nChecks each message, removes clear scams, sends borderline ones to moderators, and never removes anything when the model is unavailable.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/community-ops`"
+        "width": 640,
+        "height": 230,
+        "content": "## Community ops · Message moderation\nChecks each message, removes clear scams, sends borderline ones to moderators, and never removes anything when the model is unavailable.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/community-ops`"
       }
     },
     {
       "id": "33f2ea2b-1e10-4c10-a294-caf65a4127a1",
       "position": [
         0,
-        0
+        270
       ],
       "name": "Message posted",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "1b61e473-e7c9-426e-a31b-2b99e70f33ef",
       "position": [
-        240,
-        0
+        260,
+        270
       ],
       "name": "Read the message",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "f207acb2-b765-4972-aaf0-3b903b66e2ba",
       "position": [
-        480,
-        0
+        520,
+        270
       ],
       "name": "Judge it",
       "type": "n8n-nodes-base.httpRequest",
@@ -82,8 +82,8 @@
     {
       "id": "c79361ed-de8f-4c6a-a2d9-91fc2ee5f564",
       "position": [
-        720,
-        0
+        780,
+        270
       ],
       "name": "Read the verdict",
       "type": "n8n-nodes-base.code",
@@ -95,8 +95,8 @@
     {
       "id": "2a9c7d7c-5aeb-4529-a878-b59740499487",
       "position": [
-        960,
-        0
+        1040,
+        270
       ],
       "name": "What to do?",
       "type": "n8n-nodes-base.switch",
@@ -164,8 +164,8 @@
     {
       "id": "2cc4b682-85e5-4cf0-a678-272cd16265e0",
       "position": [
-        1200,
-        -180
+        1300,
+        90
       ],
       "name": "Delete the message",
       "type": "n8n-nodes-base.httpRequest",
@@ -196,8 +196,8 @@
     {
       "id": "6677c49a-18c8-444e-ace4-f2eb1aa9bd1b",
       "position": [
-        1440,
-        0
+        1560,
+        270
       ],
       "name": "Time the author out",
       "type": "n8n-nodes-base.httpRequest",
@@ -229,8 +229,8 @@
     {
       "id": "42eba279-1d64-4fc0-a50d-b8316047edf6",
       "position": [
-        1680,
-        0
+        1820,
+        270
       ],
       "name": "Log the action",
       "type": "n8n-nodes-base.httpRequest",
@@ -261,8 +261,8 @@
     {
       "id": "6fd1f7c1-e801-4df2-a48c-41a1d530e9a1",
       "position": [
-        1920,
-        0
+        2080,
+        270
       ],
       "name": "Removed message",
       "type": "n8n-nodes-base.code",
@@ -274,8 +274,8 @@
     {
       "id": "cfef1a6f-3e53-45ee-a625-667d79d8eff3",
       "position": [
-        1200,
-        0
+        1300,
+        270
       ],
       "name": "Review message",
       "type": "n8n-nodes-base.code",
@@ -287,8 +287,8 @@
     {
       "id": "c94baa18-48f5-4d99-a38b-de71b931f840",
       "position": [
-        2160,
-        0
+        2340,
+        270
       ],
       "name": "Tell moderators",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -305,8 +305,8 @@
     {
       "id": "f36881e3-2c0c-41fe-a8e4-7cda9cadc893",
       "position": [
-        1200,
-        180
+        1300,
+        450
       ],
       "name": "Leave it",
       "type": "n8n-nodes-base.noOp",

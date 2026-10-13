@@ -9,9 +9,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // EveryHour                          scheduleTrigger
-// ReadHeartbeats                     httpRequest                [retry]
+// ReadHeartbeats                     supabase                   [creds] [alwaysOutput] [retry]
 // FindTheOverdue                     code
-// Alert                              httpRequest                [retry]
+// Alert                              slack                      [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -41,15 +41,15 @@ export class ReliabilityHeartbeatMonitorWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Reliability · Heartbeat monitor
-Notices the failure nobody reports: a scheduled workflow that silently stopped running. Each one checks in, and this alerts when a check-in is overdue.
+Notices the failure nobody reports: a scheduled workflow that silently stopped running. Each one checks in to Supabase, and this alerts Slack when a check-in is overdue.
 
-**Needs:** ALERT_CHANNEL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase, Slack
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`shared\``,
     };
 
@@ -58,7 +58,7 @@ Notices the failure nobody reports: a scheduled workflow that silently stopped r
         name: 'Every hour',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     EveryHour = {
         rule: {
@@ -74,28 +74,20 @@ Notices the failure nobody reports: a scheduled workflow that silently stopped r
     @node({
         id: '51a204d2-fda6-4401-a753-f0385df5b7b4',
         name: 'Read heartbeats',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [240, 0],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [260, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
+        alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ReadHeartbeats = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/heartbeats',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'heartbeats',
+        returnAll: true,
     };
 
     @node({
@@ -103,47 +95,41 @@ Notices the failure nobody reports: a scheduled workflow that silently stopped r
         name: 'Find the overdue',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 90],
     })
     FindTheOverdue = {
         jsCode: `const now = Date.now();
-const overdue = $input.all()
+return $input.all()
   .map((i) => i.json)
   .filter((h) => h.name && h.last_seen)
   .filter((h) => now - new Date(h.last_seen).getTime() > (h.max_gap_minutes ?? 90) * 60000)
-  .map((h) => ({ json: { name: h.name, last_seen: h.last_seen, hours_silent: Math.round((now - new Date(h.last_seen).getTime()) / 36e5) } }));
-return overdue;`,
+  .map((h) => ({ json: { name: h.name, last_seen: h.last_seen, hours_silent: Math.round((now - new Date(h.last_seen).getTime()) / 36e5) } }));`,
     };
 
     @node({
         id: 'bd1916cf-eab1-43cb-aa23-144449178675',
         name: 'Alert',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [720, 0],
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
+        position: [780, 90],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     Alert = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '#ops-alerts' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: "={{ ':zzz: ' + $json.name + ' has not run for ' + $json.hours_silent + 'h (last seen ' + $json.last_seen + ').' }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ channel: $env.ALERT_CHANNEL, text: ':zzz: ' + $json.name + ' has not run for ' + $json.hours_silent + 'h (last seen ' + $json.last_seen + ').' }) }}",
     };
 
     // =====================================================================

@@ -15,7 +15,8 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Search, LLM, Chat |
+| Platforms | Datastore, Search, LLM, Chat |
+| Nodes | 14 |
 | Calls | `error-handler` |
 | Files | [`content-draft.json`](content-draft.json) · [`content-draft.workflow.ts`](content-draft.workflow.ts) |
 
@@ -71,7 +72,8 @@ Receives a person's decision on a draft. Approved drafts are published to the CM
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Datastore, CMS, Chat |
+| Platforms | Datastore, CMS, Chat |
+| Nodes | 13 |
 | Calls | `error-handler` |
 | Files | [`content-approval.json`](content-approval.json) · [`content-approval.workflow.ts`](content-approval.workflow.ts) |
 
@@ -126,7 +128,8 @@ Every hour, writes a post per network for anything newly published and schedules
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, LLM, Social |
+| Platforms | Datastore, LLM, Social |
+| Nodes | 10 |
 | Calls | `error-handler` |
 | Files | [`content-distribute.json`](content-distribute.json) · [`content-distribute.workflow.ts`](content-distribute.workflow.ts) |
 

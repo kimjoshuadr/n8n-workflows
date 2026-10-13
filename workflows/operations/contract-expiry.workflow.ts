@@ -43,15 +43,16 @@ export class ContractsExpiryRemindersWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Contracts · Expiry reminders
 Warns the owner of each contract 60, 30 and 7 days before it ends, so renewals are a decision and never an accident.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/operations\``,
     };
 
@@ -60,7 +61,7 @@ Warns the owner of each contract 60, 30 and 7 days before it ends, so renewals a
         name: 'Monday 09:00',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     Monday0900 = {
         rule: {
@@ -78,7 +79,7 @@ Warns the owner of each contract 60, 30 and 7 days before it ends, so renewals a
         name: 'Active contracts',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -115,7 +116,7 @@ Warns the owner of each contract 60, 30 and 7 days before it ends, so renewals a
         name: 'Which warning is due?',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 90],
     })
     WhichWarningIsDue = {
         jsCode: `const MARKS = [60, 30, 7];
@@ -132,7 +133,7 @@ return $input.all().map((i) => i.json).filter((c) => c.ends_on && c.owner_email)
         name: 'Warn the owner',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -163,7 +164,7 @@ return $input.all().map((i) => i.json).filter((c) => c.ends_on && c.owner_email)
         name: 'Record the warning',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, 0],
+        position: [1040, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

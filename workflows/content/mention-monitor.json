@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Brand · Mention monitor\nChecks hourly for new mentions of the brand, and raises the negative ones straight away with the text and the link.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SEARCH_API_KEY, SEARCH_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
+        "width": 640,
+        "height": 230,
+        "content": "## Brand · Mention monitor\nChecks hourly for new mentions of the brand, and raises the negative ones straight away with the text and the link.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SEARCH_API_KEY, SEARCH_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
       }
     },
     {
       "id": "783f890a-1f56-4274-a82b-85b36463e9ff",
       "position": [
         0,
-        0
+        90
       ],
       "name": "Hourly",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "1f6f7a17-4b0b-477e-aedd-db2ce240958a",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Search for mentions",
       "type": "n8n-nodes-base.httpRequest",
@@ -71,8 +71,8 @@
     {
       "id": "5aa5a603-f41c-4f9a-aa3b-de47c512dc3c",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "One item per mention",
       "type": "n8n-nodes-base.code",
@@ -84,8 +84,8 @@
     {
       "id": "0d4086c4-ba23-454c-a9bf-93759237988d",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Claim as seen",
       "type": "n8n-nodes-base.httpRequest",
@@ -126,8 +126,8 @@
     {
       "id": "9f0e05e0-d6d4-41ba-a9e4-7c45edf88955",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "New mention?",
       "type": "n8n-nodes-base.if",
@@ -160,8 +160,8 @@
     {
       "id": "709e6a7c-db85-41d5-a448-3325ef6a0625",
       "position": [
-        1200,
-        0
+        1300,
+        90
       ],
       "name": "Read the tone",
       "type": "n8n-nodes-base.httpRequest",
@@ -193,8 +193,8 @@
     {
       "id": "a33254dd-9d01-4f63-afb8-8192e282cd8a",
       "position": [
-        1440,
-        0
+        1560,
+        90
       ],
       "name": "Read the verdict",
       "type": "n8n-nodes-base.code",
@@ -206,8 +206,8 @@
     {
       "id": "c611beb0-43ce-4506-ae34-bb8a59e94758",
       "position": [
-        1680,
-        0
+        1820,
+        90
       ],
       "name": "Needs attention?",
       "type": "n8n-nodes-base.if",
@@ -240,8 +240,8 @@
     {
       "id": "111a576d-cccd-4ada-af8f-6d8381d791be",
       "position": [
-        1920,
-        0
+        2080,
+        90
       ],
       "name": "Write the alert",
       "type": "n8n-nodes-base.code",
@@ -253,8 +253,8 @@
     {
       "id": "a257aad1-dddc-44ca-ad56-a889b9f0f97b",
       "position": [
-        2160,
-        0
+        2340,
+        90
       ],
       "name": "Raise it",
       "type": "n8n-nodes-base.executeWorkflow",

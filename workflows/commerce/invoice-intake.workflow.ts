@@ -55,15 +55,16 @@ export class FinanceSupplierInvoiceIntakeWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Finance · Supplier invoice intake
 Reads a supplier invoice with a model, checks the arithmetic and the duplicate history itself, and files it or sends it for review.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/commerce\``,
     };
 
@@ -73,7 +74,7 @@ Reads a supplier invoice with a model, checks the arithmetic and the duplicate h
         name: 'Invoice received',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     InvoiceReceived = {
         httpMethod: 'POST',
@@ -87,7 +88,7 @@ Reads a supplier invoice with a model, checks the arithmetic and the duplicate h
         name: 'Read the upload',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     ReadTheUpload = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -99,7 +100,7 @@ return [{ json: { file_url: b.file_url ?? null, text: String(b.text ?? "").slice
         name: 'Extract the fields',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 180],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -138,7 +139,7 @@ return [{ json: { file_url: b.file_url ?? null, text: String(b.text ?? "").slice
         name: 'Read the fields',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 180],
     })
     ReadTheFields = {
         jsCode: `const before = $("Read the upload").all();
@@ -161,7 +162,7 @@ return out;`,
         name: 'Seen this invoice?',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, 0],
+        position: [1040, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -202,7 +203,7 @@ return out;`,
         name: 'Check it',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 0],
+        position: [1300, 180],
     })
     CheckIt = {
         jsCode: `const f = $("Read the fields").first().json;
@@ -222,7 +223,7 @@ return [{ json: { ...f, duplicate, problems, ok: problems.length === 0 } }];`,
         name: 'Clean?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1440, 0],
+        position: [1560, 180],
     })
     Clean = {
         conditions: {
@@ -254,7 +255,7 @@ return [{ json: { ...f, duplicate, problems, ok: problems.length === 0 } }];`,
         name: 'File it',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, -90],
+        position: [1820, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -285,7 +286,7 @@ return [{ json: { ...f, duplicate, problems, ok: problems.length === 0 } }];`,
         name: 'Queue for review',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, 90],
+        position: [1820, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -316,7 +317,7 @@ return [{ json: { ...f, duplicate, problems, ok: problems.length === 0 } }];`,
         name: 'Review message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1920, 0],
+        position: [2080, 180],
     })
     ReviewMessage = {
         jsCode: `const f = $("Clean?").first().json;
@@ -328,7 +329,7 @@ return [{ json: { channel: "#finance", level: "warn", text: "An invoice" + (f.ve
         name: 'Tell finance',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2160, 0],
+        position: [2340, 180],
     })
     TellFinance = {
         workflowId: {

@@ -49,15 +49,16 @@ export class LeadIntakeFollowUpTheUnbookedWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Lead intake · Follow up the unbooked
 Each morning, writes to qualified leads who have not booked. Three nudges, two days apart, then the lead is marked cold and left alone.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/lead-intake\``,
     };
 
@@ -66,7 +67,7 @@ Each morning, writes to qualified leads who have not booked. Three nudges, two d
         name: 'Every morning',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     EveryMorning = {
         rule: {
@@ -84,7 +85,7 @@ Each morning, writes to qualified leads who have not booked. Three nudges, two d
         name: 'Unbooked leads',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, -90],
+        position: [260, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -125,7 +126,7 @@ Each morning, writes to qualified leads who have not booked. Three nudges, two d
         name: 'Who is due?',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 180],
     })
     WhoIsDue = {
         jsCode: `const now = Date.now();
@@ -140,7 +141,7 @@ return $input.all().map((i) => i.json).filter((l) => l.email)
         name: 'Nudges left?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [720, 0],
+        position: [780, 180],
     })
     NudgesLeft = {
         conditions: {
@@ -172,7 +173,7 @@ return $input.all().map((i) => i.json).filter((l) => l.email)
         name: 'Send the nudge',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, -90],
+        position: [1040, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -203,7 +204,7 @@ return $input.all().map((i) => i.json).filter((l) => l.email)
         name: 'Record the nudge',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, 0],
+        position: [1300, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -243,7 +244,7 @@ return $input.all().map((i) => i.json).filter((l) => l.email)
         name: 'Mark cold',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, 90],
+        position: [1040, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -282,7 +283,7 @@ return $input.all().map((i) => i.json).filter((l) => l.email)
         name: 'Check in',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 90],
+        position: [260, 270],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,

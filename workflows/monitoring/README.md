@@ -9,7 +9,8 @@ Checks each site every five minutes, alerts after two failures in a row, and rep
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Chat |
+| Platforms | Datastore, Chat |
+| Nodes | 7 |
 | Calls | `notify`, `error-handler` |
 | Files | [`uptime-monitor.json`](uptime-monitor.json) · [`uptime-monitor.workflow.ts`](uptime-monitor.workflow.ts) |
 
@@ -50,7 +51,8 @@ Checks every morning that last night's backup exists, is recent and is not suspi
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Backup, Chat, Datastore |
+| Platforms | Backup, Chat, Datastore |
+| Nodes | 8 |
 | Calls | `notify`, `error-handler` |
 | Files | [`backup-verify.json`](backup-verify.json) · [`backup-verify.workflow.ts`](backup-verify.workflow.ts) |
 

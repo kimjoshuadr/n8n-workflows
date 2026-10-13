@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## CRM · Enrich new contacts\nFills in company, role and size for a new CRM contact from an enrichment service, and never overwrites what a person already typed.\n\n**Needs:** CRM_API_KEY, CRM_BASE_URL, ENRICH_API_KEY, ENRICH_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
+        "width": 640,
+        "height": 230,
+        "content": "## CRM · Enrich new contacts\nFills in company, role and size for a new CRM contact from an enrichment service, and never overwrites what a person already typed.\n\n**Platforms:** none, this is logic only\n**Settings:** CRM_API_KEY, CRM_BASE_URL, ENRICH_API_KEY, ENRICH_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
       }
     },
     {
       "id": "3157603e-4d9f-4d19-af2a-c2f353d08099",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Contact created",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "ef49795c-516c-46e2-a0be-03b0bf5aef5f",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Read the contact",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "4fcd0473-a51a-489c-a91d-1e9aae011743",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Work email?",
       "type": "n8n-nodes-base.if",
@@ -83,8 +83,8 @@
     {
       "id": "8c8855ac-5b0a-4840-a801-55dc66fdaf02",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Look them up",
       "type": "n8n-nodes-base.httpRequest",
@@ -116,8 +116,8 @@
     {
       "id": "e66297c5-d75d-4c87-ad60-7354d3b80d2c",
       "position": [
-        960,
-        -90
+        1040,
+        90
       ],
       "name": "Only the blanks",
       "type": "n8n-nodes-base.code",
@@ -129,8 +129,8 @@
     {
       "id": "7dd1ef6d-3583-4c07-abca-9581957b5c5a",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "Anything to add?",
       "type": "n8n-nodes-base.if",
@@ -163,8 +163,8 @@
     {
       "id": "fe7d5277-3d60-4ffb-a1bb-5b0743428b71",
       "position": [
-        1440,
-        -90
+        1560,
+        90
       ],
       "name": "Update the contact",
       "type": "n8n-nodes-base.httpRequest",
@@ -195,8 +195,8 @@
     {
       "id": "32373b80-e9a8-4da9-ad66-3469fdd98232",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Personal email, skipped",
       "type": "n8n-nodes-base.noOp",
@@ -206,8 +206,8 @@
     {
       "id": "cbe7d520-a5dd-4819-adcc-6a4a88c2572d",
       "position": [
-        1440,
-        90
+        1560,
+        270
       ],
       "name": "Nothing new",
       "type": "n8n-nodes-base.noOp",
@@ -217,8 +217,8 @@
     {
       "id": "3452b43c-aa3b-4950-a9e6-f33aeb9f623f",
       "position": [
-        960,
-        90
+        1040,
+        270
       ],
       "name": "Lookup failed, left as is",
       "type": "n8n-nodes-base.noOp",

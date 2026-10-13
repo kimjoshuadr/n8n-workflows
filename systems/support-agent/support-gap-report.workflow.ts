@@ -47,15 +47,16 @@ export class SupportAgentWeeklyGapReportWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Support agent · Weekly gap report
 Every Monday, reads what the agent could not answer last week and tells the team which help articles are missing.
 
-**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** none, this is logic only
+**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/support-agent\``,
     };
 
@@ -64,7 +65,7 @@ Every Monday, reads what the agent could not answer last week and tells the team
         name: 'Monday 08:00',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     Monday0800 = {
         rule: {
@@ -82,7 +83,7 @@ Every Monday, reads what the agent could not answer last week and tells the team
         name: 'Unanswered last week',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -123,7 +124,7 @@ Every Monday, reads what the agent could not answer last week and tells the team
         name: 'Gather the questions',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 180],
     })
     GatherTheQuestions = {
         jsCode: `const qs = $input.all().map((i) => i.json.question).filter(Boolean);
@@ -135,7 +136,7 @@ return [{ json: { count: qs.length, questions: qs.slice(0, 80).map((q) => "- " +
         name: 'Any gaps?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [720, 0],
+        position: [780, 180],
     })
     AnyGaps = {
         conditions: {
@@ -167,7 +168,7 @@ return [{ json: { count: qs.length, questions: qs.slice(0, 80).map((q) => "- " +
         name: 'Group into topics',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, -90],
+        position: [1040, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -204,7 +205,7 @@ return [{ json: { count: qs.length, questions: qs.slice(0, 80).map((q) => "- " +
         name: 'Post the report',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, 0],
+        position: [1300, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -235,7 +236,7 @@ return [{ json: { count: qs.length, questions: qs.slice(0, 80).map((q) => "- " +
         name: 'Post all clear',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, 90],
+        position: [1040, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

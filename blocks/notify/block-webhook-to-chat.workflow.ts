@@ -37,15 +37,16 @@ export class BlockEventToAChatMessageWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Event to a chat message
 Turns any event into one readable chat message.
 
-**Needs:** CHAT_API_KEY, CHAT_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CHAT_API_KEY, CHAT_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/notify\``,
     };
 
@@ -55,7 +56,7 @@ Turns any event into one readable chat message.
         name: 'Event',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 90],
     })
     Event = {
         httpMethod: 'POST',
@@ -69,7 +70,7 @@ Turns any event into one readable chat message.
         name: 'Post it',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

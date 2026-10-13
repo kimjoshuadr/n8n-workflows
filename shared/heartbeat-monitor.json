@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Reliability · Heartbeat monitor\nNotices the failure nobody reports: a scheduled workflow that silently stopped running. Each one checks in, and this alerts when a check-in is overdue.\n\n**Needs:** ALERT_CHANNEL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
+        "width": 640,
+        "height": 230,
+        "content": "## Reliability · Heartbeat monitor\nNotices the failure nobody reports: a scheduled workflow that silently stopped running. Each one checks in to Supabase, and this alerts Slack when a check-in is overdue.\n\n**Platforms:** Supabase, Slack\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
       }
     },
     {
       "id": "2e9a4e97-913b-4c43-a7d6-574aed1f7d85",
       "position": [
         0,
-        0
+        90
       ],
       "name": "Every hour",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,76 +39,74 @@
     {
       "id": "51a204d2-fda6-4401-a753-f0385df5b7b4",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Read heartbeats",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DB_BASE_URL }}/heartbeats",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
-            }
-          ]
-        }
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "heartbeats",
+        "returnAll": true
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
       "id": "aec6adc1-e8aa-4d54-a4e9-fed809e33636",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Find the overdue",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const now = Date.now();\nconst overdue = $input.all()\n  .map((i) => i.json)\n  .filter((h) => h.name && h.last_seen)\n  .filter((h) => now - new Date(h.last_seen).getTime() > (h.max_gap_minutes ?? 90) * 60000)\n  .map((h) => ({ json: { name: h.name, last_seen: h.last_seen, hours_silent: Math.round((now - new Date(h.last_seen).getTime()) / 36e5) } }));\nreturn overdue;"
+        "jsCode": "const now = Date.now();\nreturn $input.all()\n  .map((i) => i.json)\n  .filter((h) => h.name && h.last_seen)\n  .filter((h) => now - new Date(h.last_seen).getTime() > (h.max_gap_minutes ?? 90) * 60000)\n  .map((h) => ({ json: { name: h.name, last_seen: h.last_seen, hours_silent: Math.round((now - new Date(h.last_seen).getTime()) / 36e5) } }));"
       }
     },
     {
       "id": "bd1916cf-eab1-43cb-aa23-144449178675",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Alert",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
-        "options": {
-          "timeout": 15000
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ '#ops-alerts' }}"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: $env.ALERT_CHANNEL, text: ':zzz: ' + $json.name + ' has not run for ' + $json.hours_silent + 'h (last seen ' + $json.last_seen + ').' }) }}"
+        "text": "={{ ':zzz: ' + $json.name + ' has not run for ' + $json.hours_silent + 'h (last seen ' + $json.last_seen + ').' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
     }
   ],
   "connections": {

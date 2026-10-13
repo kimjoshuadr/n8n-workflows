@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Subscriptions · Renewal reminders\nTells subscribers a week before an annual renewal, once, with the amount and the date, so the charge is never a surprise.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
+        "width": 640,
+        "height": 230,
+        "content": "## Subscriptions · Renewal reminders\nTells subscribers a week before an annual renewal, once, with the amount and the date, so the charge is never a surprise.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
       }
     },
     {
       "id": "1edddb14-9cdf-4006-a0e2-d1a2e31e0f3c",
       "position": [
         0,
-        0
+        90
       ],
       "name": "08:00 daily",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "ad792b75-15ae-418c-ac43-2afaa3873c22",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Active subscriptions",
       "type": "n8n-nodes-base.httpRequest",
@@ -82,8 +82,8 @@
     {
       "id": "a75161ec-ba9d-4a9c-ac63-bdef70d7803f",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Renewing in a week",
       "type": "n8n-nodes-base.code",
@@ -95,8 +95,8 @@
     {
       "id": "a23c2148-c86f-40f1-a64c-d266c6082ec6",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Send the notice",
       "type": "n8n-nodes-base.httpRequest",
@@ -127,8 +127,8 @@
     {
       "id": "af87ac3d-445b-4495-a5df-98a64360233b",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Mark reminded",
       "type": "n8n-nodes-base.httpRequest",

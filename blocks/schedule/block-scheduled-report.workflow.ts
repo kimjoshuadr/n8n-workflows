@@ -41,15 +41,16 @@ export class BlockScheduledCountToChatWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Scheduled count to chat
 Every morning, counts yesterday's rows in a table and posts the number.
 
-**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/schedule\``,
     };
 
@@ -58,7 +59,7 @@ Every morning, counts yesterday's rows in a table and posts the number.
         name: '08:00 daily',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     _0800Daily = {
         rule: {
@@ -76,7 +77,7 @@ Every morning, counts yesterday's rows in a table and posts the number.
         name: "Yesterday's rows",
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -113,7 +114,7 @@ Every morning, counts yesterday's rows in a table and posts the number.
         name: 'Count',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 90],
     })
     Count = {
         jsCode: 'return [{ json: { count: $input.all().filter((i) => i.json.id).length } }];',
@@ -124,7 +125,7 @@ Every morning, counts yesterday's rows in a table and posts the number.
         name: 'Post',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

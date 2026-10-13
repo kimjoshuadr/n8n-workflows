@@ -14,6 +14,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { loadAll, refsOf, root } from "./load.mjs";
 import { SYSTEMS, TIERS } from "./systems.mjs";
+import { PLATFORMS } from "../lib/platforms.mjs";
 
 const defs = await loadAll();
 const byFolder = Map.groupBy(defs, (d) => d.folder);
@@ -26,11 +27,12 @@ const SHAPE = { trigger: ["([", "])"], branch: ["{", "}"], http: ["[/", "/]"], c
 function mermaid(def) {
   const lines = ["flowchart LR"];
   for (const n of def.graph.nodes) {
-    const [open, close] = SHAPE[n.kind] ?? ["[", "]"];
+    const [open, close] = SHAPE[n.kind] ?? (n.kind === "agent" ? ["[[", "]]"] : n.kind === "part" ? ["(", ")"] : ["[", "]"]);
     lines.push(`  ${mermaidId(n.id)}${open}"${n.id.replace(/"/g, "'")}"${close}`);
   }
   for (const e of def.graph.edges) {
     const from = def.graph.nodes.find((n) => n.id === e.from);
+    if (e.part) { lines.push(`  ${mermaidId(e.from)} -.-> ${mermaidId(e.to)}`); continue; }
     const label = from.kind === "branch" && def.graph.edges.filter((x) => x.from === e.from).length > 1 ? (from.id.endsWith("?") ? (e.out === 0 ? "|yes|" : "|no|") : "") : from.kind === "http" && e.out === 1 ? "|failed|" : from.kind === "loop" ? (e.out === 0 ? "|done|" : "|each|") : "";
     lines.push(`  ${mermaidId(e.from)} -->${label} ${mermaidId(e.to)}`);
   }
@@ -41,7 +43,7 @@ const TRIGGER = { webhook: "Webhook", scheduleTrigger: "Schedule", manualTrigger
 
 function section(def, level = "##") {
   const out = [`${level} ${def.name}`, "", def.summary, ""];
-  out.push(`| | |`, `|---|---|`, `| Starts from | ${TRIGGER[def.trigger]} |`, `| Talks to | ${def.integrations.filter((i) => !["Webhook", "Schedule"].includes(i)).join(", ") || "nothing external"} |`, `| Calls | ${refsOf(def).map((r) => `\`${r}\``).join(", ") || "nothing"} |`, `| Files | [\`${def.id}.json\`](${def.id}.json) · [\`${def.id}.workflow.ts\`](${def.id}.workflow.ts) |`, "");
+  out.push(`| | |`, `|---|---|`, `| Starts from | ${TRIGGER[def.trigger]} |`, `| Platforms | ${def.platforms.length ? def.platforms.map((p) => PLATFORMS[p].name).join(", ") : (def.integrations ?? []).filter((i) => !["Webhook", "Schedule"].includes(i)).join(", ") || "none, logic only"} |`, `| Nodes | ${def.nodeCount} |`, `| Calls | ${refsOf(def).map((r) => `\`${r}\``).join(", ") || "nothing"} |`, `| Files | [\`${def.id}.json\`](${def.id}.json) · [\`${def.id}.workflow.ts\`](${def.id}.workflow.ts) |`, "");
   out.push("```mermaid", mermaid(def), "```", "");
   if (def.story?.length) {
     out.push("**How it runs**", "");
@@ -78,11 +80,12 @@ for (const [folder, list] of byFolder) {
       summary: def.summary,
       source: "reference",
       trigger: def.trigger,
-      integrations: def.integrations,
+      integrations: def.integrations ?? def.platforms.map((p) => PLATFORMS[p].name),
+      platforms: def.platforms,
       env: def.env,
       calls: refsOf(def),
       folder,
-      nodeCount: def.graph.nodes.length,
+      nodeCount: def.nodeCount,
       tests: def.tests.map((t) => t.name),
       story: def.story ?? [],
       graph: def.graph,
@@ -105,6 +108,7 @@ fs.writeFileSync(
       repo: "https://github.com/kimjoshuadr/n8n-workflows",
       tested: results ? { n8n: results.n8n, passed: results.passed, failed: results.failed } : null,
       tiers: TIERS,
+      platforms: Object.fromEntries(Object.entries(PLATFORMS).map(([id, p]) => [id, { name: p.name, job: p.job, icon: p.icon, workflows: catalog.filter((w) => w.platforms.includes(id)).length }])),
       systems: SYSTEMS.map((s) => ({ ...s, workflows: catalog.filter((w) => w.system === s.id).map((w) => w.id) })),
       workflows: catalog,
     },

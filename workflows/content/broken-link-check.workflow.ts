@@ -48,15 +48,16 @@ export class SeoBrokenLinkCheckWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## SEO · Broken link check
 Every Sunday night, visits each page in the sitemap list and reports the ones that no longer load, with the status each returned.
 
-**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/content\``,
     };
 
@@ -65,7 +66,7 @@ Every Sunday night, visits each page in the sitemap list and reports the ones th
         name: 'Sunday 23:00',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     Sunday2300 = {
         rule: {
@@ -83,7 +84,7 @@ Every Sunday night, visits each page in the sitemap list and reports the ones th
         name: 'Pages to check',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -111,7 +112,7 @@ Every Sunday night, visits each page in the sitemap list and reports the ones th
         name: 'Visit the page',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 90],
         onError: 'continueRegularOutput',
     })
     VisitThePage = {
@@ -133,7 +134,7 @@ Every Sunday night, visits each page in the sitemap list and reports the ones th
         name: 'Find the broken ones',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 90],
     })
     FindTheBrokenOnes = {
         jsCode: `const pages = $("Pages to check").all();
@@ -147,7 +148,7 @@ return [{ json: { checked: results.length, broken, any: broken.length > 0, text:
         name: 'Any broken?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 90],
     })
     AnyBroken = {
         conditions: {
@@ -179,7 +180,7 @@ return [{ json: { checked: results.length, broken, any: broken.length > 0, text:
         name: 'Report them',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, 0],
+        position: [1300, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -209,7 +210,7 @@ return [{ json: { checked: results.length, broken, any: broken.length > 0, text:
         name: 'Save the run',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

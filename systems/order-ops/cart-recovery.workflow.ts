@@ -47,15 +47,16 @@ export class OrderOpsAbandonedCartRecoveryWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Order ops · Abandoned cart recovery
 Every half hour, writes once to people who left a cart over an hour ago and have not ordered since.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/order-ops\``,
     };
 
@@ -64,7 +65,7 @@ Every half hour, writes once to people who left a cart over an hour ago and have
         name: 'Every 30 minutes',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     Every30Minutes = {
         rule: {
@@ -82,7 +83,7 @@ Every half hour, writes once to people who left a cart over an hour ago and have
         name: 'Open carts',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -123,7 +124,7 @@ Every half hour, writes once to people who left a cart over an hour ago and have
         name: 'Old enough, with an email',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 90],
     })
     OldEnoughWithAnEmail = {
         jsCode: `const now = Date.now();
@@ -138,7 +139,7 @@ return $input.all().map((i) => i.json).filter((c) => c.email && c.updated_at)
         name: 'Ordered since?',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -179,7 +180,7 @@ return $input.all().map((i) => i.json).filter((c) => c.email && c.updated_at)
         name: 'Keep the ones who did not',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [960, 0],
+        position: [1040, 90],
     })
     KeepTheOnesWhoDidNot = {
         jsCode: `const carts = $("Old enough, with an email").all();
@@ -192,7 +193,7 @@ return $input.all().map((item, i) => ({ cart: carts[i]?.json, ordered: !!item.js
         name: 'Send the reminder',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, 0],
+        position: [1300, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -223,7 +224,7 @@ return $input.all().map((item, i) => ({ cart: carts[i]?.json, ordered: !!item.js
         name: 'Mark reminded',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

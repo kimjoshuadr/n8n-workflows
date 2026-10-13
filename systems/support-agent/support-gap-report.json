@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Support agent · Weekly gap report\nEvery Monday, reads what the agent could not answer last week and tells the team which help articles are missing.\n\n**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/support-agent`"
+        "width": 640,
+        "height": 230,
+        "content": "## Support agent · Weekly gap report\nEvery Monday, reads what the agent could not answer last week and tells the team which help articles are missing.\n\n**Platforms:** none, this is logic only\n**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/support-agent`"
       }
     },
     {
       "id": "53f670c1-891f-4239-a05a-8d68c1337288",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Monday 08:00",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "670118fd-c33c-425b-a4ce-bf135d4af0a5",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Unanswered last week",
       "type": "n8n-nodes-base.httpRequest",
@@ -82,8 +82,8 @@
     {
       "id": "a8eb664c-7df9-407a-ae73-efefc86805a7",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Gather the questions",
       "type": "n8n-nodes-base.code",
@@ -95,8 +95,8 @@
     {
       "id": "7ead2bda-48fb-41ac-aa14-09eb047577d8",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Any gaps?",
       "type": "n8n-nodes-base.if",
@@ -129,8 +129,8 @@
     {
       "id": "7d797618-81eb-4794-a9c9-5663c0c21007",
       "position": [
-        960,
-        -90
+        1040,
+        90
       ],
       "name": "Group into topics",
       "type": "n8n-nodes-base.httpRequest",
@@ -161,8 +161,8 @@
     {
       "id": "8b53cf61-0843-4d92-aa2f-b44070a00f4f",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "Post the report",
       "type": "n8n-nodes-base.httpRequest",
@@ -193,8 +193,8 @@
     {
       "id": "73384992-fd9b-42be-aa60-427db5c956b3",
       "position": [
-        960,
-        90
+        1040,
+        270
       ],
       "name": "Post all clear",
       "type": "n8n-nodes-base.httpRequest",

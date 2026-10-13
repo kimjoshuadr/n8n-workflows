@@ -10,17 +10,17 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
 // Compose                            set
-// PostToChat                         httpRequest                [onError→out(1)] [retry]
-// DeliveredByChat                    set
-// EmailInstead                       httpRequest                [retry]
+// PostToSlack                        slack                      [onError→out(1)] [creds] [retry]
+// DeliveredBySlack                   set
+// EmailInstead                       sendGrid                   [creds] [retry]
 // DeliveredByEmail                   set
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
 // WhenCalled
 //    → Compose
-//      → PostToChat
-//        → DeliveredByChat
+//      → PostToSlack
+//        → DeliveredBySlack
 //       .out(1) → EmailInstead
 //          → DeliveredByEmail
 // </workflow-map>
@@ -45,15 +45,15 @@ export class ReliabilityNotifyWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Reliability · Notify
-The one place alerts leave from. Posts to chat, and falls back to email when chat is down, so an outage cannot hide its own alert.
+The one place alerts leave from. Posts to Slack, and falls back to a SendGrid email when Slack is down, so an outage cannot hide its own alert.
 
-**Needs:** ALERT_CHANNEL, CHAT_API_KEY, CHAT_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** Slack, SendGrid
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`shared\``,
     };
 
@@ -62,7 +62,7 @@ The one place alerts leave from. Posts to chat, and falls back to email when cha
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 180],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -73,7 +73,7 @@ The one place alerts leave from. Posts to chat, and falls back to email when cha
         name: 'Compose',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [240, 0],
+        position: [260, 180],
     })
     Compose = {
         assignments: {
@@ -81,7 +81,7 @@ The one place alerts leave from. Posts to chat, and falls back to email when cha
                 {
                     id: 'cce3708b-632e-413d-ae7b-8d97df6d8604',
                     name: 'channel',
-                    value: '={{ $json.channel ?? $env.ALERT_CHANNEL }}',
+                    value: "={{ $json.channel ?? '#ops-alerts' }}",
                     type: 'string',
                 },
                 {
@@ -103,50 +103,46 @@ The one place alerts leave from. Posts to chat, and falls back to email when cha
     };
 
     @node({
-        id: '180af92a-833b-42a7-a5f8-97c455ab1340',
-        name: 'Post to chat',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [480, 0],
+        id: '8996d357-98cb-4aa8-a03c-0101debf7713',
+        name: 'Post to Slack',
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
+        position: [520, 180],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         onError: 'continueErrorOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
-    PostToChat = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+    PostToSlack = {
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: '={{ $json.channel }}',
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: '={{ $json.text }}',
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}',
     };
 
     @node({
-        id: 'f9988700-4056-45dc-a754-58072e82e41f',
-        name: 'Delivered by chat',
+        id: '13c8f07f-3a66-4c92-a260-350203014922',
+        name: 'Delivered by Slack',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [720, -90],
+        position: [780, 90],
     })
-    DeliveredByChat = {
+    DeliveredBySlack = {
         assignments: {
             assignments: [
                 {
-                    id: '7918710d-13df-494d-a3bd-c1d1cb07df58',
+                    id: '682d65d0-762f-4c72-a079-09e95c7494a2',
                     name: 'delivered',
-                    value: "={{ 'chat' }}",
+                    value: "={{ 'slack' }}",
                     type: 'string',
                 },
             ],
@@ -158,32 +154,25 @@ The one place alerts leave from. Posts to chat, and falls back to email when cha
     @node({
         id: 'bc694fe5-059b-4dc6-a962-80a0ff8706f4',
         name: 'Email instead',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [720, 90],
+        type: 'n8n-nodes-base.sendGrid',
+        version: 1,
+        position: [780, 270],
+        credentials: { sendGridApi: { id: '__CRED:sendgrid__', name: 'SendGrid' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     EmailInstead = {
-        method: 'POST',
-        url: '={{ $env.EMAIL_BASE_URL }}/emails',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.EMAIL_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ to: 'ops@example.com', subject: 'Alert (chat unavailable)', text: $('Compose').item.json.text }) }}",
+        resource: 'mail',
+        operation: 'send',
+        fromEmail: "={{ 'hello@example.com' }}",
+        fromName: "={{ 'Acme' }}",
+        toEmail: "={{ 'ops@example.com' }}",
+        subject: "={{ 'Alert (Slack unavailable)' }}",
+        dynamicTemplate: false,
+        contentType: 'text/plain',
+        contentValue: "={{ $('Compose').item.json.text }}",
+        additionalFields: {},
     };
 
     @node({
@@ -191,7 +180,7 @@ The one place alerts leave from. Posts to chat, and falls back to email when cha
         name: 'Delivered by email',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [960, 0],
+        position: [1040, 180],
     })
     DeliveredByEmail = {
         assignments: {
@@ -215,9 +204,9 @@ The one place alerts leave from. Posts to chat, and falls back to email when cha
     @links()
     defineRouting() {
         this.WhenCalled.out(0).to(this.Compose.in(0));
-        this.Compose.out(0).to(this.PostToChat.in(0));
-        this.PostToChat.out(0).to(this.DeliveredByChat.in(0));
-        this.PostToChat.out(1).to(this.EmailInstead.in(0));
+        this.Compose.out(0).to(this.PostToSlack.in(0));
+        this.PostToSlack.out(0).to(this.DeliveredBySlack.in(0));
+        this.PostToSlack.out(1).to(this.EmailInstead.in(0));
         this.EmailInstead.out(0).to(this.DeliveredByEmail.in(0));
     }
 }

@@ -9,7 +9,8 @@ Keeps the first of each item sharing a key, after normalising it, so 'A@B.co ' a
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | nothing external |
+| Platforms | none, logic only |
+| Nodes | 2 |
 | Calls | `error-handler` |
 | Files | [`block-dedupe.json`](block-dedupe.json) · [`block-dedupe.workflow.ts`](block-dedupe.workflow.ts) |
 
@@ -31,7 +32,8 @@ Follows a cursor until the API says there is no more, with a hard stop so a brok
 | | |
 |---|---|
 | Starts from | Manual run |
-| Talks to | CRM |
+| Platforms | CRM |
+| Nodes | 6 |
 | Calls | `error-handler` |
 | Files | [`block-paginate.json`](block-paginate.json) · [`block-paginate.workflow.ts`](block-paginate.workflow.ts) |
 
@@ -62,7 +64,8 @@ Sends items in small batches with a pause between them, for APIs that reject bur
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | Email |
+| Platforms | Email |
+| Nodes | 5 |
 | Calls | `error-handler` |
 | Files | [`block-rate-limited-loop.json`](block-rate-limited-loop.json) · [`block-rate-limited-loop.workflow.ts`](block-rate-limited-loop.workflow.ts) |
 
@@ -91,7 +94,8 @@ Groups a long list into chunks of 100 and upserts each chunk in one request.
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | Datastore |
+| Platforms | Datastore |
+| Nodes | 3 |
 | Calls | `error-handler` |
 | Files | [`block-batch-upsert.json`](block-batch-upsert.json) · [`block-batch-upsert.workflow.ts`](block-batch-upsert.workflow.ts) |
 

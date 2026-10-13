@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Scheduled count to chat\nEvery morning, counts yesterday's rows in a table and posts the number.\n\n**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/schedule`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Scheduled count to chat\nEvery morning, counts yesterday's rows in a table and posts the number.\n\n**Platforms:** none, this is logic only\n**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/schedule`"
       }
     },
     {
       "id": "e3a079bf-3467-4ff4-a55f-e6bf48dcb4b6",
       "position": [
         0,
-        0
+        90
       ],
       "name": "08:00 daily",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "1997818f-2761-44bf-aea2-849b68947fa4",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Yesterday's rows",
       "type": "n8n-nodes-base.httpRequest",
@@ -78,8 +78,8 @@
     {
       "id": "ff4da1f0-c67f-4736-ae48-cbdb52ea9148",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Count",
       "type": "n8n-nodes-base.code",
@@ -91,8 +91,8 @@
     {
       "id": "c876f823-9f4f-4f9e-a210-9199b3f869c5",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Post",
       "type": "n8n-nodes-base.httpRequest",

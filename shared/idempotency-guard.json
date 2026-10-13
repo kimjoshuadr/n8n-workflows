@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Reliability · Idempotency guard\nAnswers one question for a caller: has this event been handled before? Webhooks are delivered more than once; this is what makes that safe.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
+        "width": 640,
+        "height": 230,
+        "content": "## Reliability · Idempotency guard\nAnswers one question for a caller: has this event been handled before? Webhooks are delivered more than once; a unique key in Supabase is what makes that safe.\n\n**Platforms:** Supabase\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
       }
     },
     {
       "id": "c47be24e-4697-4571-a345-0057e8485a07",
       "position": [
         0,
-        0
+        180
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "04c7cece-c13f-45d1-a348-92716649141a",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Build the key",
       "type": "n8n-nodes-base.code",
@@ -45,65 +45,109 @@
     {
       "id": "76375043-ec78-48c8-a260-7ac720ad762e",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Claim the key",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DB_BASE_URL }}/idempotency_keys",
-        "options": {
-          "timeout": 15000,
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "neverError": true
-            }
-          }
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "row",
+        "operation": "create",
+        "tableId": "idempotency_keys",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.DB_API_KEY }}"
+              "fieldId": "idempotency_key",
+              "fieldValue": "={{ $json.idempotency_key }}"
             },
             {
-              "name": "Prefer",
-              "value": "resolution=ignore-duplicates,return=representation"
+              "fieldId": "claimed_at",
+              "fieldValue": "={{ $now.toISO() }}"
             }
           ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "on_conflict",
-              "value": "={{ 'idempotency_key' }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ idempotency_key: $json.idempotency_key, claimed_at: $now.toISO() }) }}"
+        }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "supabaseApi": {
+          "id": "__CRED:supabase__",
+          "name": "Supabase"
+        }
+      }
     },
     {
-      "id": "0441a50f-c140-4915-a28e-80ed5a31574f",
+      "id": "9f04f3f0-5e11-4edb-a1db-2fd74def4e08",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
-      "name": "Report",
+      "name": "First time",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const before = $(\"Build the key\").all();\nreturn $input.all().map((item, i) => {\n  const rows = Array.isArray(item.json.body) ? item.json.body : [];\n  return { json: { ...before[i].json, duplicate: rows.length === 0 } };\n});"
+        "jsCode": "const before = $(\"Build the key\").all();\nreturn $input.all().map((_, i) => ({ json: { ...before[i].json, duplicate: false } }));"
+      }
+    },
+    {
+      "id": "c489cd8f-25af-40ef-a752-dae7c51c303d",
+      "position": [
+        780,
+        270
+      ],
+      "name": "Already claimed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "176585e2-4fac-4168-a128-a4d77974b982",
+              "leftValue": "={{ /duplicate key|23505/.test(String($json.error ?? '')) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "8a86d7b8-0700-41ff-a2b5-1159baf72211",
+      "position": [
+        1040,
+        90
+      ],
+      "name": "Seen before",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => { const { error, ...rest } = item.json; return { json: { ...rest, duplicate: true } }; });"
+      }
+    },
+    {
+      "id": "641764ba-382a-4ff0-a76c-54227c4efc70",
+      "position": [
+        1040,
+        270
+      ],
+      "name": "Could not check",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "parameters": {
+        "errorMessage": "={{ String($json.error ?? 'The idempotency key could not be claimed') }}"
       }
     }
   ],
@@ -134,7 +178,32 @@
       "main": [
         [
           {
-            "node": "Report",
+            "node": "First time",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Already claimed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Already claimed?": {
+      "main": [
+        [
+          {
+            "node": "Seen before",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Could not check",
             "type": "main",
             "index": 0
           }

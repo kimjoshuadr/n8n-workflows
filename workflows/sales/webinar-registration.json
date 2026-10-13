@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Events · Webinar registration and reminders\nRegisters someone for a webinar, sends the calendar invite, and reminds them a day and an hour before. Full sessions get a waitlist reply.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
+        "width": 640,
+        "height": 230,
+        "content": "## Events · Webinar registration and reminders\nRegisters someone for a webinar, sends the calendar invite, and reminds them a day and an hour before. Full sessions get a waitlist reply.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
       }
     },
     {
       "id": "84fdd34d-0acb-4d79-afc1-890f3c149c2b",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Registration",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "a4de99b5-a706-4a2f-a431-d8138de2aa91",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Read the form",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "6ac60d43-855b-4256-ab86-5cb748269af3",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Valid?",
       "type": "n8n-nodes-base.if",
@@ -83,8 +83,8 @@
     {
       "id": "969476db-290f-4136-add8-c2187d38051d",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Invalid",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -100,8 +100,8 @@
     {
       "id": "f5a5fd9d-6142-41d4-afdc-9431895facb9",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Load the webinar",
       "type": "n8n-nodes-base.httpRequest",
@@ -139,8 +139,8 @@
     {
       "id": "52b5b9dd-0c38-4456-a42a-11d8c20516df",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Seats left?",
       "type": "n8n-nodes-base.if",
@@ -173,8 +173,8 @@
     {
       "id": "5a5f949e-b610-4c2b-aafc-11893dadaadc",
       "position": [
-        1200,
-        -90
+        1300,
+        90
       ],
       "name": "Register",
       "type": "n8n-nodes-base.httpRequest",
@@ -215,8 +215,8 @@
     {
       "id": "ae900ee8-782e-41fd-a01a-868339b997fb",
       "position": [
-        1440,
-        -90
+        1560,
+        90
       ],
       "name": "Newly registered?",
       "type": "n8n-nodes-base.if",
@@ -249,8 +249,8 @@
     {
       "id": "39d1899e-d1cd-4cf0-a1ba-c4c5c3b8a480",
       "position": [
-        1680,
-        -90
+        1820,
+        90
       ],
       "name": "Count the seat",
       "type": "n8n-nodes-base.httpRequest",
@@ -290,8 +290,8 @@
     {
       "id": "5ddd5294-a794-4b65-ab8d-b5b27a9c8270",
       "position": [
-        1920,
-        0
+        2080,
+        180
       ],
       "name": "Send the invite",
       "type": "n8n-nodes-base.httpRequest",
@@ -322,8 +322,8 @@
     {
       "id": "4ff542d0-6946-47aa-a546-25dd5a54921d",
       "position": [
-        2160,
-        0
+        2340,
+        180
       ],
       "name": "Confirmed",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -339,8 +339,8 @@
     {
       "id": "e75c8f15-5b89-4a39-aa36-d441b6d50f68",
       "position": [
-        1680,
-        90
+        1820,
+        270
       ],
       "name": "Already registered",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -356,8 +356,8 @@
     {
       "id": "be848488-61d4-47e6-ab84-78065c63d285",
       "position": [
-        1200,
-        90
+        1300,
+        270
       ],
       "name": "Add to waitlist",
       "type": "n8n-nodes-base.httpRequest",
@@ -388,8 +388,8 @@
     {
       "id": "f0100853-d664-47d8-ad8a-fa1dfa6be095",
       "position": [
-        1440,
-        90
+        1560,
+        270
       ],
       "name": "Waitlisted",
       "type": "n8n-nodes-base.respondToWebhook",

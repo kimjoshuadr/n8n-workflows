@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Incremental sync with a bookmark\nThe skeleton of every reliable sync: read the bookmark, fetch what is newer, write it, and only then move the bookmark.\n\n**Needs:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Incremental sync with a bookmark\nThe skeleton of every reliable sync: read the bookmark, fetch what is newer, write it, and only then move the bookmark.\n\n**Platforms:** none, this is logic only\n**Settings:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
       }
     },
     {
       "id": "e24463a8-b568-48fe-ae05-15373c8370d7",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Run manually",
       "type": "n8n-nodes-base.manualTrigger",
@@ -30,8 +30,8 @@
     {
       "id": "2b38276a-8f8a-4515-a388-aa41e4683216",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Read bookmark",
       "type": "n8n-nodes-base.httpRequest",
@@ -69,8 +69,8 @@
     {
       "id": "f960397b-b671-4a21-a236-1af63390f3d5",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Fetch newer",
       "type": "n8n-nodes-base.httpRequest",
@@ -107,8 +107,8 @@
     {
       "id": "69153129-555f-48c3-a271-e3794d2630a2",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Newest id",
       "type": "n8n-nodes-base.code",
@@ -120,8 +120,8 @@
     {
       "id": "465e900a-785f-4ea6-a5ce-3f51b223b853",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Anything new?",
       "type": "n8n-nodes-base.if",
@@ -154,8 +154,8 @@
     {
       "id": "9917a8a6-4b99-4fa2-accd-0d230b8df6b9",
       "position": [
-        1200,
-        -90
+        1300,
+        90
       ],
       "name": "Write rows",
       "type": "n8n-nodes-base.httpRequest",
@@ -186,8 +186,8 @@
     {
       "id": "6129f980-4786-4109-a7e0-76b4286ca43f",
       "position": [
-        1440,
-        0
+        1560,
+        180
       ],
       "name": "Move bookmark",
       "type": "n8n-nodes-base.httpRequest",
@@ -231,8 +231,8 @@
     {
       "id": "5a6a3488-b574-404b-ae2c-acbd61dbb79b",
       "position": [
-        1200,
-        90
+        1300,
+        270
       ],
       "name": "Up to date",
       "type": "n8n-nodes-base.noOp",

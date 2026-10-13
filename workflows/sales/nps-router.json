@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -480
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Feedback · Route survey scores\nSends each survey score where it is useful: unhappy customers to a person today, happy ones to a review request, and every score to the record.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
+        "width": 640,
+        "height": 230,
+        "content": "## Feedback · Route survey scores\nSends each survey score where it is useful: unhappy customers to a person today, happy ones to a review request, and every score to the record.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
       }
     },
     {
       "id": "3bf32680-1d50-4e50-a4ea-2c42277b3137",
       "position": [
         0,
-        0
+        270
       ],
       "name": "Survey answered",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "339cf1ef-a31e-4620-aec3-ae2b0f1a003d",
       "position": [
-        240,
-        0
+        260,
+        270
       ],
       "name": "Read the score",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "66dfdaed-cb42-48de-acc5-47de7847afbe",
       "position": [
-        480,
-        0
+        520,
+        270
       ],
       "name": "Record it",
       "type": "n8n-nodes-base.httpRequest",
@@ -81,8 +81,8 @@
     {
       "id": "d50b1c61-e2bd-472a-a71a-00c0ab501795",
       "position": [
-        720,
-        0
+        780,
+        270
       ],
       "name": "Which group?",
       "type": "n8n-nodes-base.switch",
@@ -150,8 +150,8 @@
     {
       "id": "455d6e26-f5f7-40a8-a4fb-dfff6fcf7d0e",
       "position": [
-        960,
-        -180
+        1040,
+        90
       ],
       "name": "Open a ticket",
       "type": "n8n-nodes-base.httpRequest",
@@ -182,8 +182,8 @@
     {
       "id": "af2e9c76-4151-4385-ab0a-1504598d4940",
       "position": [
-        1200,
-        0
+        1300,
+        270
       ],
       "name": "Detractor message",
       "type": "n8n-nodes-base.code",
@@ -195,8 +195,8 @@
     {
       "id": "6d03c695-f7ee-491c-aa6d-71266ca951b3",
       "position": [
-        1440,
-        0
+        1560,
+        270
       ],
       "name": "Tell customer success",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -213,8 +213,8 @@
     {
       "id": "cdf61384-7b85-4098-ad49-2bfa6d5847bc",
       "position": [
-        960,
-        0
+        1040,
+        270
       ],
       "name": "Invite a public review",
       "type": "n8n-nodes-base.httpRequest",
@@ -245,8 +245,8 @@
     {
       "id": "f5ff5b9f-7408-4f49-a854-41a69502410a",
       "position": [
-        960,
-        180
+        1040,
+        450
       ],
       "name": "Recorded only",
       "type": "n8n-nodes-base.noOp",

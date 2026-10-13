@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Monitoring · Uptime checks\nChecks each site every five minutes, alerts after two failures in a row, and reports how long it was down once it recovers.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/monitoring`"
+        "width": 640,
+        "height": 230,
+        "content": "## Monitoring · Uptime checks\nChecks each site every five minutes, alerts after two failures in a row, and reports how long it was down once it recovers.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/monitoring`"
       }
     },
     {
       "id": "f70bf48d-283c-4a2c-aaae-ab4901535896",
       "position": [
         0,
-        0
+        90
       ],
       "name": "Every 5 minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "a59acde9-ea44-4855-a081-a100d1ac6563",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Sites to watch",
       "type": "n8n-nodes-base.httpRequest",
@@ -69,8 +69,8 @@
     {
       "id": "1fabe702-b581-4673-ad5c-e47b93ef8aad",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Request the site",
       "type": "n8n-nodes-base.httpRequest",
@@ -93,8 +93,8 @@
     {
       "id": "b8d7f84e-5c1d-41fd-a7d1-1442adc92d5b",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Decide the state",
       "type": "n8n-nodes-base.code",
@@ -106,8 +106,8 @@
     {
       "id": "b14e6c12-3537-4eca-afb3-6e53b4eab7c5",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Save the state",
       "type": "n8n-nodes-base.httpRequest",
@@ -147,8 +147,8 @@
     {
       "id": "2f6e9f36-8e0c-4e5a-ac57-36920a51e703",
       "position": [
-        1200,
-        0
+        1300,
+        90
       ],
       "name": "Alerts for changes",
       "type": "n8n-nodes-base.code",
@@ -160,8 +160,8 @@
     {
       "id": "747d0dc2-60f6-4abf-a7c2-6331437b5a66",
       "position": [
-        1440,
-        0
+        1560,
+        90
       ],
       "name": "Alert",
       "type": "n8n-nodes-base.executeWorkflow",

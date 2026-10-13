@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Limit actions per key per hour\nAnswers whether a key (a user, an IP, a customer) is still under its hourly limit, and counts the attempt.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Limit actions per key per hour\nAnswers whether a key (a user, an IP, a customer) is still under its hourly limit, and counts the attempt.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
       }
     },
     {
       "id": "34f3edb1-256a-48bb-a696-3d6ab172a696",
       "position": [
         0,
-        0
+        90
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "50c28140-dbf5-4e8a-aafe-fded0ba360f0",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "This hour's bucket",
       "type": "n8n-nodes-base.code",
@@ -45,8 +45,8 @@
     {
       "id": "5589a8f5-8015-481b-af5e-180d6874f8d5",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Read the count",
       "type": "n8n-nodes-base.httpRequest",
@@ -84,8 +84,8 @@
     {
       "id": "476bcae2-c494-44ba-ae25-066f7ad5f163",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Decide",
       "type": "n8n-nodes-base.code",
@@ -97,8 +97,8 @@
     {
       "id": "b12cd4bf-990b-42d7-a31d-22fe96b96da7",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Count the attempt",
       "type": "n8n-nodes-base.httpRequest",
@@ -142,8 +142,8 @@
     {
       "id": "7c828451-7e60-4ebc-ae4f-59b487b09bde",
       "position": [
-        1200,
-        0
+        1300,
+        90
       ],
       "name": "Answer",
       "type": "n8n-nodes-base.set",

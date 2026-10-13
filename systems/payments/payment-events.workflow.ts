@@ -71,15 +71,16 @@ export class PaymentsEventLedgerWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -570],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Payments · Event ledger
 Records each payment, failure and refund from the processor exactly once, updates the invoice, and sends the receipt or the retry notice.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, PAYMENTS_WEBHOOK_SECRET
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, PAYMENTS_WEBHOOK_SECRET
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/payments\``,
     };
 
@@ -89,7 +90,7 @@ Records each payment, failure and refund from the processor exactly once, update
         name: 'Payment event',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 360],
     })
     PaymentEvent = {
         httpMethod: 'POST',
@@ -103,7 +104,7 @@ Records each payment, failure and refund from the processor exactly once, update
         name: 'Signed?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [240, 0],
+        position: [260, 360],
     })
     Signed = {
         conditions: {
@@ -135,7 +136,7 @@ Records each payment, failure and refund from the processor exactly once, update
         name: 'Unauthorised',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [480, -90],
+        position: [520, 270],
     })
     Unauthorised = {
         respondWith: 'json',
@@ -150,7 +151,7 @@ Records each payment, failure and refund from the processor exactly once, update
         name: 'Read the event',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 90],
+        position: [520, 450],
     })
     ReadTheEvent = {
         jsCode: `const e = $("Payment event").first().json.body ?? {};
@@ -164,7 +165,7 @@ return [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount 
         name: 'Seen before?',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [720, 0],
+        position: [780, 360],
     })
     SeenBefore = {
         workflowId: {
@@ -180,7 +181,7 @@ return [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount 
         name: 'New event?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 360],
     })
     NewEvent = {
         conditions: {
@@ -212,7 +213,7 @@ return [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount 
         name: 'Already recorded',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [1200, -90],
+        position: [1300, 270],
     })
     AlreadyRecorded = {
         respondWith: 'json',
@@ -227,7 +228,7 @@ return [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount 
         name: 'Which event?',
         type: 'n8n-nodes-base.switch',
         version: 3.2,
-        position: [1200, 90],
+        position: [1300, 450],
     })
     WhichEvent = {
         rules: {
@@ -319,7 +320,7 @@ return [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount 
         name: 'Ledger: credit',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, -270],
+        position: [1560, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -350,7 +351,7 @@ return [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount 
         name: 'Mark invoice paid',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, -180],
+        position: [1820, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -390,7 +391,7 @@ return [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount 
         name: 'Send receipt',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1920, -90],
+        position: [2080, 270],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -422,7 +423,7 @@ return [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount 
         name: 'Mark invoice failed',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, -90],
+        position: [1560, 270],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -462,7 +463,7 @@ return [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount 
         name: 'Ask to update card',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, 0],
+        position: [1820, 360],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -494,7 +495,7 @@ return [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount 
         name: 'Ledger: debit',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 90],
+        position: [1560, 450],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -525,7 +526,7 @@ return [{ json: { event_id: String(e.id), type: e.type, amount: Number(o.amount 
         name: 'Refund message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, 180],
+        position: [1820, 540],
     })
     RefundMessage = {
         jsCode: `const e = $("New event?").first().json;
@@ -537,7 +538,7 @@ return [{ json: { text: "Refund of " + e.amount + " " + e.currency + " recorded 
         name: 'Tell finance',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1920, 90],
+        position: [2080, 450],
     })
     TellFinance = {
         workflowId: {
@@ -553,7 +554,7 @@ return [{ json: { text: "Refund of " + e.amount + " " + e.currency + " recorded 
         name: 'Recorded',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [2160, 0],
+        position: [2340, 360],
     })
     Recorded = {
         respondWith: 'json',
@@ -568,7 +569,7 @@ return [{ json: { text: "Refund of " + e.amount + " " + e.currency + " recorded 
         name: 'Not handled',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [1440, 270],
+        position: [1560, 630],
     })
     NotHandled = {
         respondWith: 'json',

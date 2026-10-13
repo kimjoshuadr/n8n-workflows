@@ -47,15 +47,16 @@ export class ReviewsAskAfterDeliveryWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Reviews · Ask after delivery
 A week after an order is delivered, asks for a review once. Customers with an open support conversation are not asked.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/sales\``,
     };
 
@@ -64,7 +65,7 @@ A week after an order is delivered, asks for a review once. Customers with an op
         name: '10:00 daily',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     _1000Daily = {
         rule: {
@@ -82,7 +83,7 @@ A week after an order is delivered, asks for a review once. Customers with an op
         name: 'Delivered orders',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -123,7 +124,7 @@ A week after an order is delivered, asks for a review once. Customers with an op
         name: 'Delivered a week ago',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 90],
     })
     DeliveredAWeekAgo = {
         jsCode: `const now = Date.now();
@@ -137,7 +138,7 @@ return $input.all().map((i) => i.json).filter((o) => o.email && o.delivered_at)
         name: 'Open conversation?',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -182,7 +183,7 @@ return $input.all().map((i) => i.json).filter((o) => o.email && o.delivered_at)
         name: 'Happy customers only',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [960, 0],
+        position: [1040, 90],
     })
     HappyCustomersOnly = {
         jsCode: `const orders = $("Delivered a week ago").all();
@@ -194,7 +195,7 @@ return $input.all().map((item, i) => ({ order: orders[i]?.json, open: !!item.jso
         name: 'Ask for a review',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, 0],
+        position: [1300, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -225,7 +226,7 @@ return $input.all().map((item, i) => ({ order: orders[i]?.json, open: !!item.jso
         name: 'Mark asked',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

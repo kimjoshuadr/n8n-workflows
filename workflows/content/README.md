@@ -9,7 +9,8 @@ Each Friday, reads the feeds you follow, drops what was already sent, and emails
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, LLM, Email |
+| Platforms | Datastore, LLM, Email |
+| Nodes | 10 |
 | Calls | `error-handler` |
 | Files | [`feed-digest.json`](feed-digest.json) · [`feed-digest.workflow.ts`](feed-digest.workflow.ts) |
 
@@ -55,7 +56,8 @@ Every Sunday night, visits each page in the sitemap list and reports the ones th
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Chat |
+| Platforms | Datastore, Chat |
+| Nodes | 7 |
 | Calls | `error-handler` |
 | Files | [`broken-link-check.json`](broken-link-check.json) · [`broken-link-check.workflow.ts`](broken-link-check.workflow.ts) |
 
@@ -95,7 +97,8 @@ Records where the site ranks for each tracked keyword every day, and alerts when
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Search, Chat |
+| Platforms | Datastore, Search, Chat |
+| Nodes | 10 |
 | Calls | `notify`, `error-handler` |
 | Files | [`rank-tracker.json`](rank-tracker.json) · [`rank-tracker.workflow.ts`](rank-tracker.workflow.ts) |
 
@@ -142,7 +145,8 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Search, Datastore, LLM, Chat |
+| Platforms | Search, Datastore, LLM, Chat |
+| Nodes | 10 |
 | Calls | `notify`, `error-handler` |
 | Files | [`mention-monitor.json`](mention-monitor.json) · [`mention-monitor.workflow.ts`](mention-monitor.workflow.ts) |
 

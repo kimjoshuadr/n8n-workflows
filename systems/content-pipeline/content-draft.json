@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Content pipeline · Research and draft\nTakes the next topic off the list, researches it, drafts the article, and asks a person to approve it. Nothing is published from here.\n\n**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SEARCH_API_KEY, SEARCH_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/content-pipeline`"
+        "width": 640,
+        "height": 230,
+        "content": "## Content pipeline · Research and draft\nTakes the next topic off the list, researches it, drafts the article, and asks a person to approve it. Nothing is published from here.\n\n**Platforms:** none, this is logic only\n**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SEARCH_API_KEY, SEARCH_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/content-pipeline`"
       }
     },
     {
       "id": "0d978302-c53c-4e6b-a20e-6a90f5e40a83",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Weekdays 07:00",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "6314bcf4-9b57-446a-a723-b46098e2bcbc",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Next topic",
       "type": "n8n-nodes-base.httpRequest",
@@ -82,8 +82,8 @@
     {
       "id": "5bb76069-560f-4701-a855-641b3a766e57",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Is there one?",
       "type": "n8n-nodes-base.if",
@@ -116,8 +116,8 @@
     {
       "id": "7d858916-a729-409f-abf6-41376f9d71e2",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Claim the topic",
       "type": "n8n-nodes-base.httpRequest",
@@ -157,8 +157,8 @@
     {
       "id": "d3ac425a-e1bc-494a-add7-70e6f4f1885f",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Research",
       "type": "n8n-nodes-base.httpRequest",
@@ -190,8 +190,8 @@
     {
       "id": "1e64b3ba-f22f-4d17-ac6b-1a969d4c1058",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "Collect sources",
       "type": "n8n-nodes-base.code",
@@ -203,8 +203,8 @@
     {
       "id": "a642d55a-764b-4c6f-a2bd-7c8be9a76bf0",
       "position": [
-        1440,
-        0
+        1560,
+        180
       ],
       "name": "Outline",
       "type": "n8n-nodes-base.httpRequest",
@@ -235,8 +235,8 @@
     {
       "id": "7006d8a4-39a7-470a-a65a-0c1014a71cf6",
       "position": [
-        1680,
-        0
+        1820,
+        180
       ],
       "name": "Read the outline",
       "type": "n8n-nodes-base.code",
@@ -248,8 +248,8 @@
     {
       "id": "7abc4d7f-5b9f-4451-a167-84dd9078c1cc",
       "position": [
-        1920,
-        0
+        2080,
+        180
       ],
       "name": "Usable outline?",
       "type": "n8n-nodes-base.if",
@@ -282,8 +282,8 @@
     {
       "id": "7d71d3bc-6809-43b8-ae2a-f11aa165edca",
       "position": [
-        2160,
-        -90
+        2340,
+        90
       ],
       "name": "Write the draft",
       "type": "n8n-nodes-base.httpRequest",
@@ -314,8 +314,8 @@
     {
       "id": "18d3527e-aff3-483c-a15c-2ce30a62dee4",
       "position": [
-        2400,
-        0
+        2600,
+        180
       ],
       "name": "Save the draft",
       "type": "n8n-nodes-base.httpRequest",
@@ -346,8 +346,8 @@
     {
       "id": "1f860db6-5ddb-4767-a6ac-e203553b5a11",
       "position": [
-        2640,
-        0
+        2860,
+        180
       ],
       "name": "Ask for approval",
       "type": "n8n-nodes-base.httpRequest",
@@ -378,8 +378,8 @@
     {
       "id": "445a2090-f167-40c6-a5eb-f181b8dbe0f3",
       "position": [
-        2160,
-        90
+        2340,
+        270
       ],
       "name": "Return the topic",
       "type": "n8n-nodes-base.httpRequest",
@@ -419,8 +419,8 @@
     {
       "id": "a3d9e506-67df-42bb-afd9-49294a675833",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Queue is empty",
       "type": "n8n-nodes-base.noOp",

@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## CRM · Meeting notes and next steps\nTurns a call transcript into a CRM note and dated follow-up tasks, and asks a person when it cannot tell who owns a task.\n\n**Needs:** CRM_API_KEY, CRM_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
+        "width": 640,
+        "height": 230,
+        "content": "## CRM · Meeting notes and next steps\nTurns a call transcript into a CRM note and dated follow-up tasks, and asks a person when it cannot tell who owns a task.\n\n**Platforms:** none, this is logic only\n**Settings:** CRM_API_KEY, CRM_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
       }
     },
     {
       "id": "89d5d99b-d1a8-4be2-acb3-2a0c5160c8f2",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Transcript ready",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "4ed514a7-68d5-4a4e-aba2-eb3705ee0a9b",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Read the transcript",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "38b511b8-9151-4494-afdb-05daa8bbed60",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Enough to summarise?",
       "type": "n8n-nodes-base.if",
@@ -83,8 +83,8 @@
     {
       "id": "b7667011-3f07-4670-a9b3-91645c7912fa",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Extract",
       "type": "n8n-nodes-base.httpRequest",
@@ -115,8 +115,8 @@
     {
       "id": "a31fe1e3-10bc-4f72-a5ab-0a5bd295c83a",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Read the notes",
       "type": "n8n-nodes-base.code",
@@ -128,8 +128,8 @@
     {
       "id": "60ceff31-c889-4a0c-af71-0b80b800d015",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "Readable?",
       "type": "n8n-nodes-base.if",
@@ -162,8 +162,8 @@
     {
       "id": "d39c264b-f7d0-43a8-a2e1-01ab7848ca1c",
       "position": [
-        1440,
-        -90
+        1560,
+        90
       ],
       "name": "Add the CRM note",
       "type": "n8n-nodes-base.httpRequest",
@@ -194,8 +194,8 @@
     {
       "id": "349fdf55-f0a1-4531-a182-fcc3961c229d",
       "position": [
-        1680,
-        -90
+        1820,
+        90
       ],
       "name": "One item per action",
       "type": "n8n-nodes-base.code",
@@ -207,8 +207,8 @@
     {
       "id": "f0d17471-7e3f-4050-a0b2-0fa9abdfacc6",
       "position": [
-        1920,
-        0
+        2080,
+        180
       ],
       "name": "Has an owner?",
       "type": "n8n-nodes-base.if",
@@ -241,8 +241,8 @@
     {
       "id": "755e768e-965a-4deb-a5ff-f00904cf9125",
       "position": [
-        2160,
-        -90
+        2340,
+        90
       ],
       "name": "Create the task",
       "type": "n8n-nodes-base.httpRequest",
@@ -273,8 +273,8 @@
     {
       "id": "ac3c0469-71fd-410e-ae46-f48a618093f7",
       "position": [
-        2160,
-        90
+        2340,
+        270
       ],
       "name": "Unowned message",
       "type": "n8n-nodes-base.code",
@@ -286,8 +286,8 @@
     {
       "id": "fc89948a-14d3-421d-abb9-e40604311a8d",
       "position": [
-        2400,
-        0
+        2600,
+        180
       ],
       "name": "Ask who owns them",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -304,8 +304,8 @@
     {
       "id": "6061f6ba-43ec-4201-a4ce-aadc9ed24909",
       "position": [
-        1440,
-        90
+        1560,
+        270
       ],
       "name": "Unreadable message",
       "type": "n8n-nodes-base.code",
@@ -317,8 +317,8 @@
     {
       "id": "3ef2c099-2440-4a09-aa9b-d9cb64bcd115",
       "position": [
-        1680,
-        90
+        1820,
+        270
       ],
       "name": "Flag for a manual read",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -335,8 +335,8 @@
     {
       "id": "379a765f-8821-40df-a491-92e8e494382f",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Too short to summarise",
       "type": "n8n-nodes-base.noOp",

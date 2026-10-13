@@ -15,7 +15,8 @@ Answers a customer's message from the help centre when it is confident, and hand
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Helpdesk, LLM, Datastore, Chat |
+| Platforms | Helpdesk, LLM, Datastore, Chat |
+| Nodes | 16 |
 | Calls | `idempotency-guard`, `error-handler` |
 | Files | [`support-answer.json`](support-answer.json) · [`support-answer.workflow.ts`](support-answer.workflow.ts) |
 
@@ -79,7 +80,8 @@ Labels each new ticket by topic and urgency, routes it to the right team, and pa
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | LLM, Helpdesk, Chat |
+| Platforms | LLM, Helpdesk, Chat |
+| Nodes | 12 |
 | Calls | `notify`, `error-handler` |
 | Files | [`support-triage.json`](support-triage.json) · [`support-triage.workflow.ts`](support-triage.workflow.ts) |
 
@@ -133,7 +135,8 @@ Every Monday, reads what the agent could not answer last week and tells the team
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, LLM, Chat |
+| Platforms | Datastore, LLM, Chat |
+| Nodes | 7 |
 | Calls | `error-handler` |
 | Files | [`support-gap-report.json`](support-gap-report.json) · [`support-gap-report.workflow.ts`](support-gap-report.workflow.ts) |
 

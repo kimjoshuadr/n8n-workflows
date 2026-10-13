@@ -45,15 +45,16 @@ export class BlockWaitForAPersonSYesWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Wait for a person's yes
 Records a pending decision and gives back approve and reject links. Nothing proceeds until one is pressed, and each link works once.
 
-**Needs:** DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/reliability\``,
     };
 
@@ -63,7 +64,7 @@ Records a pending decision and gives back approve and reject links. Nothing proc
         name: 'Decision link',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     DecisionLink = {
         httpMethod: 'GET',
@@ -77,7 +78,7 @@ Records a pending decision and gives back approve and reject links. Nothing proc
         name: 'Read the link',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     ReadTheLink = {
         jsCode: `const q = $input.first().json.query ?? {};
@@ -89,7 +90,7 @@ return [{ json: { token: String(q.token ?? ""), decision: q.decision === "approv
         name: 'Resolve if still pending',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -133,7 +134,7 @@ return [{ json: { token: String(q.token ?? ""), decision: q.decision === "approv
         name: 'Resolved now?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [720, 0],
+        position: [780, 180],
     })
     ResolvedNow = {
         conditions: {
@@ -165,7 +166,7 @@ return [{ json: { token: String(q.token ?? ""), decision: q.decision === "approv
         name: 'Thanks',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [960, -90],
+        position: [1040, 90],
     })
     Thanks = {
         respondWith: 'json',
@@ -180,7 +181,7 @@ return [{ json: { token: String(q.token ?? ""), decision: q.decision === "approv
         name: 'Link no longer valid',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [960, 90],
+        position: [1040, 270],
     })
     LinkNoLongerValid = {
         respondWith: 'json',

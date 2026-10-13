@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Reviews · Ask after delivery\nA week after an order is delivered, asks for a review once. Customers with an open support conversation are not asked.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
+        "width": 640,
+        "height": 230,
+        "content": "## Reviews · Ask after delivery\nA week after an order is delivered, asks for a review once. Customers with an open support conversation are not asked.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/sales`"
       }
     },
     {
       "id": "209749a1-72c4-4469-a637-e9e634c1c82e",
       "position": [
         0,
-        0
+        90
       ],
       "name": "10:00 daily",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "588c8bb6-ae47-4ea1-a866-7fb00092c8d6",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Delivered orders",
       "type": "n8n-nodes-base.httpRequest",
@@ -82,8 +82,8 @@
     {
       "id": "750c9e07-a331-4b34-a4ed-b7434a4e43de",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Delivered a week ago",
       "type": "n8n-nodes-base.code",
@@ -95,8 +95,8 @@
     {
       "id": "114943dd-33dd-4235-a5cb-60a812fcfd28",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Open conversation?",
       "type": "n8n-nodes-base.httpRequest",
@@ -142,8 +142,8 @@
     {
       "id": "c2b70183-35d4-421a-a733-a998bc8059a1",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Happy customers only",
       "type": "n8n-nodes-base.code",
@@ -155,8 +155,8 @@
     {
       "id": "b8a8cda5-898f-4c8b-a116-4c314605eb46",
       "position": [
-        1200,
-        0
+        1300,
+        90
       ],
       "name": "Ask for a review",
       "type": "n8n-nodes-base.httpRequest",
@@ -187,8 +187,8 @@
     {
       "id": "6dceb0d3-ec0d-4c4c-a36a-8e05da7c8222",
       "position": [
-        1440,
-        0
+        1560,
+        90
       ],
       "name": "Mark asked",
       "type": "n8n-nodes-base.httpRequest",

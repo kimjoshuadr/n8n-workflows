@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -480
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Classify, then route\nHas a model put a message into one of a fixed set of labels and routes on it, with a default route for anything unexpected.\n\n**Needs:** LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/ai`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Classify, then route\nHas a model put a message into one of a fixed set of labels and routes on it, with a default route for anything unexpected.\n\n**Platforms:** none, this is logic only\n**Settings:** LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/ai`"
       }
     },
     {
       "id": "55e34645-22f0-419b-aaae-bf4cd106cc60",
       "position": [
         0,
-        0
+        270
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "7f5afb55-e7b6-4364-a31c-89186973d9b6",
       "position": [
-        240,
-        0
+        260,
+        270
       ],
       "name": "Classify",
       "type": "n8n-nodes-base.httpRequest",
@@ -65,8 +65,8 @@
     {
       "id": "55b3c9c1-edd0-44bc-aabc-e42c6e07ab91",
       "position": [
-        480,
-        0
+        520,
+        270
       ],
       "name": "Read the label",
       "type": "n8n-nodes-base.code",
@@ -78,8 +78,8 @@
     {
       "id": "f8981aeb-fba8-4c36-a952-56bc2e49eca2",
       "position": [
-        720,
-        0
+        780,
+        270
       ],
       "name": "By label",
       "type": "n8n-nodes-base.switch",
@@ -147,8 +147,8 @@
     {
       "id": "9449d4c0-015e-44f3-a69b-ec20bc010ba5",
       "position": [
-        960,
-        -180
+        1040,
+        90
       ],
       "name": "Billing",
       "type": "n8n-nodes-base.set",
@@ -171,8 +171,8 @@
     {
       "id": "aeb0c474-4a07-40d3-ac1b-7ec6bce85c62",
       "position": [
-        960,
-        0
+        1040,
+        270
       ],
       "name": "Technical",
       "type": "n8n-nodes-base.set",
@@ -195,8 +195,8 @@
     {
       "id": "0ba726e6-de4d-4b0c-a784-4973ac803bf4",
       "position": [
-        960,
-        180
+        1040,
+        450
       ],
       "name": "General",
       "type": "n8n-nodes-base.set",

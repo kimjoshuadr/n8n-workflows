@@ -48,15 +48,16 @@ export class BlockAModelReplyYouCanRelyOnWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · A model reply you can rely on
 Asks a model for JSON, checks the reply has the fields you need, asks once more if it does not, and then gives up honestly.
 
-**Needs:** LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** none, this is logic only
+**Settings:** LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/ai\``,
     };
 
@@ -65,7 +66,7 @@ Asks a model for JSON, checks the reply has the fields you need, asks once more 
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 180],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -76,7 +77,7 @@ Asks a model for JSON, checks the reply has the fields you need, asks once more 
         name: 'Ask',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -115,7 +116,7 @@ Asks a model for JSON, checks the reply has the fields you need, asks once more 
         name: 'Check the reply',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 180],
     })
     CheckTheReply = {
         jsCode: `const req = $("When called").first().json;
@@ -131,7 +132,7 @@ return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $r
         name: 'Good?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [720, 0],
+        position: [780, 180],
     })
     Good = {
         conditions: {
@@ -163,7 +164,7 @@ return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $r
         name: 'Try once more?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, -90],
+        position: [1040, 90],
     })
     TryOnceMore = {
         conditions: {
@@ -195,7 +196,7 @@ return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $r
         name: 'Usable',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [960, 90],
+        position: [1040, 270],
     })
     Usable = {
         assignments: {
@@ -223,7 +224,7 @@ return [{ json: { ok: !!data && missing.length === 0, data, missing, attempt: $r
         name: 'Not usable',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [1200, 0],
+        position: [1300, 180],
     })
     NotUsable = {
         assignments: {

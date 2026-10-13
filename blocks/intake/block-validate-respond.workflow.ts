@@ -43,15 +43,15 @@ export class BlockValidateAndAnswerWithFieldErrorsWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Validate and answer with field errors
 Checks a payload against simple rules and answers with exactly which fields were wrong, so the form can show it.
 
-**Needs:** nothing external
+**Platforms:** none, this is logic only
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/intake\``,
     };
 
@@ -61,7 +61,7 @@ Checks a payload against simple rules and answers with exactly which fields were
         name: 'Submitted',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     Submitted = {
         httpMethod: 'POST',
@@ -75,7 +75,7 @@ Checks a payload against simple rules and answers with exactly which fields were
         name: 'Check the fields',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     CheckTheFields = {
         jsCode: `const v = $input.first().json.body ?? {};
@@ -91,7 +91,7 @@ return [{ json: { valid: Object.keys(errors).length === 0, errors } }];`,
         name: 'Valid?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     Valid = {
         conditions: {
@@ -123,7 +123,7 @@ return [{ json: { valid: Object.keys(errors).length === 0, errors } }];`,
         name: 'Accepted',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [720, -90],
+        position: [780, 90],
     })
     Accepted = {
         respondWith: 'json',
@@ -138,7 +138,7 @@ return [{ json: { valid: Object.keys(errors).length === 0, errors } }];`,
         name: 'Field errors',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [720, 90],
+        position: [780, 270],
     })
     FieldErrors = {
         respondWith: 'json',

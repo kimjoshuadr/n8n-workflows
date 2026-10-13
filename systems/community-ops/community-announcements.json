@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Community ops · Scheduled announcements\nPosts announcements at the time they were scheduled for, once, and reports any that could not be posted.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/community-ops`"
+        "width": 640,
+        "height": 230,
+        "content": "## Community ops · Scheduled announcements\nPosts announcements at the time they were scheduled for, once, and reports any that could not be posted.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/community-ops`"
       }
     },
     {
       "id": "94a3fee6-4122-409d-a687-86e048b23b04",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Every 5 minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "e18b8fd2-19a7-472a-abf3-226d8e12a57f",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Due announcements",
       "type": "n8n-nodes-base.httpRequest",
@@ -82,8 +82,8 @@
     {
       "id": "93c7d4cd-691f-4efc-a129-1725bdbcea4b",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Any due?",
       "type": "n8n-nodes-base.if",
@@ -116,8 +116,8 @@
     {
       "id": "827d27d6-4baa-4653-ab50-756f07e67c05",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Claim it",
       "type": "n8n-nodes-base.httpRequest",
@@ -162,8 +162,8 @@
     {
       "id": "4e9bed98-201b-4067-a15b-6dc31d676d3c",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Claimed?",
       "type": "n8n-nodes-base.if",
@@ -196,8 +196,8 @@
     {
       "id": "15c59722-fa30-44b8-a0f1-5313b8358198",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "Post it",
       "type": "n8n-nodes-base.httpRequest",
@@ -229,8 +229,8 @@
     {
       "id": "8c10dae4-67df-420a-a827-914fff88de0d",
       "position": [
-        1440,
-        -90
+        1560,
+        90
       ],
       "name": "Mark sent",
       "type": "n8n-nodes-base.httpRequest",
@@ -270,8 +270,8 @@
     {
       "id": "bd231682-82ba-4c0d-a09f-a46fcc86076d",
       "position": [
-        1440,
-        90
+        1560,
+        270
       ],
       "name": "Mark failed",
       "type": "n8n-nodes-base.httpRequest",
@@ -311,8 +311,8 @@
     {
       "id": "b8c9a21d-f837-4a5a-a4bf-553c9cdccf9f",
       "position": [
-        1680,
-        0
+        1820,
+        180
       ],
       "name": "Failure message",
       "type": "n8n-nodes-base.code",
@@ -324,8 +324,8 @@
     {
       "id": "846f044b-d042-484b-a597-9b0e21a47e6c",
       "position": [
-        1920,
-        0
+        2080,
+        180
       ],
       "name": "Tell the team",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -342,8 +342,8 @@
     {
       "id": "69c0f051-6c6b-496e-aea2-44e3fda0d8a9",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Nothing due",
       "type": "n8n-nodes-base.noOp",

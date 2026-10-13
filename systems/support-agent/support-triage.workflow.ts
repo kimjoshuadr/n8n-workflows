@@ -59,15 +59,16 @@ export class SupportAgentTicketTriageWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -570],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Support agent · Ticket triage
 Labels each new ticket by topic and urgency, routes it to the right team, and pages someone only when it is urgent.
 
-**Needs:** HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** none, this is logic only
+**Settings:** HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/support-agent\``,
     };
 
@@ -77,7 +78,7 @@ Labels each new ticket by topic and urgency, routes it to the right team, and pa
         name: 'Ticket created',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 360],
     })
     TicketCreated = {
         httpMethod: 'POST',
@@ -91,7 +92,7 @@ Labels each new ticket by topic and urgency, routes it to the right team, and pa
         name: 'Read the ticket',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 360],
     })
     ReadTheTicket = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -103,7 +104,7 @@ return [{ json: { ticket_id: String(b.id), subject: String(b.subject ?? ""), bod
         name: 'Classify',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 360],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -142,7 +143,7 @@ return [{ json: { ticket_id: String(b.id), subject: String(b.subject ?? ""), bod
         name: 'Read the labels',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 360],
     })
     ReadTheLabels = {
         jsCode: `const before = $("Read the ticket").all();
@@ -165,7 +166,7 @@ return out;`,
         name: 'By topic',
         type: 'n8n-nodes-base.switch',
         version: 3.2,
-        position: [960, 0],
+        position: [1040, 360],
     })
     ByTopic = {
         rules: {
@@ -257,7 +258,7 @@ return out;`,
         name: 'Close as spam',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, -270],
+        position: [1300, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -287,7 +288,7 @@ return out;`,
         name: 'Send to billing',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, -90],
+        position: [1300, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -318,7 +319,7 @@ return out;`,
         name: 'Send to engineering',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, 90],
+        position: [1300, 450],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -349,7 +350,7 @@ return out;`,
         name: 'Send to general queue',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, 270],
+        position: [1300, 630],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -380,7 +381,7 @@ return out;`,
         name: 'Urgent?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1440, 0],
+        position: [1560, 360],
     })
     Urgent = {
         conditions: {
@@ -412,7 +413,7 @@ return out;`,
         name: 'Page message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, 0],
+        position: [1820, 360],
     })
     PageMessage = {
         jsCode: `const t = $("Read the labels").first().json;
@@ -424,7 +425,7 @@ return [{ json: { text: "Urgent " + t.label + " ticket #" + t.ticket_id + ": " +
         name: 'Page on-call',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1920, 0],
+        position: [2080, 360],
     })
     PageOnCall = {
         workflowId: {

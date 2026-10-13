@@ -37,15 +37,15 @@ export class BlockWorkingHoursGateWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Working hours gate
 Tells a caller whether now is inside working hours in a given time zone, so messages to people wait for the morning.
 
-**Needs:** nothing external
+**Platforms:** none, this is logic only
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/schedule\``,
     };
 
@@ -54,7 +54,7 @@ Tells a caller whether now is inside working hours in a given time zone, so mess
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -65,7 +65,7 @@ Tells a caller whether now is inside working hours in a given time zone, so mess
         name: 'Is it working hours?',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 90],
     })
     IsItWorkingHours = {
         jsCode: `return $input.all().map((item) => {

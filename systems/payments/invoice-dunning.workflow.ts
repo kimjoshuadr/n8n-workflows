@@ -51,15 +51,16 @@ export class PaymentsOverdueRemindersWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Payments · Overdue reminders
 Each morning, reminds customers with overdue invoices at 3, 7 and 14 days, then hands the invoice to a person at 21.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/payments\``,
     };
 
@@ -68,7 +69,7 @@ Each morning, reminds customers with overdue invoices at 3, 7 and 14 days, then 
         name: '09:00 daily',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     _0900Daily = {
         rule: {
@@ -86,7 +87,7 @@ Each morning, reminds customers with overdue invoices at 3, 7 and 14 days, then 
         name: 'Open invoices',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -123,7 +124,7 @@ Each morning, reminds customers with overdue invoices at 3, 7 and 14 days, then 
         name: 'Which step is due?',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 180],
     })
     WhichStepIsDue = {
         jsCode: `const STEPS = [3, 7, 14, 21];
@@ -140,7 +141,7 @@ return $input.all().map((i) => i.json).filter((inv) => inv.due_date && inv.email
         name: 'Still a reminder?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [720, 0],
+        position: [780, 180],
     })
     StillAReminder = {
         conditions: {
@@ -172,7 +173,7 @@ return $input.all().map((i) => i.json).filter((inv) => inv.due_date && inv.email
         name: 'Send the reminder',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, -90],
+        position: [1040, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -203,7 +204,7 @@ return $input.all().map((i) => i.json).filter((inv) => inv.due_date && inv.email
         name: 'Record the step',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, -90],
+        position: [1300, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -243,7 +244,7 @@ return $input.all().map((i) => i.json).filter((inv) => inv.due_date && inv.email
         name: 'Escalation message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [960, 90],
+        position: [1040, 270],
     })
     EscalationMessage = {
         jsCode: 'return $input.all().map((i) => ({ json: { id: i.json.id, channel: "#finance", level: "warn", text: "Invoice " + i.json.number + " (" + i.json.email + ", " + i.json.amount + ") is " + i.json.overdue + " days overdue after three reminders. It needs a call." } }));',
@@ -254,7 +255,7 @@ return $input.all().map((i) => i.json).filter((inv) => inv.due_date && inv.email
         name: 'Hand to a person',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1200, 90],
+        position: [1300, 270],
     })
     HandToAPerson = {
         workflowId: {
@@ -270,7 +271,7 @@ return $input.all().map((i) => i.json).filter((inv) => inv.due_date && inv.email
         name: 'Mark escalated',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

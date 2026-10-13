@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Monitoring · Backup verification\nChecks every morning that last night's backup exists, is recent and is not suspiciously small. A backup nobody checks is a hope, not a backup.\n\n**Needs:** BACKUP_API_KEY, BACKUP_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/monitoring`"
+        "width": 640,
+        "height": 230,
+        "content": "## Monitoring · Backup verification\nChecks every morning that last night's backup exists, is recent and is not suspiciously small. A backup nobody checks is a hope, not a backup.\n\n**Platforms:** none, this is logic only\n**Settings:** BACKUP_API_KEY, BACKUP_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/monitoring`"
       }
     },
     {
       "id": "d007aa63-704a-47a3-aa9d-0b700c3ee5a8",
       "position": [
         0,
-        0
+        180
       ],
       "name": "07:00 daily",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "5f339966-959f-4f0a-a227-de22b1941b87",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Latest backup",
       "type": "n8n-nodes-base.httpRequest",
@@ -69,8 +69,8 @@
     {
       "id": "5c2c7251-15f2-4c2b-a44a-90d626ad57f2",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Judge it",
       "type": "n8n-nodes-base.code",
@@ -82,8 +82,8 @@
     {
       "id": "0041fe8d-71ce-41b5-a6b5-d8191398cc3f",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Record the check",
       "type": "n8n-nodes-base.httpRequest",
@@ -115,8 +115,8 @@
     {
       "id": "5f142642-a0b0-4e32-ab76-cec30b3474b5",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Healthy?",
       "type": "n8n-nodes-base.if",
@@ -149,8 +149,8 @@
     {
       "id": "159934da-6978-44d6-aa83-559f35ebfa5a",
       "position": [
-        1200,
-        -90
+        1300,
+        90
       ],
       "name": "Problem message",
       "type": "n8n-nodes-base.code",
@@ -162,8 +162,8 @@
     {
       "id": "75c2aee0-bc43-4937-a984-edd41e74d3f2",
       "position": [
-        1440,
-        0
+        1560,
+        180
       ],
       "name": "Alert",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -180,8 +180,8 @@
     {
       "id": "cacf1624-b0bc-44a2-afb7-aa87114c3d1f",
       "position": [
-        1200,
-        90
+        1300,
+        270
       ],
       "name": "All good",
       "type": "n8n-nodes-base.noOp",

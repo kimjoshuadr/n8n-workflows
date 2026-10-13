@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Failed call to dead letter\nThe pattern for any write that must not be lost: try, and if it still fails after retries, park the payload.\n\n**Needs:** CRM_API_KEY, CRM_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Failed call to dead letter\nThe pattern for any write that must not be lost: try, and if it still fails after retries, park the payload.\n\n**Platforms:** none, this is logic only\n**Settings:** CRM_API_KEY, CRM_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
       }
     },
     {
       "id": "f926bffd-0efb-47d3-a188-8e3e832bf0aa",
       "position": [
         0,
-        0
+        180
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "8994304c-1331-49ba-a684-cb91f6605386",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Write",
       "type": "n8n-nodes-base.httpRequest",
@@ -65,8 +65,8 @@
     {
       "id": "c680c7f1-b0b3-4157-aa36-c6641f2ae8da",
       "position": [
-        480,
-        -90
+        520,
+        90
       ],
       "name": "Written",
       "type": "n8n-nodes-base.set",
@@ -89,8 +89,8 @@
     {
       "id": "de58dd76-675d-41bf-a078-0e3a638df254",
       "position": [
-        480,
-        90
+        520,
+        270
       ],
       "name": "Wrap",
       "type": "n8n-nodes-base.code",
@@ -102,8 +102,8 @@
     {
       "id": "488d432c-1910-4073-adf6-37c6fc4262d1",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Park it",
       "type": "n8n-nodes-base.executeWorkflow",

@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Convert a currency amount\nConverts an amount with today's rate, rounds like money, and says so when the rate could not be fetched instead of returning a wrong number.\n\n**Needs:** RATES_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Convert a currency amount\nConverts an amount with today's rate, rounds like money, and says so when the rate could not be fetched instead of returning a wrong number.\n\n**Platforms:** none, this is logic only\n**Settings:** RATES_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
       }
     },
     {
       "id": "ebe25fb7-4a24-45b5-ac09-7d05b40a2dcc",
       "position": [
         0,
-        0
+        90
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "b8eae34c-eba4-46dd-a24f-bfcfa705a611",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Today's rate",
       "type": "n8n-nodes-base.httpRequest",
@@ -66,8 +66,8 @@
     {
       "id": "f0da4299-28e6-4bb4-af0c-d9a913e8d62b",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Convert",
       "type": "n8n-nodes-base.code",

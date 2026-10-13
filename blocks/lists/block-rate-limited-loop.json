@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Loop that respects a rate limit\nSends items in small batches with a pause between them, for APIs that reject bursts.\n\n**Needs:** EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/lists`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Loop that respects a rate limit\nSends items in small batches with a pause between them, for APIs that reject bursts.\n\n**Platforms:** none, this is logic only\n**Settings:** EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/lists`"
       }
     },
     {
       "id": "29456fd6-d221-4bb3-a076-4c05cb3aac4f",
       "position": [
         0,
-        0
+        180
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "241695c6-bc46-49b3-adde-0ba3ec902d0d",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Five at a time",
       "type": "n8n-nodes-base.splitInBatches",
@@ -46,8 +46,8 @@
     {
       "id": "946085ab-8480-4676-a553-0615fceaff09",
       "position": [
-        480,
-        -90
+        520,
+        90
       ],
       "name": "Send",
       "type": "n8n-nodes-base.httpRequest",
@@ -79,8 +79,8 @@
     {
       "id": "93335136-9f17-4f45-aa3d-b25a22c7abf8",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Pause",
       "type": "n8n-nodes-base.wait",
@@ -94,8 +94,8 @@
     {
       "id": "bc05a9f0-2ccd-4316-a02d-828fa7eb4020",
       "position": [
-        480,
-        90
+        520,
+        270
       ],
       "name": "Finished",
       "type": "n8n-nodes-base.noOp",

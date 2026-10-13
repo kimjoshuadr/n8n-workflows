@@ -10,8 +10,8 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
 // WrapThePayload                     code
-// ParkIt                             httpRequest                [retry]
-// SaySo                              httpRequest                [onError→regular] [retry]
+// ParkIt                             supabase                   [creds] [retry]
+// SaySo                              slack                      [onError→regular] [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
@@ -41,15 +41,15 @@ export class ReliabilityDeadLetterWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Reliability · Dead letter
-Keeps the payload of work that could not be finished, with the reason, so nothing is lost when a downstream system is down.
+Keeps the payload of work that could not be finished in Supabase, with the reason, so nothing is lost when a platform is down.
 
-**Needs:** ALERT_CHANNEL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase, Slack
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`shared\``,
     };
 
@@ -58,7 +58,7 @@ Keeps the payload of work that could not be finished, with the reason, so nothin
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -69,7 +69,7 @@ Keeps the payload of work that could not be finished, with the reason, so nothin
         name: 'Wrap the payload',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 90],
     })
     WrapThePayload = {
         jsCode: `return $input.all().map((item) => ({ json: {
@@ -86,63 +86,78 @@ Keeps the payload of work that could not be finished, with the reason, so nothin
     @node({
         id: 'f865655c-5809-4329-a2a5-7f7061fbc9b2',
         name: 'Park it',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [480, 0],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [520, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     ParkIt = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/dead_letters',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'dead_letters',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'source',
+                    fieldValue: '={{ $json.source }}',
+                },
+                {
+                    fieldId: 'replay_url',
+                    fieldValue: '={{ $json.replay_url }}',
+                },
+                {
+                    fieldId: 'reason',
+                    fieldValue: '={{ $json.reason }}',
+                },
+                {
+                    fieldId: 'payload',
+                    fieldValue: '={{ $json.payload }}',
+                },
+                {
+                    fieldId: 'status',
+                    fieldValue: '={{ $json.status }}',
+                },
+                {
+                    fieldId: 'attempts',
+                    fieldValue: '={{ $json.attempts }}',
+                },
+                {
+                    fieldId: 'parked_at',
+                    fieldValue: '={{ $json.parked_at }}',
                 },
             ],
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify($json) }}',
     };
 
     @node({
         id: 'a3568f07-eb3f-40ed-a9fe-f1ddbb1d0f23',
         name: 'Say so',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [720, 0],
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
+        position: [780, 90],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     SaySo = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '#ops-alerts' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: "={{ ':inbox_tray: Parked 1 item from ' + $('Wrap the payload').item.json.source + ': ' + $('Wrap the payload').item.json.reason }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ channel: $env.ALERT_CHANNEL, text: ':inbox_tray: Parked 1 item from ' + $('Wrap the payload').item.json.source + ': ' + $('Wrap the payload').item.json.reason }) }}",
     };
 
     // =====================================================================

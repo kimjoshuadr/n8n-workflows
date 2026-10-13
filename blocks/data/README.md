@@ -9,7 +9,8 @@ Parses CSV text properly, including quoted commas and blank lines, into one item
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | nothing external |
+| Platforms | none, logic only |
+| Nodes | 2 |
 | Calls | `error-handler` |
 | Files | [`block-csv-to-rows.json`](block-csv-to-rows.json) · [`block-csv-to-rows.workflow.ts`](block-csv-to-rows.workflow.ts) |
 
@@ -31,7 +32,8 @@ Compares a record with the copy stored last run and reports which fields changed
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | Datastore |
+| Platforms | Datastore |
+| Nodes | 5 |
 | Calls | `error-handler` |
 | Files | [`block-change-detect.json`](block-change-detect.json) · [`block-change-detect.workflow.ts`](block-change-detect.workflow.ts) |
 
@@ -60,7 +62,8 @@ Converts an amount with today's rate, rounds like money, and says so when the ra
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | Rates |
+| Platforms | Rates |
+| Nodes | 3 |
 | Calls | `error-handler` |
 | Files | [`block-currency-convert.json`](block-currency-convert.json) · [`block-currency-convert.workflow.ts`](block-currency-convert.workflow.ts) |
 
@@ -85,7 +88,8 @@ Turns any title into a safe, readable URL slug, including accented and non-Latin
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | nothing external |
+| Platforms | none, logic only |
+| Nodes | 2 |
 | Calls | `error-handler` |
 | Files | [`block-slugify.json`](block-slugify.json) · [`block-slugify.workflow.ts`](block-slugify.workflow.ts) |
 
@@ -107,7 +111,8 @@ Works out the start and end of 'yesterday' or 'last week' in a named time zone, 
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | nothing external |
+| Platforms | none, logic only |
+| Nodes | 2 |
 | Calls | `error-handler` |
 | Files | [`block-date-window.json`](block-date-window.json) · [`block-date-window.workflow.ts`](block-date-window.workflow.ts) |
 
@@ -129,7 +134,8 @@ The skeleton of every reliable sync: read the bookmark, fetch what is newer, wri
 | | |
 |---|---|
 | Starts from | Manual run |
-| Talks to | Datastore, CRM |
+| Platforms | Datastore, CRM |
+| Nodes | 8 |
 | Calls | `error-handler` |
 | Files | [`block-cursor-sync.json`](block-cursor-sync.json) · [`block-cursor-sync.workflow.ts`](block-cursor-sync.workflow.ts) |
 
@@ -164,7 +170,8 @@ Records a file under a name derived from its own address, so the same file fetch
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | Storage, Datastore |
+| Platforms | Storage, Datastore |
+| Nodes | 6 |
 | Calls | `error-handler` |
 | Files | [`block-file-to-storage.json`](block-file-to-storage.json) · [`block-file-to-storage.workflow.ts`](block-file-to-storage.workflow.ts) |
 

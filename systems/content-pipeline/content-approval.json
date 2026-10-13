@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Content pipeline · Approve and publish\nReceives a person's decision on a draft. Approved drafts are published to the CMS once and queued for sharing; rejected ones go back with the reason.\n\n**Needs:** CMS_API_KEY, CMS_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/content-pipeline`"
+        "width": 640,
+        "height": 230,
+        "content": "## Content pipeline · Approve and publish\nReceives a person's decision on a draft. Approved drafts are published to the CMS once and queued for sharing; rejected ones go back with the reason.\n\n**Platforms:** none, this is logic only\n**Settings:** CMS_API_KEY, CMS_BASE_URL, DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/content-pipeline`"
       }
     },
     {
       "id": "9fa092bc-e41c-4bed-a845-08e0fadd4d31",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Decision",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "7711f376-a9f9-4f6b-a480-b75cf381ba3f",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Read the decision",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "33a04959-6442-46d1-a607-554514fc7a37",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Valid?",
       "type": "n8n-nodes-base.if",
@@ -83,8 +83,8 @@
     {
       "id": "5b538e98-8219-4da6-a3f0-43fc8f775598",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Bad request",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -100,8 +100,8 @@
     {
       "id": "e82f2931-af53-486d-a69b-60045ba08156",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Load the draft",
       "type": "n8n-nodes-base.httpRequest",
@@ -139,8 +139,8 @@
     {
       "id": "6f0ef800-0409-458e-a682-49a6271d6100",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Awaiting approval?",
       "type": "n8n-nodes-base.if",
@@ -173,8 +173,8 @@
     {
       "id": "3c7bbd10-2628-4fe1-adc2-d80960b0ab2d",
       "position": [
-        1200,
-        -90
+        1300,
+        90
       ],
       "name": "Not pending",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -190,8 +190,8 @@
     {
       "id": "64a803c8-ff31-4c98-a28b-8cfbe18a3141",
       "position": [
-        1200,
-        90
+        1300,
+        270
       ],
       "name": "Approved?",
       "type": "n8n-nodes-base.if",
@@ -224,8 +224,8 @@
     {
       "id": "da3bfa64-8127-442a-af58-b4f958504c20",
       "position": [
-        1440,
-        -90
+        1560,
+        90
       ],
       "name": "Publish to CMS",
       "type": "n8n-nodes-base.httpRequest",
@@ -256,8 +256,8 @@
     {
       "id": "6bffc76d-2b27-4279-a5c8-83e49d6db969",
       "position": [
-        1680,
-        -90
+        1820,
+        90
       ],
       "name": "Mark published",
       "type": "n8n-nodes-base.httpRequest",
@@ -297,8 +297,8 @@
     {
       "id": "1b5bcd38-0d80-4961-aefa-49f7e6b1e9ad",
       "position": [
-        1920,
-        0
+        2080,
+        180
       ],
       "name": "Published",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -314,8 +314,8 @@
     {
       "id": "ff443074-0b6f-43cf-a541-0dc7f3a938b4",
       "position": [
-        1440,
-        90
+        1560,
+        270
       ],
       "name": "Mark rejected",
       "type": "n8n-nodes-base.httpRequest",
@@ -355,8 +355,8 @@
     {
       "id": "d968cf3e-5801-455c-aa4b-d6a5a7566ef7",
       "position": [
-        1680,
-        90
+        1820,
+        270
       ],
       "name": "Rejected",
       "type": "n8n-nodes-base.respondToWebhook",

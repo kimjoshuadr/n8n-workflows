@@ -2,7 +2,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Reliability · Error handler
-// Nodes   : 7  |  Connections: 5
+// Nodes   : 8  |  Connections: 6
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
@@ -10,19 +10,21 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // OnWorkflowError                    errorTrigger
 // DescribeTheFailure                 code
-// LogTheError                        httpRequest                [alwaysOutput] [retry]
-// FirstTimeThisHour                  if
-// AlertTheTeam                       httpRequest                [retry]
+// LogTheError                        supabase                   [onError→out(1)] [creds]
+// AlertTheTeam                       slack                      [creds] [retry]
+// SeenThisHour                       if
 // AlreadyAlerted                     noOp
+// AlertAnyway                        slack                      [creds] [retry]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
 // OnWorkflowError
 //    → DescribeTheFailure
 //      → LogTheError
-//        → FirstTimeThisHour
-//          → AlertTheTeam
-//         .out(1) → AlreadyAlerted
+//        → AlertTheTeam
+//       .out(1) → SeenThisHour
+//          → AlreadyAlerted
+//         .out(1) → AlertAnyway
 // </workflow-map>
 
 // =====================================================================
@@ -45,15 +47,15 @@ export class ReliabilityErrorHandlerWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Reliability · Error handler
-Catches a failure in any workflow, logs it, and alerts once per distinct error per hour so a broken loop cannot flood the channel.
+Catches a failure in any workflow, logs it to Supabase, and alerts Slack once per distinct error per hour so a broken loop cannot flood the channel.
 
-**Needs:** ALERT_CHANNEL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase, Slack
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`shared\``,
     };
 
@@ -62,7 +64,7 @@ Catches a failure in any workflow, logs it, and alerts once per distinct error p
         name: 'On workflow error',
         type: 'n8n-nodes-base.errorTrigger',
         version: 1,
-        position: [0, 0],
+        position: [0, 180],
     })
     OnWorkflowError = {};
 
@@ -71,7 +73,7 @@ Catches a failure in any workflow, logs it, and alerts once per distinct error p
         name: 'Describe the failure',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     DescribeTheFailure = {
         jsCode: `const e = $input.first().json;
@@ -91,55 +93,81 @@ return [{ json: {
     @node({
         id: 'd2475f31-7b58-4456-a438-515d78ab10c9',
         name: 'Log the error',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [480, 0],
-        alwaysOutputData: true,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [520, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
+        onError: 'continueErrorOutput',
+    })
+    LogTheError = {
+        resource: 'row',
+        operation: 'create',
+        tableId: 'workflow_errors',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
+                {
+                    fieldId: 'workflow',
+                    fieldValue: '={{ $json.workflow }}',
+                },
+                {
+                    fieldId: 'node',
+                    fieldValue: '={{ $json.node }}',
+                },
+                {
+                    fieldId: 'message',
+                    fieldValue: '={{ $json.message }}',
+                },
+                {
+                    fieldId: 'execution_id',
+                    fieldValue: '={{ $json.execution_id }}',
+                },
+                {
+                    fieldId: 'fingerprint',
+                    fieldValue: '={{ $json.fingerprint }}',
+                },
+                {
+                    fieldId: 'at',
+                    fieldValue: '={{ $json.at }}',
+                },
+            ],
+        },
+    };
+
+    @node({
+        id: 'c8d93d0f-8888-4d65-a12f-33ac1fd0c634',
+        name: 'Alert the team',
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
+        position: [780, 90],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
-    LogTheError = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/workflow_errors',
-        options: {
-            timeout: 15000,
+    AlertTheTeam = {
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '#ops-alerts' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-                {
-                    name: 'Prefer',
-                    value: 'resolution=ignore-duplicates,return=representation',
-                },
-            ],
+        text: "={{ ':rotating_light: ' + $('Describe the failure').first().json.workflow + ' failed at \"' + $('Describe the failure').first().json.node + '\": ' + $('Describe the failure').first().json.message }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'on_conflict',
-                    value: "={{ 'fingerprint' }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify($json) }}',
     };
 
     @node({
-        id: '5485f3d1-55dd-4cfa-af7c-1c94460243ff',
-        name: 'First time this hour?',
+        id: '4228acb3-0754-44f0-a012-4e1eb27f27d8',
+        name: 'Seen this hour?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [720, 0],
+        position: [780, 270],
     })
-    FirstTimeThisHour = {
+    SeenThisHour = {
         conditions: {
             options: {
                 caseSensitive: true,
@@ -149,8 +177,8 @@ return [{ json: {
             },
             conditions: [
                 {
-                    id: '1b52a6e5-2630-4b58-a577-9ce45358a32c',
-                    leftValue: '={{ !!$json.id }}',
+                    id: '1bdc4999-ccb8-41e9-af7a-e9a19ae7f1ec',
+                    leftValue: "={{ /duplicate key|23505/.test(String($json.error ?? '')) }}",
                     rightValue: '',
                     operator: {
                         type: 'boolean',
@@ -165,46 +193,39 @@ return [{ json: {
     };
 
     @node({
-        id: 'c8d93d0f-8888-4d65-a12f-33ac1fd0c634',
-        name: 'Alert the team',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [960, -90],
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
-    })
-    AlertTheTeam = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: `={{ JSON.stringify({
-  channel: $env.ALERT_CHANNEL,
-  text: ':rotating_light: ' + $('Describe the failure').first().json.workflow + ' failed at "' + $('Describe the failure').first().json.node + '": ' + $('Describe the failure').first().json.message
-}) }}`,
-    };
-
-    @node({
         id: '70793f10-e5f6-42c6-ae4d-08413c8b661b',
         name: 'Already alerted',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [960, 90],
+        position: [1040, 90],
     })
     AlreadyAlerted = {};
+
+    @node({
+        id: '6f134486-cf8a-47ef-a248-883dfb8464cc',
+        name: 'Alert anyway',
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
+        position: [1040, 270],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
+        retryOnFail: true,
+        maxTries: 3,
+        waitBetweenTries: 1000,
+    })
+    AlertAnyway = {
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '#ops-alerts' }}",
+        },
+        text: "={{ ':rotating_light: ' + $('Describe the failure').first().json.workflow + ' failed at \"' + $('Describe the failure').first().json.node + '\": ' + $('Describe the failure').first().json.message + ' (and the error log could not be written)' }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
+        },
+    };
 
     // =====================================================================
     // ROUTAGE ET CONNEXIONS
@@ -214,8 +235,9 @@ return [{ json: {
     defineRouting() {
         this.OnWorkflowError.out(0).to(this.DescribeTheFailure.in(0));
         this.DescribeTheFailure.out(0).to(this.LogTheError.in(0));
-        this.LogTheError.out(0).to(this.FirstTimeThisHour.in(0));
-        this.FirstTimeThisHour.out(0).to(this.AlertTheTeam.in(0));
-        this.FirstTimeThisHour.out(1).to(this.AlreadyAlerted.in(0));
+        this.LogTheError.out(0).to(this.AlertTheTeam.in(0));
+        this.LogTheError.out(1).to(this.SeenThisHour.in(0));
+        this.SeenThisHour.out(0).to(this.AlreadyAlerted.in(0));
+        this.SeenThisHour.out(1).to(this.AlertAnyway.in(0));
     }
 }

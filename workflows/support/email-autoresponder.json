@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Support · Inbox triage and first reply\nSorts the shared inbox: answers the handful of questions that have a fixed answer, files newsletters and receipts, and leaves everything else for a person.\n\n**Needs:** EMAIL_API_KEY, EMAIL_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/support`"
+        "width": 640,
+        "height": 230,
+        "content": "## Support · Inbox triage and first reply\nSorts the shared inbox: answers the handful of questions that have a fixed answer, files newsletters and receipts, and leaves everything else for a person.\n\n**Platforms:** none, this is logic only\n**Settings:** EMAIL_API_KEY, EMAIL_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/support`"
       }
     },
     {
       "id": "3f7b9eab-f73c-4bae-a39a-5fb5bb509649",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Email received",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "3fffe216-4bbc-4ff0-ab69-6419df3bf306",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Read the email",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "881bc208-f9ee-4cd0-ae33-179c2b3f916c",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "From a person?",
       "type": "n8n-nodes-base.if",
@@ -83,8 +83,8 @@
     {
       "id": "95e0eb93-a0f2-4785-a029-af48ba64748d",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Archive it",
       "type": "n8n-nodes-base.httpRequest",
@@ -115,8 +115,8 @@
     {
       "id": "f16bc1e7-80cf-4fd6-a52f-2c1331b1a456",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "What is it asking?",
       "type": "n8n-nodes-base.httpRequest",
@@ -148,8 +148,8 @@
     {
       "id": "76dd5537-8f50-436d-afee-cb0960475ee5",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Read the intent",
       "type": "n8n-nodes-base.code",
@@ -161,8 +161,8 @@
     {
       "id": "0dbffd99-c923-4469-a808-a283219c1739",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "A fixed-answer question?",
       "type": "n8n-nodes-base.if",
@@ -195,8 +195,8 @@
     {
       "id": "cb18c537-3f8a-4656-adde-32ca7e1ea845",
       "position": [
-        1440,
-        -90
+        1560,
+        90
       ],
       "name": "Send the standard reply",
       "type": "n8n-nodes-base.httpRequest",
@@ -227,8 +227,8 @@
     {
       "id": "61936198-2dd8-47cb-aa85-04c3879a8f47",
       "position": [
-        1680,
-        0
+        1820,
+        180
       ],
       "name": "Label as answered",
       "type": "n8n-nodes-base.httpRequest",
@@ -259,8 +259,8 @@
     {
       "id": "d2ffd372-0eb1-4b45-aae4-858e0bf68533",
       "position": [
-        1440,
-        90
+        1560,
+        270
       ],
       "name": "Leave for a person",
       "type": "n8n-nodes-base.httpRequest",

@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Inventory · Supplier stock sync\nPulls the supplier's stock feed every two hours and updates the store only for products whose quantity changed, refusing a feed that looks wrong.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL, SUPPLIER_API_KEY, SUPPLIER_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
+        "width": 640,
+        "height": 230,
+        "content": "## Inventory · Supplier stock sync\nPulls the supplier's stock feed every two hours and updates the store only for products whose quantity changed, refusing a feed that looks wrong.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL, SUPPLIER_API_KEY, SUPPLIER_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
       }
     },
     {
       "id": "447e4632-3745-453f-a3f2-83bd7b5e479d",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Every 2 hours",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "0e51cb14-7698-48f7-a7f9-0ac5229504f9",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Supplier feed",
       "type": "n8n-nodes-base.httpRequest",
@@ -68,8 +68,8 @@
     {
       "id": "9720d664-fa72-4670-ae31-77520b4f6081",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Last known stock",
       "type": "n8n-nodes-base.httpRequest",
@@ -99,8 +99,8 @@
     {
       "id": "3de44985-b2c5-4819-a7cb-cebef1a8d8be",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "What changed?",
       "type": "n8n-nodes-base.code",
@@ -112,8 +112,8 @@
     {
       "id": "43f83472-acbb-4a4d-a086-39d595c2683a",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Feed looks sane?",
       "type": "n8n-nodes-base.if",
@@ -146,8 +146,8 @@
     {
       "id": "6d094bfd-caaf-496a-acc9-3aa3327f20e9",
       "position": [
-        1200,
-        -90
+        1300,
+        90
       ],
       "name": "One item per change",
       "type": "n8n-nodes-base.code",
@@ -159,8 +159,8 @@
     {
       "id": "69e1eaac-4590-4059-a49d-b85c2cb45bfc",
       "position": [
-        1440,
-        -90
+        1560,
+        90
       ],
       "name": "Update the store",
       "type": "n8n-nodes-base.httpRequest",
@@ -192,8 +192,8 @@
     {
       "id": "652c313e-7013-4265-acb5-944180336c23",
       "position": [
-        1680,
-        0
+        1820,
+        180
       ],
       "name": "Update the snapshot",
       "type": "n8n-nodes-base.httpRequest",
@@ -237,8 +237,8 @@
     {
       "id": "e8a82eec-5026-487f-aa42-b3d9e3f8fb35",
       "position": [
-        1200,
-        90
+        1300,
+        270
       ],
       "name": "Refused message",
       "type": "n8n-nodes-base.code",
@@ -250,8 +250,8 @@
     {
       "id": "3b1cb19e-2f5b-4e5d-ad1c-f494891c8d60",
       "position": [
-        1440,
-        90
+        1560,
+        270
       ],
       "name": "Alert",
       "type": "n8n-nodes-base.executeWorkflow",

@@ -45,15 +45,16 @@ export class BlockSaveARemoteFileToStorageWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Save a remote file to storage
 Records a file under a name derived from its own address, so the same file fetched twice is stored once.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, STORAGE_API_KEY, STORAGE_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, STORAGE_API_KEY, STORAGE_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/data\``,
     };
 
@@ -62,7 +63,7 @@ Records a file under a name derived from its own address, so the same file fetch
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 180],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -73,7 +74,7 @@ Records a file under a name derived from its own address, so the same file fetch
         name: 'Name it',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     NameIt = {
         jsCode: `return $input.all().map((item) => {
@@ -89,7 +90,7 @@ Records a file under a name derived from its own address, so the same file fetch
         name: 'Claim the name',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -129,7 +130,7 @@ Records a file under a name derived from its own address, so the same file fetch
         name: 'New file?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [720, 0],
+        position: [780, 180],
     })
     NewFile = {
         conditions: {
@@ -161,7 +162,7 @@ Records a file under a name derived from its own address, so the same file fetch
         name: 'Copy to storage',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, -90],
+        position: [1040, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -191,7 +192,7 @@ Records a file under a name derived from its own address, so the same file fetch
         name: 'Already stored',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [960, 90],
+        position: [1040, 270],
     })
     AlreadyStored = {};
 

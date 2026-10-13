@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Order ops · Shipping updates\nTurns a courier status into the right message for the customer, and tells a person when a parcel fails delivery.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
+        "width": 640,
+        "height": 230,
+        "content": "## Order ops · Shipping updates\nTurns a courier status into the right message for the customer, and tells a person when a parcel fails delivery.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
       }
     },
     {
       "id": "42df853a-d0a6-4919-af5f-9735fc36a8f3",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Shipment update",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "71fd70e8-dfba-4bb5-ad59-1035a4e2bff4",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Read the update",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "c15724f6-79aa-4d95-a7d4-53743f7e0e69",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "A status we act on?",
       "type": "n8n-nodes-base.if",
@@ -83,8 +83,8 @@
     {
       "id": "cc409fbe-411d-4196-ae48-6f0559fd5099",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Update the order",
       "type": "n8n-nodes-base.httpRequest",
@@ -129,8 +129,8 @@
     {
       "id": "16d95082-c695-421d-a908-179fb68bc8d6",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Changed?",
       "type": "n8n-nodes-base.if",
@@ -163,8 +163,8 @@
     {
       "id": "2240c39f-6021-4317-aea2-bfd89ac4a6e7",
       "position": [
-        1200,
-        -90
+        1300,
+        90
       ],
       "name": "Which status?",
       "type": "n8n-nodes-base.switch",
@@ -207,8 +207,8 @@
     {
       "id": "6eb79a8a-b24f-4bb7-a5d7-4f96bdd185c8",
       "position": [
-        1440,
-        -90
+        1560,
+        90
       ],
       "name": "Email the customer",
       "type": "n8n-nodes-base.httpRequest",
@@ -239,8 +239,8 @@
     {
       "id": "d038a7e2-f962-40cd-a0c9-cd7da023a8ca",
       "position": [
-        1440,
-        90
+        1560,
+        270
       ],
       "name": "Failed delivery message",
       "type": "n8n-nodes-base.code",
@@ -252,8 +252,8 @@
     {
       "id": "62d5b452-f997-4bcd-a93c-4054d8681bca",
       "position": [
-        1680,
-        0
+        1820,
+        180
       ],
       "name": "Tell support",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -270,8 +270,8 @@
     {
       "id": "00910118-420e-460a-a6ac-8ee760218b5b",
       "position": [
-        1200,
-        90
+        1300,
+        270
       ],
       "name": "Nothing to do",
       "type": "n8n-nodes-base.noOp",
@@ -281,8 +281,8 @@
     {
       "id": "28badb89-8cc6-44fd-a614-64ba521c5a04",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Ignored status",
       "type": "n8n-nodes-base.noOp",

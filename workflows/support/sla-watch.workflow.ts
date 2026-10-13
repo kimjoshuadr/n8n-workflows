@@ -45,15 +45,16 @@ export class SupportSlaBreachWatchWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Support · SLA breach watch
 Every ten minutes, finds tickets about to miss their first-response time, warns the owner, and escalates the ones that already have. Each ticket is raised once per stage.
 
-**Needs:** HELPDESK_API_KEY, HELPDESK_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** HELPDESK_API_KEY, HELPDESK_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/support\``,
     };
 
@@ -62,7 +63,7 @@ Every ten minutes, finds tickets about to miss their first-response time, warns 
         name: 'Every 10 minutes',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     Every10Minutes = {
         rule: {
@@ -80,7 +81,7 @@ Every ten minutes, finds tickets about to miss their first-response time, warns 
         name: 'Unanswered tickets',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -120,7 +121,7 @@ Every ten minutes, finds tickets about to miss their first-response time, warns 
         name: 'Measure against the SLA',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 90],
     })
     MeasureAgainstTheSla = {
         jsCode: `const SLA = { urgent: 30, high: 120, normal: 480, low: 1440 }; // minutes to first response
@@ -138,7 +139,7 @@ return ($input.first().json.tickets ?? []).map((t) => {
         name: 'Remember the stage',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -168,7 +169,7 @@ return ($input.first().json.tickets ?? []).map((t) => {
         name: 'Write the alert',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [960, 0],
+        position: [1040, 90],
     })
     WriteTheAlert = {
         jsCode: `const before = $("Measure against the SLA").all();
@@ -180,7 +181,7 @@ return $input.all().map((_, i) => { const t = before[i].json; return { json: { c
         name: 'Raise it',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1200, 0],
+        position: [1300, 90],
     })
     RaiseIt = {
         workflowId: {

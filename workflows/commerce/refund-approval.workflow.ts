@@ -69,15 +69,16 @@ export class PaymentsRefundRequestsWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -480],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Payments · Refund requests
 Refunds small amounts on recent orders automatically, and sends anything larger, older or repeated to a person with the facts attached.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, PAYMENTS_API_KEY, PAYMENTS_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, PAYMENTS_API_KEY, PAYMENTS_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/commerce\``,
     };
 
@@ -87,7 +88,7 @@ Refunds small amounts on recent orders automatically, and sends anything larger,
         name: 'Refund requested',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 270],
     })
     RefundRequested = {
         httpMethod: 'POST',
@@ -101,7 +102,7 @@ Refunds small amounts on recent orders automatically, and sends anything larger,
         name: 'Read the request',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 270],
     })
     ReadTheRequest = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -113,7 +114,7 @@ return [{ json: { order_id: String(b.order_id ?? ""), reason: String(b.reason ??
         name: 'Valid?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 270],
     })
     Valid = {
         conditions: {
@@ -145,7 +146,7 @@ return [{ json: { order_id: String(b.order_id ?? ""), reason: String(b.reason ??
         name: 'Invalid',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [720, -90],
+        position: [780, 180],
     })
     Invalid = {
         respondWith: 'json',
@@ -160,7 +161,7 @@ return [{ json: { order_id: String(b.order_id ?? ""), reason: String(b.reason ??
         name: 'Load the order',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 90],
+        position: [780, 360],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -197,7 +198,7 @@ return [{ json: { order_id: String(b.order_id ?? ""), reason: String(b.reason ??
         name: 'Order found?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 270],
     })
     OrderFound = {
         conditions: {
@@ -229,7 +230,7 @@ return [{ json: { order_id: String(b.order_id ?? ""), reason: String(b.reason ??
         name: 'Unknown order',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [1200, -90],
+        position: [1300, 180],
     })
     UnknownOrder = {
         respondWith: 'json',
@@ -244,7 +245,7 @@ return [{ json: { order_id: String(b.order_id ?? ""), reason: String(b.reason ??
         name: 'Past refunds',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, 90],
+        position: [1300, 360],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -281,7 +282,7 @@ return [{ json: { order_id: String(b.order_id ?? ""), reason: String(b.reason ??
         name: 'Apply the policy',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1440, 0],
+        position: [1560, 270],
     })
     ApplyThePolicy = {
         jsCode: `const o = $("Order found?").first().json;
@@ -300,7 +301,7 @@ return [{ json: { order_id: o.order_id, email: o.email, amount: Number(o.total),
         name: 'Decision',
         type: 'n8n-nodes-base.switch',
         version: 3.2,
-        position: [1680, 0],
+        position: [1820, 270],
     })
     Decision = {
         rules: {
@@ -367,7 +368,7 @@ return [{ json: { order_id: o.order_id, email: o.email, amount: Number(o.total),
         name: 'Already refunded',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [1920, -180],
+        position: [2080, 90],
     })
     AlreadyRefunded = {
         respondWith: 'json',
@@ -382,7 +383,7 @@ return [{ json: { order_id: o.order_id, email: o.email, amount: Number(o.total),
         name: 'Refund at the processor',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1920, 0],
+        position: [2080, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -416,7 +417,7 @@ return [{ json: { order_id: o.order_id, email: o.email, amount: Number(o.total),
         name: 'Record the refund',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2160, -90],
+        position: [2340, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -447,7 +448,7 @@ return [{ json: { order_id: o.order_id, email: o.email, amount: Number(o.total),
         name: 'Mark the order',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2400, -90],
+        position: [2600, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -486,7 +487,7 @@ return [{ json: { order_id: o.order_id, email: o.email, amount: Number(o.total),
         name: 'Refunded',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [2640, 0],
+        position: [2860, 270],
     })
     Refunded = {
         respondWith: 'json',
@@ -501,7 +502,7 @@ return [{ json: { order_id: o.order_id, email: o.email, amount: Number(o.total),
         name: 'Review message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1920, 180],
+        position: [2080, 450],
     })
     ReviewMessage = {
         jsCode: `const d = $input.first().json;
@@ -513,7 +514,7 @@ return [{ json: { channel: "#finance", level: "warn", text: "Refund request for 
         name: 'Ask finance',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2160, 90],
+        position: [2340, 360],
     })
     AskFinance = {
         workflowId: {
@@ -529,7 +530,7 @@ return [{ json: { channel: "#finance", level: "warn", text: "Refund request for 
         name: 'Under review',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [2400, 90],
+        position: [2600, 360],
     })
     UnderReview = {
         respondWith: 'json',

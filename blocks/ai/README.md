@@ -9,7 +9,8 @@ Asks a model for JSON, checks the reply has the fields you need, asks once more 
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | LLM |
+| Platforms | LLM |
+| Nodes | 7 |
 | Calls | `error-handler` |
 | Files | [`block-llm-json-guard.json`](block-llm-json-guard.json) · [`block-llm-json-guard.workflow.ts`](block-llm-json-guard.workflow.ts) |
 
@@ -43,7 +44,8 @@ Replaces emails, phone numbers and card numbers with placeholders, and hands bac
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | nothing external |
+| Platforms | none, logic only |
+| Nodes | 2 |
 | Calls | `error-handler` |
 | Files | [`block-pii-redact.json`](block-pii-redact.json) · [`block-pii-redact.workflow.ts`](block-pii-redact.workflow.ts) |
 
@@ -65,7 +67,8 @@ Cuts long text into chunks that end on sentence boundaries and overlap by whole 
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | nothing external |
+| Platforms | none, logic only |
+| Nodes | 2 |
 | Calls | `error-handler` |
 | Files | [`block-chunk-text.json`](block-chunk-text.json) · [`block-chunk-text.workflow.ts`](block-chunk-text.workflow.ts) |
 
@@ -87,7 +90,8 @@ Has a model put a message into one of a fixed set of labels and routes on it, wi
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | LLM |
+| Platforms | LLM |
+| Nodes | 7 |
 | Calls | `error-handler` |
 | Files | [`block-classify-route.json`](block-classify-route.json) · [`block-classify-route.workflow.ts`](block-classify-route.workflow.ts) |
 

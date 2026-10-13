@@ -46,15 +46,16 @@ export class BlockReadEveryPageOfAnApiWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Read every page of an API
 Follows a cursor until the API says there is no more, with a hard stop so a broken API cannot loop forever.
 
-**Needs:** CRM_API_KEY, CRM_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CRM_API_KEY, CRM_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/lists\``,
     };
 
@@ -63,7 +64,7 @@ Follows a cursor until the API says there is no more, with a hard stop so a brok
         name: 'Run manually',
         type: 'n8n-nodes-base.manualTrigger',
         version: 1,
-        position: [0, 0],
+        position: [0, 90],
     })
     RunManually = {};
 
@@ -72,7 +73,7 @@ Follows a cursor until the API says there is no more, with a hard stop so a brok
         name: 'Start',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [240, 0],
+        position: [260, 90],
     })
     Start = {
         assignments: {
@@ -100,7 +101,7 @@ Follows a cursor until the API says there is no more, with a hard stop so a brok
         name: 'Fetch a page',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -140,7 +141,7 @@ Follows a cursor until the API says there is no more, with a hard stop so a brok
         name: 'Keep going?',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 90],
     })
     KeepGoing = {
         jsCode: `const res = $input.first().json;
@@ -153,7 +154,7 @@ return [{ json: { items: res.results ?? [], cursor: res.next ?? "", page, more: 
         name: 'More pages?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 90],
     })
     MorePages = {
         conditions: {
@@ -185,7 +186,7 @@ return [{ json: { items: res.results ?? [], cursor: res.next ?? "", page, more: 
         name: 'All pages',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 0],
+        position: [1300, 90],
     })
     AllPages = {
         jsCode: `const all = [];

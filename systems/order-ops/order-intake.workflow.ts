@@ -67,15 +67,16 @@ export class OrderOpsNewOrderWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Order ops · New order
 Takes a new order from the store, records it once, takes its items out of stock, confirms to the customer, and warns the team about anything running low.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/order-ops\``,
     };
 
@@ -85,7 +86,7 @@ Takes a new order from the store, records it once, takes its items out of stock,
         name: 'Order created',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     OrderCreated = {
         httpMethod: 'POST',
@@ -99,7 +100,7 @@ Takes a new order from the store, records it once, takes its items out of stock,
         name: 'From the store?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [240, 0],
+        position: [260, 180],
     })
     FromTheStore = {
         conditions: {
@@ -131,7 +132,7 @@ Takes a new order from the store, records it once, takes its items out of stock,
         name: 'Unauthorised',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [480, -90],
+        position: [520, 90],
     })
     Unauthorised = {
         respondWith: 'json',
@@ -146,7 +147,7 @@ Takes a new order from the store, records it once, takes its items out of stock,
         name: 'Received',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [480, 90],
+        position: [520, 270],
     })
     Received = {
         respondWith: 'json',
@@ -161,7 +162,7 @@ Takes a new order from the store, records it once, takes its items out of stock,
         name: 'Read the order',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 180],
     })
     ReadTheOrder = {
         jsCode: `const o = $("Order created").first().json.body ?? {};
@@ -175,7 +176,7 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'Seen before?',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [960, 0],
+        position: [1040, 180],
     })
     SeenBefore = {
         workflowId: {
@@ -191,7 +192,7 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'New order?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1200, 0],
+        position: [1300, 180],
     })
     NewOrder = {
         conditions: {
@@ -223,7 +224,7 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'Already handled',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1440, -90],
+        position: [1560, 90],
     })
     AlreadyHandled = {};
 
@@ -232,7 +233,7 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'Save the order',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 90],
+        position: [1560, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -263,7 +264,7 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'One item per line',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, -90],
+        position: [1820, 90],
     })
     OneItemPerLine = {
         jsCode: 'return $("New order?").first().json.lines.map((l) => ({ json: { ...l, order_id: $("New order?").first().json.order_id } }));',
@@ -274,7 +275,7 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'Take from stock',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1920, 0],
+        position: [2080, 180],
         onError: 'continueErrorOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -305,7 +306,7 @@ return [{ json: { order_id: String(o.id), email: String(o.email ?? "").toLowerCa
         name: 'What is running low?',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2160, -90],
+        position: [2340, 90],
     })
     WhatIsRunningLow = {
         jsCode: `const lines = $("One item per line").all();
@@ -319,7 +320,7 @@ return [{ json: { low, any_low: low.length > 0, text: "Running low: " + low.map(
         name: 'Anything low?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [2400, -90],
+        position: [2600, 90],
     })
     AnythingLow = {
         conditions: {
@@ -351,7 +352,7 @@ return [{ json: { low, any_low: low.length > 0, text: "Running low: " + low.map(
         name: 'Warn the team',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2640, 0],
+        position: [2860, 180],
     })
     WarnTheTeam = {
         workflowId: {
@@ -367,7 +368,7 @@ return [{ json: { low, any_low: low.length > 0, text: "Running low: " + low.map(
         name: 'Confirm to customer',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, 90],
+        position: [1820, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -398,7 +399,7 @@ return [{ json: { low, any_low: low.length > 0, text: "Running low: " + low.map(
         name: 'Stock failure payload',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2160, 90],
+        position: [2340, 270],
     })
     StockFailurePayload = {
         jsCode: `const l = $input.first().json;
@@ -410,7 +411,7 @@ return [{ json: { source: "order-intake", reason: "Stock could not be adjusted f
         name: 'Park for replay',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2400, 90],
+        position: [2600, 270],
     })
     ParkForReplay = {
         workflowId: {

@@ -2,7 +2,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Reliability · Idempotency guard
-// Nodes   : 5  |  Connections: 3
+// Nodes   : 8  |  Connections: 6
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
@@ -10,15 +10,21 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // AboutThisWorkflow                  stickyNote
 // WhenCalled                         executeWorkflowTrigger
 // BuildTheKey                        code
-// ClaimTheKey                        httpRequest                [retry]
-// Report                             code
+// ClaimTheKey                        supabase                   [onError→out(1)] [creds]
+// FirstTime                          code
+// AlreadyClaimed                     if
+// SeenBefore                         code
+// CouldNotCheck                      stopAndError
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
 // WhenCalled
 //    → BuildTheKey
 //      → ClaimTheKey
-//        → Report
+//        → FirstTime
+//       .out(1) → AlreadyClaimed
+//          → SeenBefore
+//         .out(1) → CouldNotCheck
 // </workflow-map>
 
 // =====================================================================
@@ -41,15 +47,15 @@ export class ReliabilityIdempotencyGuardWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Reliability · Idempotency guard
-Answers one question for a caller: has this event been handled before? Webhooks are delivered more than once; this is what makes that safe.
+Answers one question for a caller: has this event been handled before? Webhooks are delivered more than once; a unique key in Supabase is what makes that safe.
 
-**Needs:** DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`shared\``,
     };
 
@@ -58,7 +64,7 @@ Answers one question for a caller: has this event been handled before? Webhooks 
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 180],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -69,7 +75,7 @@ Answers one question for a caller: has this event been handled before? Webhooks 
         name: 'Build the key',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     BuildTheKey = {
         jsCode: `return $input.all().map((item) => {
@@ -82,65 +88,95 @@ Answers one question for a caller: has this event been handled before? Webhooks 
     @node({
         id: '76375043-ec78-48c8-a260-7ac720ad762e',
         name: 'Claim the key',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [480, 0],
-        retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [520, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
+        onError: 'continueErrorOutput',
     })
     ClaimTheKey = {
-        method: 'POST',
-        url: '={{ $env.DB_BASE_URL }}/idempotency_keys',
-        options: {
-            timeout: 15000,
-            response: {
-                response: {
-                    fullResponse: true,
-                    neverError: true,
-                },
-            },
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'create',
+        tableId: 'idempotency_keys',
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'idempotency_key',
+                    fieldValue: '={{ $json.idempotency_key }}',
                 },
                 {
-                    name: 'Prefer',
-                    value: 'resolution=ignore-duplicates,return=representation',
+                    fieldId: 'claimed_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'on_conflict',
-                    value: "={{ 'idempotency_key' }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ idempotency_key: $json.idempotency_key, claimed_at: $now.toISO() }) }}',
     };
 
     @node({
-        id: '0441a50f-c140-4915-a28e-80ed5a31574f',
-        name: 'Report',
+        id: '9f04f3f0-5e11-4edb-a1db-2fd74def4e08',
+        name: 'First time',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 90],
     })
-    Report = {
+    FirstTime = {
         jsCode: `const before = $("Build the key").all();
-return $input.all().map((item, i) => {
-  const rows = Array.isArray(item.json.body) ? item.json.body : [];
-  return { json: { ...before[i].json, duplicate: rows.length === 0 } };
-});`,
+return $input.all().map((_, i) => ({ json: { ...before[i].json, duplicate: false } }));`,
+    };
+
+    @node({
+        id: 'c489cd8f-25af-40ef-a752-dae7c51c303d',
+        name: 'Already claimed?',
+        type: 'n8n-nodes-base.if',
+        version: 2.2,
+        position: [780, 270],
+    })
+    AlreadyClaimed = {
+        conditions: {
+            options: {
+                caseSensitive: true,
+                leftValue: '',
+                typeValidation: 'loose',
+                version: 2,
+            },
+            conditions: [
+                {
+                    id: '176585e2-4fac-4168-a128-a4d77974b982',
+                    leftValue: "={{ /duplicate key|23505/.test(String($json.error ?? '')) }}",
+                    rightValue: '',
+                    operator: {
+                        type: 'boolean',
+                        operation: 'true',
+                        singleValue: true,
+                    },
+                },
+            ],
+            combinator: 'and',
+        },
+        options: {},
+    };
+
+    @node({
+        id: '8a86d7b8-0700-41ff-a2b5-1159baf72211',
+        name: 'Seen before',
+        type: 'n8n-nodes-base.code',
+        version: 2,
+        position: [1040, 90],
+    })
+    SeenBefore = {
+        jsCode: 'return $input.all().map((item) => { const { error, ...rest } = item.json; return { json: { ...rest, duplicate: true } }; });',
+    };
+
+    @node({
+        id: '641764ba-382a-4ff0-a76c-54227c4efc70',
+        name: 'Could not check',
+        type: 'n8n-nodes-base.stopAndError',
+        version: 1,
+        position: [1040, 270],
+    })
+    CouldNotCheck = {
+        errorMessage: "={{ String($json.error ?? 'The idempotency key could not be claimed') }}",
     };
 
     // =====================================================================
@@ -151,6 +187,9 @@ return $input.all().map((item, i) => {
     defineRouting() {
         this.WhenCalled.out(0).to(this.BuildTheKey.in(0));
         this.BuildTheKey.out(0).to(this.ClaimTheKey.in(0));
-        this.ClaimTheKey.out(0).to(this.Report.in(0));
+        this.ClaimTheKey.out(0).to(this.FirstTime.in(0));
+        this.ClaimTheKey.out(1).to(this.AlreadyClaimed.in(0));
+        this.AlreadyClaimed.out(0).to(this.SeenBefore.in(0));
+        this.AlreadyClaimed.out(1).to(this.CouldNotCheck.in(0));
     }
 }

@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Templated email\nOne place to send an email from: fills a template, refuses to send with a placeholder left unfilled.\n\n**Needs:** EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/notify`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Templated email\nOne place to send an email from: fills a template, refuses to send with a placeholder left unfilled.\n\n**Platforms:** none, this is logic only\n**Settings:** EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/notify`"
       }
     },
     {
       "id": "6b47409a-4454-4a99-a978-ef50174df98b",
       "position": [
         0,
-        0
+        180
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "35e8a58f-2759-4770-a724-fcdf6b28c1f4",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Fill the template",
       "type": "n8n-nodes-base.code",
@@ -45,8 +45,8 @@
     {
       "id": "d7a5ac31-1188-4015-a330-b96f686905fe",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Ready to send?",
       "type": "n8n-nodes-base.if",
@@ -79,8 +79,8 @@
     {
       "id": "094f1562-bd7c-4de6-ab93-a31f9c07baac",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Send",
       "type": "n8n-nodes-base.httpRequest",
@@ -111,8 +111,8 @@
     {
       "id": "a19e9332-07d8-4ece-a6a9-dc5f20f37db9",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Sent",
       "type": "n8n-nodes-base.set",
@@ -135,8 +135,8 @@
     {
       "id": "d5b32bf5-641b-4a2c-a514-b919cd01d922",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Held back",
       "type": "n8n-nodes-base.set",

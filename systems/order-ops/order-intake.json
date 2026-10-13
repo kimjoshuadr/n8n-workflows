@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Order ops · New order\nTakes a new order from the store, records it once, takes its items out of stock, confirms to the customer, and warns the team about anything running low.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
+        "width": 640,
+        "height": 230,
+        "content": "## Order ops · New order\nTakes a new order from the store, records it once, takes its items out of stock, confirms to the customer, and warns the team about anything running low.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
       }
     },
     {
       "id": "4912eeaa-972c-4c81-abc2-f564361e5215",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Order created",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "ffb10e7f-4bdd-4a22-a901-37129cfe791b",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "From the store?",
       "type": "n8n-nodes-base.if",
@@ -70,8 +70,8 @@
     {
       "id": "acdfd98a-2bec-47f4-a79c-818cabc96e9e",
       "position": [
-        480,
-        -90
+        520,
+        90
       ],
       "name": "Unauthorised",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -87,8 +87,8 @@
     {
       "id": "0bbefa30-9fa8-4379-aaef-79ed7104eb31",
       "position": [
-        480,
-        90
+        520,
+        270
       ],
       "name": "Received",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -104,8 +104,8 @@
     {
       "id": "412e6bc2-f528-496a-a29c-f6ad22f9639f",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Read the order",
       "type": "n8n-nodes-base.code",
@@ -117,8 +117,8 @@
     {
       "id": "fbdbb6e8-80be-47db-a1ca-d73cc6e69219",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Seen before?",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -135,8 +135,8 @@
     {
       "id": "d373d0f6-019d-4fe9-ad72-b5c0c6fce154",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "New order?",
       "type": "n8n-nodes-base.if",
@@ -169,8 +169,8 @@
     {
       "id": "ac0b0063-a396-4721-ae59-bdfe7a64f22b",
       "position": [
-        1440,
-        -90
+        1560,
+        90
       ],
       "name": "Already handled",
       "type": "n8n-nodes-base.noOp",
@@ -180,8 +180,8 @@
     {
       "id": "aef03a4a-86e2-4430-a437-6db3c673ce6c",
       "position": [
-        1440,
-        90
+        1560,
+        270
       ],
       "name": "Save the order",
       "type": "n8n-nodes-base.httpRequest",
@@ -212,8 +212,8 @@
     {
       "id": "4f2935f7-e7e4-4c8b-a0cf-64b2f5a6883a",
       "position": [
-        1680,
-        -90
+        1820,
+        90
       ],
       "name": "One item per line",
       "type": "n8n-nodes-base.code",
@@ -225,8 +225,8 @@
     {
       "id": "fffc4284-4dee-4e19-a621-58d9e1b9e7bd",
       "position": [
-        1920,
-        0
+        2080,
+        180
       ],
       "name": "Take from stock",
       "type": "n8n-nodes-base.httpRequest",
@@ -258,8 +258,8 @@
     {
       "id": "7e13d170-9ffb-402a-a058-fe6e355013da",
       "position": [
-        2160,
-        -90
+        2340,
+        90
       ],
       "name": "What is running low?",
       "type": "n8n-nodes-base.code",
@@ -271,8 +271,8 @@
     {
       "id": "009ffea0-ce7e-4e68-abf4-8f0aa7d3c022",
       "position": [
-        2400,
-        -90
+        2600,
+        90
       ],
       "name": "Anything low?",
       "type": "n8n-nodes-base.if",
@@ -305,8 +305,8 @@
     {
       "id": "ec573f0a-d530-455d-ab22-68d2bc56d010",
       "position": [
-        2640,
-        0
+        2860,
+        180
       ],
       "name": "Warn the team",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -323,8 +323,8 @@
     {
       "id": "991c63e2-d785-4358-ad19-0d208e3a6370",
       "position": [
-        1680,
-        90
+        1820,
+        270
       ],
       "name": "Confirm to customer",
       "type": "n8n-nodes-base.httpRequest",
@@ -355,8 +355,8 @@
     {
       "id": "45c11ce1-b33f-41de-a7cc-f7d4587fb60c",
       "position": [
-        2160,
-        90
+        2340,
+        270
       ],
       "name": "Stock failure payload",
       "type": "n8n-nodes-base.code",
@@ -368,8 +368,8 @@
     {
       "id": "574b9e51-0991-40fe-ab59-8e18023544d7",
       "position": [
-        2400,
-        90
+        2600,
+        270
       ],
       "name": "Park for replay",
       "type": "n8n-nodes-base.executeWorkflow",

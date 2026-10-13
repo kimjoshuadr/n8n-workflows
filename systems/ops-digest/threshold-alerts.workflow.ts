@@ -45,15 +45,16 @@ export class OpsDigestThresholdAlertsWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Ops digest · Threshold alerts
 Checks each watched number hourly and alerts when it crosses its line, and again when it recovers. It does not repeat itself in between.
 
-**Needs:** DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/ops-digest\``,
     };
 
@@ -62,7 +63,7 @@ Checks each watched number hourly and alerts when it crosses its line, and again
         name: 'Hourly',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     Hourly = {
         rule: {
@@ -80,7 +81,7 @@ Checks each watched number hourly and alerts when it crosses its line, and again
         name: 'Watched metrics',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -108,7 +109,7 @@ Checks each watched number hourly and alerts when it crosses its line, and again
         name: 'Which changed state?',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 90],
     })
     WhichChangedState = {
         jsCode: `return $input.all().map((i) => i.json).filter((m) => m.name && typeof m.value === "number").map((m) => {
@@ -123,7 +124,7 @@ Checks each watched number hourly and alerts when it crosses its line, and again
         name: 'Remember the state',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -162,7 +163,7 @@ Checks each watched number hourly and alerts when it crosses its line, and again
         name: 'Alert text',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [960, 0],
+        position: [1040, 90],
     })
     AlertText = {
         jsCode: `const before = $("Which changed state?").all();
@@ -174,7 +175,7 @@ return $input.all().map((item, i) => { const m = before[i].json; return { json: 
         name: 'Alert',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1200, 0],
+        position: [1300, 90],
     })
     Alert = {
         workflowId: {

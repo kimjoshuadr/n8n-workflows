@@ -37,15 +37,16 @@ export class BlockCheckInWithTheHeartbeatMonitorWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Check in with the heartbeat monitor
 The two nodes a scheduled workflow adds so the heartbeat monitor can tell when it stops running.
 
-**Needs:** DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/schedule\``,
     };
 
@@ -54,7 +55,7 @@ The two nodes a scheduled workflow adds so the heartbeat monitor can tell when i
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -65,7 +66,7 @@ The two nodes a scheduled workflow adds so the heartbeat monitor can tell when i
         name: 'Check in',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

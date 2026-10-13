@@ -43,15 +43,16 @@ export class SubscriptionsRenewalRemindersWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Subscriptions · Renewal reminders
 Tells subscribers a week before an annual renewal, once, with the amount and the date, so the charge is never a surprise.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/commerce\``,
     };
 
@@ -60,7 +61,7 @@ Tells subscribers a week before an annual renewal, once, with the amount and the
         name: '08:00 daily',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     _0800Daily = {
         rule: {
@@ -78,7 +79,7 @@ Tells subscribers a week before an annual renewal, once, with the amount and the
         name: 'Active subscriptions',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -119,7 +120,7 @@ Tells subscribers a week before an annual renewal, once, with the amount and the
         name: 'Renewing in a week',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 90],
     })
     RenewingInAWeek = {
         jsCode: `const now = Date.now();
@@ -134,7 +135,7 @@ return $input.all().map((i) => i.json).filter((s) => s.email && s.renews_at).fil
         name: 'Send the notice',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -165,7 +166,7 @@ return $input.all().map((i) => i.json).filter((s) => s.email && s.renews_at).fil
         name: 'Mark reminded',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, 0],
+        position: [1040, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Wait for a person's yes\nRecords a pending decision and gives back approve and reject links. Nothing proceeds until one is pressed, and each link works once.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Wait for a person's yes\nRecords a pending decision and gives back approve and reject links. Nothing proceeds until one is pressed, and each link works once.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
       }
     },
     {
       "id": "b5a17500-15e1-4031-a9ce-52a4c5702edf",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Decision link",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "745e3af5-4eac-4a5d-a116-7cd560b4cc76",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Read the link",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "03f464db-fa1d-4ce5-a2a2-a68afaa8c184",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Resolve if still pending",
       "type": "n8n-nodes-base.httpRequest",
@@ -95,8 +95,8 @@
     {
       "id": "f0fed394-42c6-4876-a934-692bd767984d",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Resolved now?",
       "type": "n8n-nodes-base.if",
@@ -129,8 +129,8 @@
     {
       "id": "c57ba15a-111f-4269-aa6e-42d06d49bf8b",
       "position": [
-        960,
-        -90
+        1040,
+        90
       ],
       "name": "Thanks",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -146,8 +146,8 @@
     {
       "id": "b58c6f0f-2371-4495-ac4a-c927e54a91ff",
       "position": [
-        960,
-        90
+        1040,
+        270
       ],
       "name": "Link no longer valid",
       "type": "n8n-nodes-base.respondToWebhook",

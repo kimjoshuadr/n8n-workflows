@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Support · SLA breach watch\nEvery ten minutes, finds tickets about to miss their first-response time, warns the owner, and escalates the ones that already have. Each ticket is raised once per stage.\n\n**Needs:** HELPDESK_API_KEY, HELPDESK_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/support`"
+        "width": 640,
+        "height": 230,
+        "content": "## Support · SLA breach watch\nEvery ten minutes, finds tickets about to miss their first-response time, warns the owner, and escalates the ones that already have. Each ticket is raised once per stage.\n\n**Platforms:** none, this is logic only\n**Settings:** HELPDESK_API_KEY, HELPDESK_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/support`"
       }
     },
     {
       "id": "45ebb3a7-a119-4b2c-a7d7-b67ce3887cdd",
       "position": [
         0,
-        0
+        90
       ],
       "name": "Every 10 minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "28a8502f-811b-413c-a123-00db8e8bff6e",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Unanswered tickets",
       "type": "n8n-nodes-base.httpRequest",
@@ -81,8 +81,8 @@
     {
       "id": "c8cab437-7298-4c7b-a1bd-266a9d1b14db",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Measure against the SLA",
       "type": "n8n-nodes-base.code",
@@ -94,8 +94,8 @@
     {
       "id": "bfcdbd2a-2e77-43ff-a71a-de33e60f8282",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Remember the stage",
       "type": "n8n-nodes-base.httpRequest",
@@ -126,8 +126,8 @@
     {
       "id": "e07c273e-d6c5-47c7-a6ff-92ab0d12bd38",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Write the alert",
       "type": "n8n-nodes-base.code",
@@ -139,8 +139,8 @@
     {
       "id": "5e506199-acaf-4276-acec-afff92ad22a3",
       "position": [
-        1200,
-        0
+        1300,
+        90
       ],
       "name": "Raise it",
       "type": "n8n-nodes-base.executeWorkflow",

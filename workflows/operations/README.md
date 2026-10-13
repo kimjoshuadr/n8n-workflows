@@ -9,7 +9,8 @@ When someone is hired, creates their checklist, books their first-week meetings,
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Datastore, Calendar, Email, Chat |
+| Platforms | Datastore, Calendar, Email, Chat |
+| Nodes | 11 |
 | Calls | `idempotency-guard`, `notify`, `error-handler` |
 | Files | [`employee-onboarding.json`](employee-onboarding.json) · [`employee-onboarding.workflow.ts`](employee-onboarding.workflow.ts) |
 
@@ -57,7 +58,8 @@ Posts today's meetings each weekday morning, with gaps and clashes pointed out, 
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Calendar, Chat |
+| Platforms | Calendar, Chat |
+| Nodes | 6 |
 | Calls | `error-handler` |
 | Files | [`daily-agenda.json`](daily-agenda.json) · [`daily-agenda.workflow.ts`](daily-agenda.workflow.ts) |
 
@@ -94,7 +96,8 @@ Copies contacts changed since the last run from the CRM to the email platform, p
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, CRM, Email |
+| Platforms | Datastore, CRM, Email |
+| Nodes | 8 |
 | Calls | `error-handler` |
 | Files | [`contact-sync.json`](contact-sync.json) · [`contact-sync.workflow.ts`](contact-sync.workflow.ts) |
 
@@ -136,7 +139,8 @@ Warns the owner of each contract 60, 30 and 7 days before it ends, so renewals a
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Email |
+| Platforms | Datastore, Email |
+| Nodes | 5 |
 | Calls | `error-handler` |
 | Files | [`contract-expiry.json`](contract-expiry.json) · [`contract-expiry.workflow.ts`](contract-expiry.workflow.ts) |
 

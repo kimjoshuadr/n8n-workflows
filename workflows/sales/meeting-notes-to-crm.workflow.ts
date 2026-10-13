@@ -63,15 +63,16 @@ export class CrmMeetingNotesAndNextStepsWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## CRM · Meeting notes and next steps
 Turns a call transcript into a CRM note and dated follow-up tasks, and asks a person when it cannot tell who owns a task.
 
-**Needs:** CRM_API_KEY, CRM_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** none, this is logic only
+**Settings:** CRM_API_KEY, CRM_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/sales\``,
     };
 
@@ -81,7 +82,7 @@ Turns a call transcript into a CRM note and dated follow-up tasks, and asks a pe
         name: 'Transcript ready',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     TranscriptReady = {
         httpMethod: 'POST',
@@ -95,7 +96,7 @@ Turns a call transcript into a CRM note and dated follow-up tasks, and asks a pe
         name: 'Read the transcript',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     ReadTheTranscript = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -108,7 +109,7 @@ return [{ json: { deal_id: String(b.deal_id ?? ""), title: b.title ?? "Call", tr
         name: 'Enough to summarise?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     EnoughToSummarise = {
         conditions: {
@@ -140,7 +141,7 @@ return [{ json: { deal_id: String(b.deal_id ?? ""), title: b.title ?? "Call", tr
         name: 'Extract',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, -90],
+        position: [780, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -178,7 +179,7 @@ return [{ json: { deal_id: String(b.deal_id ?? ""), title: b.title ?? "Call", tr
         name: 'Read the notes',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     ReadTheNotes = {
         jsCode: `const before = $("Read the transcript").all();
@@ -201,7 +202,7 @@ return out;`,
         name: 'Readable?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1200, 0],
+        position: [1300, 180],
     })
     Readable = {
         conditions: {
@@ -233,7 +234,7 @@ return out;`,
         name: 'Add the CRM note',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, -90],
+        position: [1560, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -264,7 +265,7 @@ return out;`,
         name: 'One item per action',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, -90],
+        position: [1820, 90],
     })
     OneItemPerAction = {
         jsCode: `const n = $("Readable?").first().json;
@@ -276,7 +277,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Has an owner?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1920, 0],
+        position: [2080, 180],
     })
     HasAnOwner = {
         conditions: {
@@ -308,7 +309,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Create the task',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2160, -90],
+        position: [2340, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -339,7 +340,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Unowned message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2160, 90],
+        position: [2340, 270],
     })
     UnownedMessage = {
         jsCode: 'return [{ json: { level: "warn", text: $input.all().length + " action(s) from the call have no clear owner: " + $input.all().map((i) => i.json.task).join("; ") } }];',
@@ -350,7 +351,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Ask who owns them',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2400, 0],
+        position: [2600, 180],
     })
     AskWhoOwnsThem = {
         workflowId: {
@@ -366,7 +367,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Unreadable message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1440, 90],
+        position: [1560, 270],
     })
     UnreadableMessage = {
         jsCode: 'return [{ json: { level: "warn", text: "Notes could not be extracted from \\"" + $("Read the transcript").first().json.title + "\\". The transcript is attached to the deal for a manual read." } }];',
@@ -377,7 +378,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Flag for a manual read',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1680, 90],
+        position: [1820, 270],
     })
     FlagForAManualRead = {
         workflowId: {
@@ -393,7 +394,7 @@ return (n.actions ?? []).filter((a) => a && a.task).map((a) => ({ json: { deal_i
         name: 'Too short to summarise',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [720, 90],
+        position: [780, 270],
     })
     TooShortToSummarise = {};
 

@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Event to a chat message\nTurns any event into one readable chat message.\n\n**Needs:** CHAT_API_KEY, CHAT_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/notify`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Event to a chat message\nTurns any event into one readable chat message.\n\n**Platforms:** none, this is logic only\n**Settings:** CHAT_API_KEY, CHAT_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/notify`"
       }
     },
     {
       "id": "dd111805-efd3-4ef4-af70-b962b7f6d573",
       "position": [
         0,
-        0
+        90
       ],
       "name": "Event",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "3e9d4ca4-0f9b-4783-a7e0-3d5785d3b519",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Post it",
       "type": "n8n-nodes-base.httpRequest",

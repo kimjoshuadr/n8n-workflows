@@ -66,15 +66,16 @@ export class SupportAgentAnswerOrHandOverWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Support agent · Answer or hand over
 Answers a customer's message from the help centre when it is confident, and hands the conversation to a person with a summary when it is not.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/support-agent\``,
     };
 
@@ -84,7 +85,7 @@ Answers a customer's message from the help centre when it is confident, and hand
         name: 'Message received',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     MessageReceived = {
         httpMethod: 'POST',
@@ -98,7 +99,7 @@ Answers a customer's message from the help centre when it is confident, and hand
         name: 'Read the message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     ReadTheMessage = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -119,7 +120,7 @@ return [{ json: {
         name: 'Seen before?',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [480, 0],
+        position: [520, 180],
     })
     SeenBefore = {
         workflowId: {
@@ -135,7 +136,7 @@ return [{ json: {
         name: 'New message?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [720, 0],
+        position: [780, 180],
     })
     NewMessage = {
         conditions: {
@@ -167,7 +168,7 @@ return [{ json: {
         name: 'Search the help centre',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, -90],
+        position: [1040, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -204,7 +205,7 @@ return [{ json: {
         name: 'Build the context',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 0],
+        position: [1300, 180],
     })
     BuildTheContext = {
         jsCode: `const m = $("New message?").first().json;
@@ -218,7 +219,7 @@ return [{ json: { ...m, context, article_count: articles.length } }];`,
         name: 'Draft an answer',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 180],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -257,7 +258,7 @@ return [{ json: { ...m, context, article_count: articles.length } }];`,
         name: 'Read the draft',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, 0],
+        position: [1820, 180],
     })
     ReadTheDraft = {
         jsCode: `const before = $("Build the context").all();
@@ -280,7 +281,7 @@ return out;`,
         name: 'Confident?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1920, 0],
+        position: [2080, 180],
     })
     Confident = {
         conditions: {
@@ -313,7 +314,7 @@ return out;`,
         name: 'Send the reply',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2160, -90],
+        position: [2340, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -344,7 +345,7 @@ return out;`,
         name: 'Hand to a person',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2160, 90],
+        position: [2340, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -374,7 +375,7 @@ return out;`,
         name: 'Leave a private note',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2400, -90],
+        position: [2600, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -405,7 +406,7 @@ return out;`,
         name: 'Answered',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2400, 90],
+        position: [2600, 270],
     })
     Answered = {
         jsCode: 'return [{ json: { ...$("Confident?").first().json, answered: true } }];',
@@ -416,7 +417,7 @@ return out;`,
         name: 'Handed over',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [2640, 0],
+        position: [2860, 180],
     })
     HandedOver = {
         jsCode: 'return [{ json: { ...$("Confident?").first().json, answered: false } }];',
@@ -427,7 +428,7 @@ return out;`,
         name: 'Log the outcome',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2880, 0],
+        position: [3120, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -458,7 +459,7 @@ return out;`,
         name: 'Ignore the repeat',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [960, 90],
+        position: [1040, 270],
     })
     IgnoreTheRepeat = {};
 

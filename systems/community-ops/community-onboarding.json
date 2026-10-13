@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Community ops · Member onboarding\nWelcomes a new member, gives them the starter role, records them, and flags accounts created minutes ago for a moderator to look at.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/community-ops`"
+        "width": 640,
+        "height": 230,
+        "content": "## Community ops · Member onboarding\nWelcomes a new member, gives them the starter role, records them, and flags accounts created minutes ago for a moderator to look at.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/community-ops`"
       }
     },
     {
       "id": "e059afcd-3601-4e69-a3d7-22b8df581ab1",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Member joined",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "4e0dec90-ac80-41e2-aae3-0d4a1ecea46e",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Read the member",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "95ec3f75-8384-49d8-ad60-1bbc0cc3124c",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "A person?",
       "type": "n8n-nodes-base.if",
@@ -83,8 +83,8 @@
     {
       "id": "be2489a8-0193-46f5-a5fb-d07430bde7d3",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Seen before?",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -101,8 +101,8 @@
     {
       "id": "d7a1aae2-1f8e-4e2c-a079-20ff98850948",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "First join?",
       "type": "n8n-nodes-base.if",
@@ -135,8 +135,8 @@
     {
       "id": "536eb07d-1ee8-4cbd-a0a3-203e85d5e5c5",
       "position": [
-        1200,
-        -90
+        1300,
+        90
       ],
       "name": "Save the member",
       "type": "n8n-nodes-base.httpRequest",
@@ -167,8 +167,8 @@
     {
       "id": "fdae915b-fb3a-4004-a837-e8f949ed2232",
       "position": [
-        1440,
-        0
+        1560,
+        180
       ],
       "name": "Brand new account?",
       "type": "n8n-nodes-base.if",
@@ -201,8 +201,8 @@
     {
       "id": "b12e7464-4f69-488e-a292-1c3b581452fc",
       "position": [
-        1680,
-        -90
+        1820,
+        90
       ],
       "name": "Review message",
       "type": "n8n-nodes-base.code",
@@ -214,8 +214,8 @@
     {
       "id": "425e4729-319a-47e8-a6b2-aed0b4428eb9",
       "position": [
-        1920,
-        -90
+        2080,
+        90
       ],
       "name": "Ask a moderator",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -232,8 +232,8 @@
     {
       "id": "4c0f6157-2935-4fea-ac74-bebd537606a0",
       "position": [
-        1680,
-        90
+        1820,
+        270
       ],
       "name": "Give starter role",
       "type": "n8n-nodes-base.httpRequest",
@@ -264,8 +264,8 @@
     {
       "id": "99234657-a229-41b2-a4fa-81f0ea228f12",
       "position": [
-        1920,
-        90
+        2080,
+        270
       ],
       "name": "Welcome them",
       "type": "n8n-nodes-base.httpRequest",
@@ -297,8 +297,8 @@
     {
       "id": "5e0c8e26-6be8-4648-a7bc-de87547925fb",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Ignore bots",
       "type": "n8n-nodes-base.noOp",
@@ -308,8 +308,8 @@
     {
       "id": "dee8a18f-0d90-45db-a501-62c0fecef08f",
       "position": [
-        1200,
-        90
+        1300,
+        270
       ],
       "name": "Rejoined",
       "type": "n8n-nodes-base.noOp",

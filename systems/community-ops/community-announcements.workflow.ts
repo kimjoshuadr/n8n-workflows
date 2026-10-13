@@ -55,15 +55,16 @@ export class CommunityOpsScheduledAnnouncementsWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Community ops · Scheduled announcements
 Posts announcements at the time they were scheduled for, once, and reports any that could not be posted.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/community-ops\``,
     };
 
@@ -72,7 +73,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Every 5 minutes',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     Every5Minutes = {
         rule: {
@@ -90,7 +91,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Due announcements',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -131,7 +132,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Any due?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     AnyDue = {
         conditions: {
@@ -163,7 +164,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Claim it',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, -90],
+        position: [780, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -207,7 +208,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Claimed?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     Claimed = {
         conditions: {
@@ -239,7 +240,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Post it',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, 0],
+        position: [1300, 180],
         onError: 'continueErrorOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -271,7 +272,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Mark sent',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, -90],
+        position: [1560, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -310,7 +311,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Mark failed',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 90],
+        position: [1560, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -349,7 +350,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Failure message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, 0],
+        position: [1820, 180],
     })
     FailureMessage = {
         jsCode: 'return $input.all().map((i) => ({ json: { channel: "#mods", level: "warn", text: "An announcement could not be posted and was marked failed: \\"" + String(i.json.content ?? "").slice(0, 120) + "\\"" } }));',
@@ -360,7 +361,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Tell the team',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1920, 0],
+        position: [2080, 180],
     })
     TellTheTeam = {
         workflowId: {
@@ -376,7 +377,7 @@ Posts announcements at the time they were scheduled for, once, and reports any t
         name: 'Nothing due',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [720, 90],
+        position: [780, 270],
     })
     NothingDue = {};
 

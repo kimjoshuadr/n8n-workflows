@@ -53,15 +53,16 @@ export class SeoKeywordRankTrackerWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## SEO · Keyword rank tracker
 Records where the site ranks for each tracked keyword every day, and alerts when one falls five places or drops off the first page.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, SEARCH_API_KEY, SEARCH_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, SEARCH_API_KEY, SEARCH_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/content\``,
     };
 
@@ -70,7 +71,7 @@ Records where the site ranks for each tracked keyword every day, and alerts when
         name: '05:00 daily',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     _0500Daily = {
         rule: {
@@ -88,7 +89,7 @@ Records where the site ranks for each tracked keyword every day, and alerts when
         name: 'Tracked keywords',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -116,7 +117,7 @@ Records where the site ranks for each tracked keyword every day, and alerts when
         name: 'Search for it',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 180],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -147,7 +148,7 @@ Records where the site ranks for each tracked keyword every day, and alerts when
         name: 'Find our position',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 180],
     })
     FindOurPosition = {
         jsCode: `const kws = $("Tracked keywords").all();
@@ -170,7 +171,7 @@ return $input.all().map((item, i) => {
         name: 'Got a result?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     GotAResult = {
         conditions: {
@@ -202,7 +203,7 @@ return $input.all().map((item, i) => {
         name: 'Record today',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, -90],
+        position: [1300, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -232,7 +233,7 @@ return $input.all().map((item, i) => {
         name: 'Update the keyword',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -272,7 +273,7 @@ return $input.all().map((item, i) => {
         name: 'Gather the drops',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, 0],
+        position: [1820, 180],
     })
     GatherTheDrops = {
         jsCode: `const drops = $("Got a result?").all().map((i) => i.json).filter((k) => k.alert);
@@ -285,7 +286,7 @@ return [{ json: { channel: "#seo", level: "warn", text: drops.length + " keyword
         name: 'Alert',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1920, 0],
+        position: [2080, 180],
     })
     Alert = {
         workflowId: {
@@ -301,7 +302,7 @@ return [{ json: { channel: "#seo", level: "warn", text: drops.length + " keyword
         name: 'Search failed, keep yesterday',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1200, 90],
+        position: [1300, 270],
     })
     SearchFailedKeepYesterday = {};
 

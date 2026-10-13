@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Validate and answer with field errors\nChecks a payload against simple rules and answers with exactly which fields were wrong, so the form can show it.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/intake`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Validate and answer with field errors\nChecks a payload against simple rules and answers with exactly which fields were wrong, so the form can show it.\n\n**Platforms:** none, this is logic only\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/intake`"
       }
     },
     {
       "id": "a22a6b5c-3fa2-4b9b-a448-d581475e0233",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Submitted",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "c548a1ea-6522-400e-a1fd-010b91401e49",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Check the fields",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "7b856a40-290d-4ae8-a098-0511a8a5c6e7",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Valid?",
       "type": "n8n-nodes-base.if",
@@ -83,8 +83,8 @@
     {
       "id": "109b75e3-637b-45e5-a075-b00913761e78",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Accepted",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -100,8 +100,8 @@
     {
       "id": "cca6c7be-894e-4b91-ad0e-104610355658",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Field errors",
       "type": "n8n-nodes-base.respondToWebhook",

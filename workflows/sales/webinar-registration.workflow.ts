@@ -61,15 +61,16 @@ export class EventsWebinarRegistrationAndRemindersWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Events · Webinar registration and reminders
 Registers someone for a webinar, sends the calendar invite, and reminds them a day and an hour before. Full sessions get a waitlist reply.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/sales\``,
     };
 
@@ -79,7 +80,7 @@ Registers someone for a webinar, sends the calendar invite, and reminds them a d
         name: 'Registration',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     Registration = {
         httpMethod: 'POST',
@@ -93,7 +94,7 @@ Registers someone for a webinar, sends the calendar invite, and reminds them a d
         name: 'Read the form',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     ReadTheForm = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -106,7 +107,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Valid?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     Valid = {
         conditions: {
@@ -138,7 +139,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Invalid',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [720, -90],
+        position: [780, 90],
     })
     Invalid = {
         respondWith: 'json',
@@ -153,7 +154,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Load the webinar',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 90],
+        position: [780, 270],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -190,7 +191,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Seats left?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     SeatsLeft = {
         conditions: {
@@ -222,7 +223,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Register',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, -90],
+        position: [1300, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -263,7 +264,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Newly registered?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1440, -90],
+        position: [1560, 90],
     })
     NewlyRegistered = {
         conditions: {
@@ -295,7 +296,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Count the seat',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, -90],
+        position: [1820, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -334,7 +335,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Send the invite',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1920, 0],
+        position: [2080, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -365,7 +366,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Confirmed',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [2160, 0],
+        position: [2340, 180],
     })
     Confirmed = {
         respondWith: 'json',
@@ -380,7 +381,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Already registered',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [1680, 90],
+        position: [1820, 270],
     })
     AlreadyRegistered = {
         respondWith: 'json',
@@ -395,7 +396,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Add to waitlist',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, 90],
+        position: [1300, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -426,7 +427,7 @@ return [{ json: { valid: /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) && !!b.web
         name: 'Waitlisted',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [1440, 90],
+        position: [1560, 270],
     })
     Waitlisted = {
         respondWith: 'json',

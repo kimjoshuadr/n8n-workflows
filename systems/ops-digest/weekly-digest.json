@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Ops digest · Weekly summary\nEvery Monday, gathers the week's numbers from sales, orders, support and the site, compares them with the week before, and sends one readable summary.\n\n**Needs:** ANALYTICS_API_KEY, ANALYTICS_BASE_URL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/ops-digest`"
+        "width": 640,
+        "height": 230,
+        "content": "## Ops digest · Weekly summary\nEvery Monday, gathers the week's numbers from sales, orders, support and the site, compares them with the week before, and sends one readable summary.\n\n**Platforms:** none, this is logic only\n**Settings:** ANALYTICS_API_KEY, ANALYTICS_BASE_URL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/ops-digest`"
       }
     },
     {
       "id": "b2cbae22-9d4c-4f91-af96-2bae0e3600f4",
       "position": [
         0,
-        0
+        90
       ],
       "name": "Monday 08:30",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "53f3aaa9-f418-4aa7-a424-a53ff11e08c4",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Leads",
       "type": "n8n-nodes-base.httpRequest",
@@ -79,8 +79,8 @@
     {
       "id": "90762edf-a548-48b3-a5c2-564f1f34cd20",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Orders",
       "type": "n8n-nodes-base.httpRequest",
@@ -120,8 +120,8 @@
     {
       "id": "0ddb7501-5085-40cf-a518-95b7e31fab71",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Support",
       "type": "n8n-nodes-base.httpRequest",
@@ -161,8 +161,8 @@
     {
       "id": "c10bcb57-446e-42ae-a90b-ab78d94dac30",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Site traffic",
       "type": "n8n-nodes-base.httpRequest",
@@ -206,8 +206,8 @@
     {
       "id": "635da5aa-34a8-4aef-a80a-d70b0f2abecc",
       "position": [
-        1200,
-        0
+        1300,
+        90
       ],
       "name": "Work out the week",
       "type": "n8n-nodes-base.code",
@@ -219,8 +219,8 @@
     {
       "id": "b2f0ee23-8279-4608-ac96-f15e51b2cf10",
       "position": [
-        1440,
-        0
+        1560,
+        90
       ],
       "name": "Write the summary",
       "type": "n8n-nodes-base.httpRequest",
@@ -252,8 +252,8 @@
     {
       "id": "99be993a-d78a-4dcf-a48f-4a5405f08564",
       "position": [
-        1680,
-        0
+        1820,
+        90
       ],
       "name": "Compose",
       "type": "n8n-nodes-base.code",
@@ -265,8 +265,8 @@
     {
       "id": "0043e746-634d-4b10-ad1a-0762ad46d5e4",
       "position": [
-        1920,
-        0
+        2080,
+        90
       ],
       "name": "Post to the channel",
       "type": "n8n-nodes-base.httpRequest",
@@ -298,8 +298,8 @@
     {
       "id": "3dc25152-556c-4195-a8f4-3cf8314a708e",
       "position": [
-        2160,
-        0
+        2340,
+        90
       ],
       "name": "Email the owner",
       "type": "n8n-nodes-base.httpRequest",
@@ -330,8 +330,8 @@
     {
       "id": "986b4855-5540-4b83-aa75-8c9939ef8d1f",
       "position": [
-        2400,
-        0
+        2600,
+        90
       ],
       "name": "Check in",
       "type": "n8n-nodes-base.httpRequest",

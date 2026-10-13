@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Webhook to a table\nThe smallest useful workflow: receive a form post, keep the fields you named, store a row, answer the sender.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/intake`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Webhook to a table\nThe smallest useful workflow: receive a form post, keep the fields you named, store a row, answer the sender.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/intake`"
       }
     },
     {
       "id": "856da8c4-1ef7-40da-a9e2-1714e5b10edb",
       "position": [
         0,
-        0
+        90
       ],
       "name": "Form posted",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "2ca64af3-be2f-49c3-a4d8-e60878c2ea43",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Keep known fields",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "b347c1b3-65ab-4277-ad35-d0982b273dc1",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Store the row",
       "type": "n8n-nodes-base.httpRequest",
@@ -81,8 +81,8 @@
     {
       "id": "9fc6b43c-2a82-4322-a503-cd2ec12ef109",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Thanks",
       "type": "n8n-nodes-base.respondToWebhook",

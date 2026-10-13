@@ -55,15 +55,16 @@ export class PeopleNewHireOnboardingWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## People · New hire onboarding
 When someone is hired, creates their checklist, books their first-week meetings, tells the people who need to act, and sends the welcome email on the right morning.
 
-**Needs:** CALENDAR_API_KEY, CALENDAR_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CALENDAR_API_KEY, CALENDAR_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/operations\``,
     };
 
@@ -73,7 +74,7 @@ When someone is hired, creates their checklist, books their first-week meetings,
         name: 'Hire confirmed',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     HireConfirmed = {
         httpMethod: 'POST',
@@ -87,7 +88,7 @@ When someone is hired, creates their checklist, books their first-week meetings,
         name: 'Read the hire',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     ReadTheHire = {
         jsCode: `const h = $input.first().json.body ?? {};
@@ -100,7 +101,7 @@ return [{ json: { employee_id: String(h.id ?? h.email), email: String(h.email).t
         name: 'Seen before?',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [480, 0],
+        position: [520, 180],
     })
     SeenBefore = {
         workflowId: {
@@ -116,7 +117,7 @@ return [{ json: { employee_id: String(h.id ?? h.email), email: String(h.email).t
         name: 'New hire?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [720, 0],
+        position: [780, 180],
     })
     NewHire = {
         conditions: {
@@ -148,7 +149,7 @@ return [{ json: { employee_id: String(h.id ?? h.email), email: String(h.email).t
         name: 'Build the checklist',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [960, -90],
+        position: [1040, 90],
     })
     BuildTheChecklist = {
         jsCode: `const h = $input.first().json;
@@ -169,7 +170,7 @@ return tasks.map((t) => ({ json: { ...t, employee_id: h.employee_id, employee: h
         name: 'Save the task',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, 0],
+        position: [1300, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -199,7 +200,7 @@ return tasks.map((t) => ({ json: { ...t, employee_id: h.employee_id, employee: h
         name: 'Book first-day welcome',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 180],
         onError: 'continueRegularOutput',
         executeOnce: true,
         retryOnFail: true,
@@ -232,7 +233,7 @@ return tasks.map((t) => ({ json: { ...t, employee_id: h.employee_id, employee: h
         name: 'Schedule the welcome email',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, 0],
+        position: [1820, 180],
         executeOnce: true,
         retryOnFail: true,
         maxTries: 3,
@@ -264,7 +265,7 @@ return tasks.map((t) => ({ json: { ...t, employee_id: h.employee_id, employee: h
         name: 'Team message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1920, 0],
+        position: [2080, 180],
     })
     TeamMessage = {
         jsCode: `const h = $("New hire?").first().json;
@@ -276,7 +277,7 @@ return [{ json: { channel: "#people", level: "info", text: h.name + " (" + h.rol
         name: 'Tell the team',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2160, 0],
+        position: [2340, 180],
     })
     TellTheTeam = {
         workflowId: {
@@ -292,7 +293,7 @@ return [{ json: { channel: "#people", level: "info", text: h.name + " (" + h.rol
         name: 'Already set up',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [960, 90],
+        position: [1040, 270],
     })
     AlreadySetUp = {};
 

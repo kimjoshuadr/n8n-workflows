@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Retry with growing waits\nCalls an address up to four times, waiting longer each time, and reports clearly whether it finally worked.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Retry with growing waits\nCalls an address up to four times, waiting longer each time, and reports clearly whether it finally worked.\n\n**Platforms:** none, this is logic only\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/reliability`"
       }
     },
     {
       "id": "c524340f-bc14-4db8-a123-97eff6b962e4",
       "position": [
         0,
-        0
+        180
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "569708b4-c93f-4fc8-a8a1-d06a965f239c",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Begin",
       "type": "n8n-nodes-base.set",
@@ -68,8 +68,8 @@
     {
       "id": "3cc0b145-84f2-40a8-a6c0-2017b12a23de",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Try",
       "type": "n8n-nodes-base.httpRequest",
@@ -89,8 +89,8 @@
     {
       "id": "0e387f0a-d9fb-472d-ac51-aeed0248d14c",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Worked",
       "type": "n8n-nodes-base.set",
@@ -119,8 +119,8 @@
     {
       "id": "1d5f0688-07b8-4ecd-a0ba-851817c3f923",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Again?",
       "type": "n8n-nodes-base.code",
@@ -132,8 +132,8 @@
     {
       "id": "b530af44-cdf7-42ff-a3e9-e5f9eb2f2070",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Attempts left?",
       "type": "n8n-nodes-base.if",
@@ -166,8 +166,8 @@
     {
       "id": "a6bd8d77-c15a-4bfd-a13f-66a7d53458d4",
       "position": [
-        1200,
-        -90
+        1300,
+        90
       ],
       "name": "Back off",
       "type": "n8n-nodes-base.wait",
@@ -181,8 +181,8 @@
     {
       "id": "cc232b8c-c5d2-4e8b-a6b6-c481bc556fee",
       "position": [
-        1200,
-        90
+        1300,
+        270
       ],
       "name": "Gave up",
       "type": "n8n-nodes-base.set",

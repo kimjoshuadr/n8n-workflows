@@ -37,15 +37,15 @@ export class BlockRemoveDuplicatesByKeyWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Remove duplicates by key
 Keeps the first of each item sharing a key, after normalising it, so 'A@B.co ' and 'a@b.co' count as one.
 
-**Needs:** nothing external
+**Platforms:** none, this is logic only
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/lists\``,
     };
 
@@ -54,7 +54,7 @@ Keeps the first of each item sharing a key, after normalising it, so 'A@B.co ' a
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -65,7 +65,7 @@ Keeps the first of each item sharing a key, after normalising it, so 'A@B.co ' a
         name: 'Dedupe',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 90],
     })
     Dedupe = {
         jsCode: `const seen = new Set();

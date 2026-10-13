@@ -49,15 +49,16 @@ export class MonitoringBackupVerificationWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Monitoring · Backup verification
 Checks every morning that last night's backup exists, is recent and is not suspiciously small. A backup nobody checks is a hope, not a backup.
 
-**Needs:** BACKUP_API_KEY, BACKUP_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** BACKUP_API_KEY, BACKUP_BASE_URL, DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/monitoring\``,
     };
 
@@ -66,7 +67,7 @@ Checks every morning that last night's backup exists, is recent and is not suspi
         name: '07:00 daily',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     _0700Daily = {
         rule: {
@@ -84,7 +85,7 @@ Checks every morning that last night's backup exists, is recent and is not suspi
         name: 'Latest backup',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -112,7 +113,7 @@ Checks every morning that last night's backup exists, is recent and is not suspi
         name: 'Judge it',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 180],
     })
     JudgeIt = {
         jsCode: `const b = $input.first().json;
@@ -133,7 +134,7 @@ return [{ json: { ok: problems.length === 0, problems, size_mb: b?.size_bytes ? 
         name: 'Record the check',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 180],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -165,7 +166,7 @@ return [{ json: { ok: problems.length === 0, problems, size_mb: b?.size_bytes ? 
         name: 'Healthy?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     Healthy = {
         conditions: {
@@ -197,7 +198,7 @@ return [{ json: { ok: problems.length === 0, problems, size_mb: b?.size_bytes ? 
         name: 'Problem message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, -90],
+        position: [1300, 90],
     })
     ProblemMessage = {
         jsCode: 'return [{ json: { level: "critical", text: "Backup check failed: " + $("Judge it").first().json.problems.join("; ") + "." } }];',
@@ -208,7 +209,7 @@ return [{ json: { ok: problems.length === 0, problems, size_mb: b?.size_bytes ? 
         name: 'Alert',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1440, 0],
+        position: [1560, 180],
     })
     Alert = {
         workflowId: {
@@ -224,7 +225,7 @@ return [{ json: { ok: problems.length === 0, problems, size_mb: b?.size_bytes ? 
         name: 'All good',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1200, 90],
+        position: [1300, 270],
     })
     AllGood = {};
 

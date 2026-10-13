@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Order ops · Abandoned cart recovery\nEvery half hour, writes once to people who left a cart over an hour ago and have not ordered since.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
+        "width": 640,
+        "height": 230,
+        "content": "## Order ops · Abandoned cart recovery\nEvery half hour, writes once to people who left a cart over an hour ago and have not ordered since.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/order-ops`"
       }
     },
     {
       "id": "bf374b17-7bf5-455e-aa1b-cd26e7b0b724",
       "position": [
         0,
-        0
+        90
       ],
       "name": "Every 30 minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "ef20ccc2-6d8f-4926-a900-55032fbf7a07",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Open carts",
       "type": "n8n-nodes-base.httpRequest",
@@ -82,8 +82,8 @@
     {
       "id": "f596ebf9-a01e-4790-a4f2-6e03f5bd4c6e",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Old enough, with an email",
       "type": "n8n-nodes-base.code",
@@ -95,8 +95,8 @@
     {
       "id": "45339362-e072-4837-af59-ff251cb63367",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Ordered since?",
       "type": "n8n-nodes-base.httpRequest",
@@ -138,8 +138,8 @@
     {
       "id": "4bd795cf-d826-4fed-abe3-f96e4f87ce3f",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Keep the ones who did not",
       "type": "n8n-nodes-base.code",
@@ -151,8 +151,8 @@
     {
       "id": "7a6181b9-c613-4c6f-aaf1-dc55d26ca9a6",
       "position": [
-        1200,
-        0
+        1300,
+        90
       ],
       "name": "Send the reminder",
       "type": "n8n-nodes-base.httpRequest",
@@ -183,8 +183,8 @@
     {
       "id": "bffa7485-a137-422c-a30b-1fc7f3ea835d",
       "position": [
-        1440,
-        0
+        1560,
+        90
       ],
       "name": "Mark reminded",
       "type": "n8n-nodes-base.httpRequest",

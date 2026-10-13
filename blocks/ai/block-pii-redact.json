@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Mask personal data before a model sees it\nReplaces emails, phone numbers and card numbers with placeholders, and hands back the map to restore them afterwards.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/ai`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Mask personal data before a model sees it\nReplaces emails, phone numbers and card numbers with placeholders, and hands back the map to restore them afterwards.\n\n**Platforms:** none, this is logic only\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/ai`"
       }
     },
     {
       "id": "333de384-e0f8-4a0f-a8aa-7c5f7dbb79f2",
       "position": [
         0,
-        0
+        90
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "65d9d932-6242-47ac-a993-46fc80c6fa8a",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Redact",
       "type": "n8n-nodes-base.code",

@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Content pipeline · Share what was published\nEvery hour, writes a post per network for anything newly published and schedules it. One network failing does not stop the others.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SOCIAL_API_KEY, SOCIAL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/content-pipeline`"
+        "width": 640,
+        "height": 230,
+        "content": "## Content pipeline · Share what was published\nEvery hour, writes a post per network for anything newly published and schedules it. One network failing does not stop the others.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SOCIAL_API_KEY, SOCIAL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/content-pipeline`"
       }
     },
     {
       "id": "036d7389-17dd-4ba5-a054-9e611fda1d69",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Hourly",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "d817ebe2-d13c-4dc0-ab13-f027000f2d9a",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Published, not shared",
       "type": "n8n-nodes-base.httpRequest",
@@ -82,8 +82,8 @@
     {
       "id": "b1be9994-856d-42cc-ab3a-c475e1fa85d7",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Anything new?",
       "type": "n8n-nodes-base.if",
@@ -116,8 +116,8 @@
     {
       "id": "4592c543-8ffe-466b-ae2b-8a73509434b2",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
       "name": "Each article",
       "type": "n8n-nodes-base.splitInBatches",
@@ -130,8 +130,8 @@
     {
       "id": "c1c10a8f-f873-4cba-a408-0c73981fe02a",
       "position": [
-        960,
-        -90
+        1040,
+        90
       ],
       "name": "Write the posts",
       "type": "n8n-nodes-base.httpRequest",
@@ -163,8 +163,8 @@
     {
       "id": "59b33689-10df-428f-a8c2-a1774b912f31",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "One item per network",
       "type": "n8n-nodes-base.code",
@@ -176,8 +176,8 @@
     {
       "id": "2306ed84-5499-4b7e-a44b-7b5532034fa9",
       "position": [
-        1440,
-        0
+        1560,
+        180
       ],
       "name": "Schedule the post",
       "type": "n8n-nodes-base.httpRequest",
@@ -209,8 +209,8 @@
     {
       "id": "f6063fae-3d9d-465a-a446-c1d7489e7cea",
       "position": [
-        1680,
-        0
+        1820,
+        180
       ],
       "name": "Mark shared",
       "type": "n8n-nodes-base.httpRequest",
@@ -250,8 +250,8 @@
     {
       "id": "c218a248-0804-4ebb-aa86-f712bd24fd60",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Nothing new",
       "type": "n8n-nodes-base.noOp",
@@ -261,8 +261,8 @@
     {
       "id": "978b2aea-298a-45ad-ad79-9933b7b48ea6",
       "position": [
-        960,
-        90
+        1040,
+        270
       ],
       "name": "Done",
       "type": "n8n-nodes-base.noOp",

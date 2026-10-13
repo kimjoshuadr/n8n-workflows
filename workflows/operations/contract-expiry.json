@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Contracts · Expiry reminders\nWarns the owner of each contract 60, 30 and 7 days before it ends, so renewals are a decision and never an accident.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
+        "width": 640,
+        "height": 230,
+        "content": "## Contracts · Expiry reminders\nWarns the owner of each contract 60, 30 and 7 days before it ends, so renewals are a decision and never an accident.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
       }
     },
     {
       "id": "7bd67fa1-8654-4e8a-a7a7-626f90c3f5fb",
       "position": [
         0,
-        0
+        90
       ],
       "name": "Monday 09:00",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "88d0cbd0-8640-4b5c-a523-473a3b2ee1ef",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Active contracts",
       "type": "n8n-nodes-base.httpRequest",
@@ -78,8 +78,8 @@
     {
       "id": "6d080424-87dd-4da7-a5ca-bb31cd68a699",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Which warning is due?",
       "type": "n8n-nodes-base.code",
@@ -91,8 +91,8 @@
     {
       "id": "275001f5-3bcb-47dd-a1c8-3bb2e7022143",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Warn the owner",
       "type": "n8n-nodes-base.httpRequest",
@@ -123,8 +123,8 @@
     {
       "id": "2ecddad7-4372-4f22-acd2-c41b5093bfbb",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Record the warning",
       "type": "n8n-nodes-base.httpRequest",

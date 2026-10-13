@@ -51,15 +51,16 @@ export class FeedbackRouteSurveyScoresWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -480],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Feedback · Route survey scores
 Sends each survey score where it is useful: unhappy customers to a person today, happy ones to a review request, and every score to the record.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/sales\``,
     };
 
@@ -69,7 +70,7 @@ Sends each survey score where it is useful: unhappy customers to a person today,
         name: 'Survey answered',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 270],
     })
     SurveyAnswered = {
         httpMethod: 'POST',
@@ -83,7 +84,7 @@ Sends each survey score where it is useful: unhappy customers to a person today,
         name: 'Read the score',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 270],
     })
     ReadTheScore = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -97,7 +98,7 @@ return [{ json: { email: String(b.email ?? "").toLowerCase(), score, comment: St
         name: 'Record it',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -128,7 +129,7 @@ return [{ json: { email: String(b.email ?? "").toLowerCase(), score, comment: St
         name: 'Which group?',
         type: 'n8n-nodes-base.switch',
         version: 3.2,
-        position: [720, 0],
+        position: [780, 270],
     })
     WhichGroup = {
         rules: {
@@ -195,7 +196,7 @@ return [{ json: { email: String(b.email ?? "").toLowerCase(), score, comment: St
         name: 'Open a ticket',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, -180],
+        position: [1040, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -226,7 +227,7 @@ return [{ json: { email: String(b.email ?? "").toLowerCase(), score, comment: St
         name: 'Detractor message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 0],
+        position: [1300, 270],
     })
     DetractorMessage = {
         jsCode: `const s = $("Read the score").first().json;
@@ -238,7 +239,7 @@ return [{ json: { level: "warn", text: s.email + " scored us " + s.score + "/10"
         name: 'Tell customer success',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1440, 0],
+        position: [1560, 270],
     })
     TellCustomerSuccess = {
         workflowId: {
@@ -254,7 +255,7 @@ return [{ json: { level: "warn", text: s.email + " scored us " + s.score + "/10"
         name: 'Invite a public review',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, 0],
+        position: [1040, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -285,7 +286,7 @@ return [{ json: { level: "warn", text: s.email + " scored us " + s.score + "/10"
         name: 'Recorded only',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [960, 180],
+        position: [1040, 450],
     })
     RecordedOnly = {};
 

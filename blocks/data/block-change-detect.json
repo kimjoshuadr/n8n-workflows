@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Has this changed since last time?\nCompares a record with the copy stored last run and reports which fields changed, so downstream work only happens on a real change.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Has this changed since last time?\nCompares a record with the copy stored last run and reports which fields changed, so downstream work only happens on a real change.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
       }
     },
     {
       "id": "02c67ad5-888a-4e3a-a8f4-bb6bba708814",
       "position": [
         0,
-        0
+        90
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "5fb4ec90-8354-4a87-a45d-c8790a5615ab",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Last copy",
       "type": "n8n-nodes-base.httpRequest",
@@ -71,8 +71,8 @@
     {
       "id": "692aaa04-53ea-44f6-ac2d-d448361b6deb",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Compare",
       "type": "n8n-nodes-base.code",
@@ -84,8 +84,8 @@
     {
       "id": "62205f27-328b-4074-a301-b75394c0ecbc",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Store this copy",
       "type": "n8n-nodes-base.httpRequest",
@@ -129,8 +129,8 @@
     {
       "id": "4672e0d3-5b8e-4b68-abb9-3ed657a11084",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Answer",
       "type": "n8n-nodes-base.set",

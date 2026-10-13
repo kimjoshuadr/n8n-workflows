@@ -39,15 +39,16 @@ export class BlockConvertACurrencyAmountWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Convert a currency amount
 Converts an amount with today's rate, rounds like money, and says so when the rate could not be fetched instead of returning a wrong number.
 
-**Needs:** RATES_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** RATES_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/data\``,
     };
 
@@ -56,7 +57,7 @@ Converts an amount with today's rate, rounds like money, and says so when the ra
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -67,7 +68,7 @@ Converts an amount with today's rate, rounds like money, and says so when the ra
         name: "Today's rate",
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -99,7 +100,7 @@ Converts an amount with today's rate, rounds like money, and says so when the ra
         name: 'Convert',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 90],
     })
     Convert = {
         jsCode: `const req = $("When called").first().json;

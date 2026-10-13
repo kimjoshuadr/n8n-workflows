@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Finance · Supplier invoice intake\nReads a supplier invoice with a model, checks the arithmetic and the duplicate history itself, and files it or sends it for review.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
+        "width": 640,
+        "height": 230,
+        "content": "## Finance · Supplier invoice intake\nReads a supplier invoice with a model, checks the arithmetic and the duplicate history itself, and files it or sends it for review.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
       }
     },
     {
       "id": "2d441b15-b385-429f-aa5b-7bed507d0641",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Invoice received",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "03e231f0-d86d-4ba5-a2de-0b0b5a10f8bb",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Read the upload",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "be6efcea-4980-4068-ab30-c0b58ec2b4e2",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Extract the fields",
       "type": "n8n-nodes-base.httpRequest",
@@ -82,8 +82,8 @@
     {
       "id": "d19b84c8-153d-4c12-a0ec-264645de9250",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Read the fields",
       "type": "n8n-nodes-base.code",
@@ -95,8 +95,8 @@
     {
       "id": "92aa97fc-c57f-4b53-ae7f-ce0206030bf0",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Seen this invoice?",
       "type": "n8n-nodes-base.httpRequest",
@@ -138,8 +138,8 @@
     {
       "id": "10a82e1d-ac43-4aa1-ae61-c8eff25bac77",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "Check it",
       "type": "n8n-nodes-base.code",
@@ -151,8 +151,8 @@
     {
       "id": "7ca9ce37-ace8-4cee-aeb4-4e3144e09c43",
       "position": [
-        1440,
-        0
+        1560,
+        180
       ],
       "name": "Clean?",
       "type": "n8n-nodes-base.if",
@@ -185,8 +185,8 @@
     {
       "id": "cd45c33b-3b28-49ba-ae08-c9d3cc192e7f",
       "position": [
-        1680,
-        -90
+        1820,
+        90
       ],
       "name": "File it",
       "type": "n8n-nodes-base.httpRequest",
@@ -217,8 +217,8 @@
     {
       "id": "c799b624-8903-400f-a667-8b17653a9225",
       "position": [
-        1680,
-        90
+        1820,
+        270
       ],
       "name": "Queue for review",
       "type": "n8n-nodes-base.httpRequest",
@@ -249,8 +249,8 @@
     {
       "id": "06b8e197-286b-4745-ae65-385155019379",
       "position": [
-        1920,
-        0
+        2080,
+        180
       ],
       "name": "Review message",
       "type": "n8n-nodes-base.code",
@@ -262,8 +262,8 @@
     {
       "id": "6d3870fe-3a81-410a-a75d-811f7a71ab28",
       "position": [
-        2160,
-        0
+        2340,
+        180
       ],
       "name": "Tell finance",
       "type": "n8n-nodes-base.executeWorkflow",

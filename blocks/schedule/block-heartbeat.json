@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Check in with the heartbeat monitor\nThe two nodes a scheduled workflow adds so the heartbeat monitor can tell when it stops running.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/schedule`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Check in with the heartbeat monitor\nThe two nodes a scheduled workflow adds so the heartbeat monitor can tell when it stops running.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/schedule`"
       }
     },
     {
       "id": "0d5e14a1-4a8a-4110-a3f8-9061685c8175",
       "position": [
         0,
-        0
+        90
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "25f69045-c3d2-4b4a-a5bc-5407849851d3",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Check in",
       "type": "n8n-nodes-base.httpRequest",

@@ -50,15 +50,15 @@ export class BlockRetryWithGrowingWaitsWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Retry with growing waits
 Calls an address up to four times, waiting longer each time, and reports clearly whether it finally worked.
 
-**Needs:** nothing external
+**Platforms:** none, this is logic only
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/reliability\``,
     };
 
@@ -67,7 +67,7 @@ Calls an address up to four times, waiting longer each time, and reports clearly
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 180],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -78,7 +78,7 @@ Calls an address up to four times, waiting longer each time, and reports clearly
         name: 'Begin',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [240, 0],
+        position: [260, 180],
     })
     Begin = {
         assignments: {
@@ -112,7 +112,7 @@ Calls an address up to four times, waiting longer each time, and reports clearly
         name: 'Try',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 180],
         onError: 'continueErrorOutput',
     })
     Try_ = {
@@ -131,7 +131,7 @@ Calls an address up to four times, waiting longer each time, and reports clearly
         name: 'Worked',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [720, -90],
+        position: [780, 90],
     })
     Worked = {
         assignments: {
@@ -159,7 +159,7 @@ Calls an address up to four times, waiting longer each time, and reports clearly
         name: 'Again?',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 90],
+        position: [780, 270],
     })
     Again = {
         jsCode: `const prev = $("Begin").first().json;
@@ -172,7 +172,7 @@ return [{ json: { url: prev.url, payload: prev.payload, attempt, give_up: attemp
         name: 'Attempts left?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     AttemptsLeft = {
         conditions: {
@@ -205,7 +205,7 @@ return [{ json: { url: prev.url, payload: prev.payload, attempt, give_up: attemp
         name: 'Back off',
         type: 'n8n-nodes-base.wait',
         version: 1.1,
-        position: [1200, -90],
+        position: [1300, 90],
     })
     BackOff = {
         amount: 2,
@@ -217,7 +217,7 @@ return [{ json: { url: prev.url, payload: prev.payload, attempt, give_up: attemp
         name: 'Gave up',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [1200, 90],
+        position: [1300, 270],
     })
     GaveUp = {
         assignments: {

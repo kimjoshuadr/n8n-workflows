@@ -49,15 +49,16 @@ export class BlockIncrementalSyncWithABookmarkWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Incremental sync with a bookmark
 The skeleton of every reliable sync: read the bookmark, fetch what is newer, write it, and only then move the bookmark.
 
-**Needs:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/data\``,
     };
 
@@ -66,7 +67,7 @@ The skeleton of every reliable sync: read the bookmark, fetch what is newer, wri
         name: 'Run manually',
         type: 'n8n-nodes-base.manualTrigger',
         version: 1,
-        position: [0, 0],
+        position: [0, 180],
     })
     RunManually = {};
 
@@ -75,7 +76,7 @@ The skeleton of every reliable sync: read the bookmark, fetch what is newer, wri
         name: 'Read bookmark',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -112,7 +113,7 @@ The skeleton of every reliable sync: read the bookmark, fetch what is newer, wri
         name: 'Fetch newer',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -148,7 +149,7 @@ The skeleton of every reliable sync: read the bookmark, fetch what is newer, wri
         name: 'Newest id',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 180],
     })
     NewestId = {
         jsCode: `const rows = $input.first().json.results ?? [];
@@ -160,7 +161,7 @@ return [{ json: { rows, count: rows.length, newest: rows.length ? String(Math.ma
         name: 'Anything new?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     AnythingNew = {
         conditions: {
@@ -192,7 +193,7 @@ return [{ json: { rows, count: rows.length, newest: rows.length ? String(Math.ma
         name: 'Write rows',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, -90],
+        position: [1300, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -222,7 +223,7 @@ return [{ json: { rows, count: rows.length, newest: rows.length ? String(Math.ma
         name: 'Move bookmark',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -265,7 +266,7 @@ return [{ json: { rows, count: rows.length, newest: rows.length ? String(Math.ma
         name: 'Up to date',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1200, 90],
+        position: [1300, 270],
     })
     UpToDate = {};
 

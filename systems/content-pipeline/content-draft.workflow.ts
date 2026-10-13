@@ -61,15 +61,16 @@ export class ContentPipelineResearchAndDraftWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Content pipeline · Research and draft
 Takes the next topic off the list, researches it, drafts the article, and asks a person to approve it. Nothing is published from here.
 
-**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SEARCH_API_KEY, SEARCH_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SEARCH_API_KEY, SEARCH_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/content-pipeline\``,
     };
 
@@ -78,7 +79,7 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
         name: 'Weekdays 07:00',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     Weekdays0700 = {
         rule: {
@@ -96,7 +97,7 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
         name: 'Next topic',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -137,7 +138,7 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
         name: 'Is there one?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     IsThereOne = {
         conditions: {
@@ -169,7 +170,7 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
         name: 'Claim the topic',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, -90],
+        position: [780, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -208,7 +209,7 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
         name: 'Research',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, 0],
+        position: [1040, 180],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -239,7 +240,7 @@ Takes the next topic off the list, researches it, drafts the article, and asks a
         name: 'Collect sources',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 0],
+        position: [1300, 180],
     })
     CollectSources = {
         jsCode: `const t = $("Is there one?").first().json;
@@ -252,7 +253,7 @@ return [{ json: { topic_id: t.id, topic: t.topic, sources: results.map((r) => ({
         name: 'Outline',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -290,7 +291,7 @@ return [{ json: { topic_id: t.id, topic: t.topic, sources: results.map((r) => ({
         name: 'Read the outline',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, 0],
+        position: [1820, 180],
     })
     ReadTheOutline = {
         jsCode: `const before = $("Collect sources").all();
@@ -313,7 +314,7 @@ return out;`,
         name: 'Usable outline?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1920, 0],
+        position: [2080, 180],
     })
     UsableOutline = {
         conditions: {
@@ -345,7 +346,7 @@ return out;`,
         name: 'Write the draft',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2160, -90],
+        position: [2340, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -382,7 +383,7 @@ return out;`,
         name: 'Save the draft',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2400, 0],
+        position: [2600, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -413,7 +414,7 @@ return out;`,
         name: 'Ask for approval',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2640, 0],
+        position: [2860, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -444,7 +445,7 @@ return out;`,
         name: 'Return the topic',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2160, 90],
+        position: [2340, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -483,7 +484,7 @@ return out;`,
         name: 'Queue is empty',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [720, 90],
+        position: [780, 270],
     })
     QueueIsEmpty = {};
 

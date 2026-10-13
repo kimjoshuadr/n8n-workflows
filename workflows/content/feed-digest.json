@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Content · Industry news digest\nEach Friday, reads the feeds you follow, drops what was already sent, and emails a short digest of what is new.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
+        "width": 640,
+        "height": 230,
+        "content": "## Content · Industry news digest\nEach Friday, reads the feeds you follow, drops what was already sent, and emails a short digest of what is new.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/content`"
       }
     },
     {
       "id": "cc9d4449-7460-44ef-a9f2-fa35b2b73ace",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Friday 15:00",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "177a9f15-bba1-4e84-af8d-87fa87c9c578",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Feeds to read",
       "type": "n8n-nodes-base.httpRequest",
@@ -69,8 +69,8 @@
     {
       "id": "af78b7b8-9ef8-4c32-a03a-2aae5929a03e",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Fetch the feed",
       "type": "n8n-nodes-base.httpRequest",
@@ -87,8 +87,8 @@
     {
       "id": "b5b5a71e-36ae-40cf-a4cf-a539b9df84a0",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Collect the items",
       "type": "n8n-nodes-base.code",
@@ -100,8 +100,8 @@
     {
       "id": "0b5672e7-ce8f-4afa-aa63-7ee83469328b",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Claim as seen",
       "type": "n8n-nodes-base.httpRequest",
@@ -142,8 +142,8 @@
     {
       "id": "2eb7e7c6-d7ce-4959-acd8-37877e2c7ef5",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "Only the new ones",
       "type": "n8n-nodes-base.code",
@@ -155,8 +155,8 @@
     {
       "id": "04fdcfe1-4e46-42f6-a010-4d958b1cf685",
       "position": [
-        1440,
-        0
+        1560,
+        180
       ],
       "name": "Anything new?",
       "type": "n8n-nodes-base.if",
@@ -189,8 +189,8 @@
     {
       "id": "2f1e68eb-7eb0-4d16-ae21-bc626f046626",
       "position": [
-        1680,
-        -90
+        1820,
+        90
       ],
       "name": "Write the digest",
       "type": "n8n-nodes-base.httpRequest",
@@ -222,8 +222,8 @@
     {
       "id": "1961c6f0-8d98-4f07-a0c4-0e729f31c566",
       "position": [
-        1920,
-        0
+        2080,
+        180
       ],
       "name": "Send the digest",
       "type": "n8n-nodes-base.httpRequest",
@@ -254,8 +254,8 @@
     {
       "id": "66d3f369-29ed-409e-a4e9-9b6197aa6b76",
       "position": [
-        1680,
-        90
+        1820,
+        270
       ],
       "name": "Quiet week",
       "type": "n8n-nodes-base.noOp",

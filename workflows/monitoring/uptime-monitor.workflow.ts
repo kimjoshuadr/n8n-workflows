@@ -47,15 +47,16 @@ export class MonitoringUptimeChecksWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Monitoring · Uptime checks
 Checks each site every five minutes, alerts after two failures in a row, and reports how long it was down once it recovers.
 
-**Needs:** DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/monitoring\``,
     };
 
@@ -64,7 +65,7 @@ Checks each site every five minutes, alerts after two failures in a row, and rep
         name: 'Every 5 minutes',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     Every5Minutes = {
         rule: {
@@ -82,7 +83,7 @@ Checks each site every five minutes, alerts after two failures in a row, and rep
         name: 'Sites to watch',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -110,7 +111,7 @@ Checks each site every five minutes, alerts after two failures in a row, and rep
         name: 'Request the site',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 90],
         onError: 'continueRegularOutput',
     })
     RequestTheSite = {
@@ -132,7 +133,7 @@ Checks each site every five minutes, alerts after two failures in a row, and rep
         name: 'Decide the state',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 90],
     })
     DecideTheState = {
         jsCode: `const monitors = $("Sites to watch").all();
@@ -156,7 +157,7 @@ return $input.all().map((item, i) => {
         name: 'Save the state',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, 0],
+        position: [1040, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -196,7 +197,7 @@ return $input.all().map((item, i) => {
         name: 'Alerts for changes',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 0],
+        position: [1300, 90],
     })
     AlertsForChanges = {
         jsCode: 'return $("Decide the state").all().map((i) => i.json).filter((m) => m.changed).map((m) => ({ json: { level: m.state === "down" ? "critical" : "info", text: m.state === "down" ? m.name + " is down (" + (m.status || "no response") + "). " + m.url : m.name + " is back up after " + m.minutes_down + " min." } }));',
@@ -207,7 +208,7 @@ return $input.all().map((item, i) => {
         name: 'Alert',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1440, 0],
+        position: [1560, 90],
     })
     Alert = {
         workflowId: {

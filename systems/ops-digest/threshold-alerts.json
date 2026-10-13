@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Ops digest · Threshold alerts\nChecks each watched number hourly and alerts when it crosses its line, and again when it recovers. It does not repeat itself in between.\n\n**Needs:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/ops-digest`"
+        "width": 640,
+        "height": 230,
+        "content": "## Ops digest · Threshold alerts\nChecks each watched number hourly and alerts when it crosses its line, and again when it recovers. It does not repeat itself in between.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/ops-digest`"
       }
     },
     {
       "id": "1a6ad27d-7a53-4d76-a8c2-44f8b619a7b8",
       "position": [
         0,
-        0
+        90
       ],
       "name": "Hourly",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "ed15231e-e603-486a-a912-74d2e74361e2",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Watched metrics",
       "type": "n8n-nodes-base.httpRequest",
@@ -69,8 +69,8 @@
     {
       "id": "5be3ce3c-3733-4b61-ae89-0d385cc71629",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Which changed state?",
       "type": "n8n-nodes-base.code",
@@ -82,8 +82,8 @@
     {
       "id": "92b216ff-2d58-4282-ad84-831c4797cf30",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Remember the state",
       "type": "n8n-nodes-base.httpRequest",
@@ -123,8 +123,8 @@
     {
       "id": "4e3d101a-2c1a-4380-a90f-59dce9486914",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Alert text",
       "type": "n8n-nodes-base.code",
@@ -136,8 +136,8 @@
     {
       "id": "354f2720-f0dc-410d-a01c-d2aa1e984f6c",
       "position": [
-        1200,
-        0
+        1300,
+        90
       ],
       "name": "Alert",
       "type": "n8n-nodes-base.executeWorkflow",

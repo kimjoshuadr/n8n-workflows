@@ -9,7 +9,8 @@ Fills in company, role and size for a new CRM contact from an enrichment service
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Enrichment, CRM |
+| Platforms | Enrichment, CRM |
+| Nodes | 10 |
 | Calls | `error-handler` |
 | Files | [`contact-enrichment.json`](contact-enrichment.json) · [`contact-enrichment.workflow.ts`](contact-enrichment.workflow.ts) |
 
@@ -55,7 +56,8 @@ Turns a call transcript into a CRM note and dated follow-up tasks, and asks a pe
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | LLM, CRM, Chat |
+| Platforms | LLM, CRM, Chat |
+| Nodes | 15 |
 | Calls | `notify`, `error-handler` |
 | Files | [`meeting-notes-to-crm.json`](meeting-notes-to-crm.json) · [`meeting-notes-to-crm.workflow.ts`](meeting-notes-to-crm.workflow.ts) |
 
@@ -112,7 +114,8 @@ A week after an order is delivered, asks for a review once. Customers with an op
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Email |
+| Platforms | Datastore, Email |
+| Nodes | 7 |
 | Calls | `error-handler` |
 | Files | [`review-request.json`](review-request.json) · [`review-request.workflow.ts`](review-request.workflow.ts) |
 
@@ -152,7 +155,8 @@ Sends each survey score where it is useful: unhappy customers to a person today,
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Datastore, Helpdesk, Email, Chat |
+| Platforms | Datastore, Helpdesk, Email, Chat |
+| Nodes | 9 |
 | Calls | `notify`, `error-handler` |
 | Files | [`nps-router.json`](nps-router.json) · [`nps-router.workflow.ts`](nps-router.workflow.ts) |
 
@@ -198,7 +202,8 @@ Registers someone for a webinar, sends the calendar invite, and reminds them a d
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Datastore, Email |
+| Platforms | Datastore, Email |
+| Nodes | 14 |
 | Calls | `error-handler` |
 | Files | [`webinar-registration.json`](webinar-registration.json) · [`webinar-registration.workflow.ts`](webinar-registration.workflow.ts) |
 

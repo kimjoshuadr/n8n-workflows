@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Split a document into overlapping chunks\nCuts long text into chunks that end on sentence boundaries and overlap by whole sentences, ready for embedding or a model's context window.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/ai`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Split a document into overlapping chunks\nCuts long text into chunks that end on sentence boundaries and overlap by whole sentences, ready for embedding or a model's context window.\n\n**Platforms:** none, this is logic only\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/ai`"
       }
     },
     {
       "id": "d8c40d0f-3482-448c-a148-58c7d4990a72",
       "position": [
         0,
-        0
+        90
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "8eb0eea8-551e-4cc2-ae4a-386a3f731b27",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Chunk",
       "type": "n8n-nodes-base.code",

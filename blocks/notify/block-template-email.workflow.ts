@@ -45,15 +45,16 @@ export class BlockTemplatedEmailWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Templated email
 One place to send an email from: fills a template, refuses to send with a placeholder left unfilled.
 
-**Needs:** EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** EMAIL_API_KEY, EMAIL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/notify\``,
     };
 
@@ -62,7 +63,7 @@ One place to send an email from: fills a template, refuses to send with a placeh
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 180],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -73,7 +74,7 @@ One place to send an email from: fills a template, refuses to send with a placeh
         name: 'Fill the template',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     FillTheTemplate = {
         jsCode: `return $input.all().map((item) => {
@@ -90,7 +91,7 @@ One place to send an email from: fills a template, refuses to send with a placeh
         name: 'Ready to send?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     ReadyToSend = {
         conditions: {
@@ -122,7 +123,7 @@ One place to send an email from: fills a template, refuses to send with a placeh
         name: 'Send',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, -90],
+        position: [780, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -152,7 +153,7 @@ One place to send an email from: fills a template, refuses to send with a placeh
         name: 'Sent',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [960, 0],
+        position: [1040, 180],
     })
     Sent = {
         assignments: {
@@ -174,7 +175,7 @@ One place to send an email from: fills a template, refuses to send with a placeh
         name: 'Held back',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [720, 90],
+        position: [780, 270],
     })
     HeldBack = {
         assignments: {

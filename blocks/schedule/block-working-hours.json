@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Working hours gate\nTells a caller whether now is inside working hours in a given time zone, so messages to people wait for the morning.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/schedule`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Working hours gate\nTells a caller whether now is inside working hours in a given time zone, so messages to people wait for the morning.\n\n**Platforms:** none, this is logic only\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/schedule`"
       }
     },
     {
       "id": "5b99faa1-deb2-4fa1-ac27-cee2502a44ea",
       "position": [
         0,
-        0
+        90
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "5e79154c-7c94-43ab-ad23-b7720503427a",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Is it working hours?",
       "type": "n8n-nodes-base.code",

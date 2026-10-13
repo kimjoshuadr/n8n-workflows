@@ -53,15 +53,16 @@ export class BrandMentionMonitorWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Brand · Mention monitor
 Checks hourly for new mentions of the brand, and raises the negative ones straight away with the text and the link.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SEARCH_API_KEY, SEARCH_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SEARCH_API_KEY, SEARCH_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/content\``,
     };
 
@@ -70,7 +71,7 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
         name: 'Hourly',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     Hourly = {
         rule: {
@@ -88,7 +89,7 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
         name: 'Search for mentions',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -118,7 +119,7 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
         name: 'One item per mention',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 90],
     })
     OneItemPerMention = {
         jsCode: 'return ($input.first().json.mentions ?? []).filter((m) => m.url && m.text).map((m) => ({ json: { url: m.url, text: String(m.text).slice(0, 1500), author: m.author ?? "unknown" } }));',
@@ -129,7 +130,7 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
         name: 'Claim as seen',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -169,7 +170,7 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
         name: 'New mention?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 90],
     })
     NewMention = {
         conditions: {
@@ -201,7 +202,7 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
         name: 'Read the tone',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, 0],
+        position: [1300, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -240,7 +241,7 @@ Checks hourly for new mentions of the brand, and raises the negative ones straig
         name: 'Read the verdict',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1440, 0],
+        position: [1560, 90],
     })
     ReadTheVerdict = {
         jsCode: `const before = $("New mention?").all();
@@ -263,7 +264,7 @@ return out;`,
         name: 'Needs attention?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1680, 0],
+        position: [1820, 90],
     })
     NeedsAttention = {
         conditions: {
@@ -295,7 +296,7 @@ return out;`,
         name: 'Write the alert',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1920, 0],
+        position: [2080, 90],
     })
     WriteTheAlert = {
         jsCode: 'return $input.all().map((i) => ({ json: { channel: "#brand", level: "warn", text: (i.json.sentiment === "unknown" ? "Unclassified" : "Negative") + " mention by " + i.json.author + ": \\"" + i.json.text.slice(0, 240) + "\\" " + i.json.url } }));',
@@ -306,7 +307,7 @@ return out;`,
         name: 'Raise it',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2160, 0],
+        position: [2340, 90],
     })
     RaiseIt = {
         workflowId: {

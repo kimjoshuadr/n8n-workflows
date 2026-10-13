@@ -41,15 +41,16 @@ export class BlockWebhookToATableWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Webhook to a table
 The smallest useful workflow: receive a form post, keep the fields you named, store a row, answer the sender.
 
-**Needs:** DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/intake\``,
     };
 
@@ -59,7 +60,7 @@ The smallest useful workflow: receive a form post, keep the fields you named, st
         name: 'Form posted',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 90],
     })
     FormPosted = {
         httpMethod: 'POST',
@@ -73,7 +74,7 @@ The smallest useful workflow: receive a form post, keep the fields you named, st
         name: 'Keep known fields',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 90],
     })
     KeepKnownFields = {
         jsCode: `const body = $input.first().json.body ?? {};
@@ -86,7 +87,7 @@ return [{ json: { ...row, received_at: new Date().toISOString() } }];`,
         name: 'Store the row',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -116,7 +117,7 @@ return [{ json: { ...row, received_at: new Date().toISOString() } }];`,
         name: 'Thanks',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [720, 0],
+        position: [780, 90],
     })
     Thanks = {
         respondWith: 'json',

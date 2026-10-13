@@ -37,15 +37,15 @@ export class BlockMaskPersonalDataBeforeAModelSeesItWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Mask personal data before a model sees it
 Replaces emails, phone numbers and card numbers with placeholders, and hands back the map to restore them afterwards.
 
-**Needs:** nothing external
+**Platforms:** none, this is logic only
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/ai\``,
     };
 
@@ -54,7 +54,7 @@ Replaces emails, phone numbers and card numbers with placeholders, and hands bac
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -65,7 +65,7 @@ Replaces emails, phone numbers and card numbers with placeholders, and hands bac
         name: 'Redact',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 90],
     })
     Redact = {
         jsCode: `return $input.all().map((item) => {

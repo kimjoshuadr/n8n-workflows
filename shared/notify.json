@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Reliability · Notify\nThe one place alerts leave from. Posts to chat, and falls back to email when chat is down, so an outage cannot hide its own alert.\n\n**Needs:** ALERT_CHANNEL, CHAT_API_KEY, CHAT_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
+        "width": 640,
+        "height": 230,
+        "content": "## Reliability · Notify\nThe one place alerts leave from. Posts to Slack, and falls back to a SendGrid email when Slack is down, so an outage cannot hide its own alert.\n\n**Platforms:** Slack, SendGrid\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `shared`"
       }
     },
     {
       "id": "26f9ecb8-11e0-4e4e-aadf-28060c93d6d5",
       "position": [
         0,
-        0
+        180
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "91932aa0-2f70-454f-a3cf-dbe4552ccb8d",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Compose",
       "type": "n8n-nodes-base.set",
@@ -44,7 +44,7 @@
             {
               "id": "cce3708b-632e-413d-ae7b-8d97df6d8604",
               "name": "channel",
-              "value": "={{ $json.channel ?? $env.ALERT_CHANNEL }}",
+              "value": "={{ $json.channel ?? '#ops-alerts' }}",
               "type": "string"
             },
             {
@@ -66,54 +66,55 @@
       }
     },
     {
-      "id": "180af92a-833b-42a7-a5f8-97c455ab1340",
+      "id": "8996d357-98cb-4aa8-a03c-0101debf7713",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
-      "name": "Post to chat",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.CHAT_BASE_URL }}/chat.postMessage",
-        "options": {
-          "timeout": 15000
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $json.channel }}"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.CHAT_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}"
+        "text": "={{ $json.text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "__CRED:slack__",
+          "name": "Slack"
+        }
+      }
     },
     {
-      "id": "f9988700-4056-45dc-a754-58072e82e41f",
+      "id": "13c8f07f-3a66-4c92-a260-350203014922",
       "position": [
-        720,
-        -90
+        780,
+        90
       ],
-      "name": "Delivered by chat",
+      "name": "Delivered by Slack",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "7918710d-13df-494d-a3bd-c1d1cb07df58",
+              "id": "682d65d0-762f-4c72-a079-09e95c7494a2",
               "name": "delivered",
-              "value": "={{ 'chat' }}",
+              "value": "={{ 'slack' }}",
               "type": "string"
             }
           ]
@@ -125,40 +126,39 @@
     {
       "id": "bc694fe5-059b-4dc6-a962-80a0ff8706f4",
       "position": [
-        720,
-        90
+        780,
+        270
       ],
       "name": "Email instead",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.EMAIL_BASE_URL }}/emails",
-        "options": {
-          "timeout": 15000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.EMAIL_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ to: 'ops@example.com', subject: 'Alert (chat unavailable)', text: $('Compose').item.json.text }) }}"
+        "resource": "mail",
+        "operation": "send",
+        "fromEmail": "={{ 'hello@example.com' }}",
+        "fromName": "={{ 'Acme' }}",
+        "toEmail": "={{ 'ops@example.com' }}",
+        "subject": "={{ 'Alert (Slack unavailable)' }}",
+        "dynamicTemplate": false,
+        "contentType": "text/plain",
+        "contentValue": "={{ $('Compose').item.json.text }}",
+        "additionalFields": {}
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "sendGridApi": {
+          "id": "__CRED:sendgrid__",
+          "name": "SendGrid"
+        }
+      }
     },
     {
       "id": "17a0749d-9962-4fa5-ab48-39fbafd917dd",
       "position": [
-        960,
-        0
+        1040,
+        180
       ],
       "name": "Delivered by email",
       "type": "n8n-nodes-base.set",
@@ -195,18 +195,18 @@
       "main": [
         [
           {
-            "node": "Post to chat",
+            "node": "Post to Slack",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Post to chat": {
+    "Post to Slack": {
       "main": [
         [
           {
-            "node": "Delivered by chat",
+            "node": "Delivered by Slack",
             "type": "main",
             "index": 0
           }

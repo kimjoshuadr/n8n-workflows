@@ -55,15 +55,16 @@ export class OpsDigestWeeklySummaryWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Ops digest · Weekly summary
 Every Monday, gathers the week's numbers from sales, orders, support and the site, compares them with the week before, and sends one readable summary.
 
-**Needs:** ANALYTICS_API_KEY, ANALYTICS_BASE_URL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** none, this is logic only
+**Settings:** ANALYTICS_API_KEY, ANALYTICS_BASE_URL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/ops-digest\``,
     };
 
@@ -72,7 +73,7 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
         name: 'Monday 08:30',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 90],
     })
     Monday0830 = {
         rule: {
@@ -90,7 +91,7 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
         name: 'Leads',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         onError: 'continueRegularOutput',
         alwaysOutputData: true,
         retryOnFail: true,
@@ -128,7 +129,7 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
         name: 'Orders',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 90],
         onError: 'continueRegularOutput',
         alwaysOutputData: true,
         executeOnce: true,
@@ -167,7 +168,7 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
         name: 'Support',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 90],
         onError: 'continueRegularOutput',
         alwaysOutputData: true,
         executeOnce: true,
@@ -206,7 +207,7 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
         name: 'Site traffic',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, 0],
+        position: [1040, 90],
         onError: 'continueRegularOutput',
         alwaysOutputData: true,
         executeOnce: true,
@@ -249,7 +250,7 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
         name: 'Work out the week',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 0],
+        position: [1300, 90],
     })
     WorkOutTheWeek = {
         jsCode: `const weekAgo = Date.now() - 7 * 864e5;
@@ -284,7 +285,7 @@ return [{ json: { metrics: out, unavailable, table: lines.join("\\n"), week_of: 
         name: 'Write the summary',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -322,7 +323,7 @@ return [{ json: { metrics: out, unavailable, table: lines.join("\\n"), week_of: 
         name: 'Compose',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, 0],
+        position: [1820, 90],
     })
     Compose = {
         jsCode: `const w = $("Work out the week").first().json;
@@ -336,7 +337,7 @@ return [{ json: { subject: "Week of " + w.week_of, text: summary + "\\n\\n" + w.
         name: 'Post to the channel',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1920, 0],
+        position: [2080, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -367,7 +368,7 @@ return [{ json: { subject: "Week of " + w.week_of, text: summary + "\\n\\n" + w.
         name: 'Email the owner',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2160, 0],
+        position: [2340, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -398,7 +399,7 @@ return [{ json: { subject: "Week of " + w.week_of, text: summary + "\\n\\n" + w.
         name: 'Check in',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2400, 0],
+        position: [2600, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,

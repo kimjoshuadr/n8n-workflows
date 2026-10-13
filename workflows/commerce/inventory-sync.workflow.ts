@@ -53,15 +53,16 @@ export class InventorySupplierStockSyncWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Inventory · Supplier stock sync
 Pulls the supplier's stock feed every two hours and updates the store only for products whose quantity changed, refusing a feed that looks wrong.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL, SUPPLIER_API_KEY, SUPPLIER_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, SHOP_API_KEY, SHOP_BASE_URL, SUPPLIER_API_KEY, SUPPLIER_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/commerce\``,
     };
 
@@ -70,7 +71,7 @@ Pulls the supplier's stock feed every two hours and updates the store only for p
         name: 'Every 2 hours',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     Every2Hours = {
         rule: {
@@ -88,7 +89,7 @@ Pulls the supplier's stock feed every two hours and updates the store only for p
         name: 'Supplier feed',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -115,7 +116,7 @@ Pulls the supplier's stock feed every two hours and updates the store only for p
         name: 'Last known stock',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 180],
         alwaysOutputData: true,
         executeOnce: true,
         retryOnFail: true,
@@ -144,7 +145,7 @@ Pulls the supplier's stock feed every two hours and updates the store only for p
         name: 'What changed?',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 180],
     })
     WhatChanged = {
         jsCode: `const feed = ($("Supplier feed").first().json.items ?? []).filter((i) => i.sku && Number.isFinite(Number(i.quantity)));
@@ -161,7 +162,7 @@ return [{ json: { feed_size: feed.length, changes, suspicious, zeroed } }];`,
         name: 'Feed looks sane?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     FeedLooksSane = {
         conditions: {
@@ -193,7 +194,7 @@ return [{ json: { feed_size: feed.length, changes, suspicious, zeroed } }];`,
         name: 'One item per change',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, -90],
+        position: [1300, 90],
     })
     OneItemPerChange = {
         jsCode: 'return $input.first().json.changes.map((json) => ({ json }));',
@@ -204,7 +205,7 @@ return [{ json: { feed_size: feed.length, changes, suspicious, zeroed } }];`,
         name: 'Update the store',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, -90],
+        position: [1560, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -235,7 +236,7 @@ return [{ json: { feed_size: feed.length, changes, suspicious, zeroed } }];`,
         name: 'Update the snapshot',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, 0],
+        position: [1820, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -279,7 +280,7 @@ return [{ json: { feed_size: feed.length, changes, suspicious, zeroed } }];`,
         name: 'Refused message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 90],
+        position: [1300, 270],
     })
     RefusedMessage = {
         jsCode: `const r = $input.first().json;
@@ -291,7 +292,7 @@ return [{ json: { level: "critical", text: "Supplier stock feed refused: " + (r.
         name: 'Alert',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1440, 90],
+        position: [1560, 270],
     })
     Alert = {
         workflowId: {

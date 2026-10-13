@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## People · New hire onboarding\nWhen someone is hired, creates their checklist, books their first-week meetings, tells the people who need to act, and sends the welcome email on the right morning.\n\n**Needs:** CALENDAR_API_KEY, CALENDAR_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
+        "width": 640,
+        "height": 230,
+        "content": "## People · New hire onboarding\nWhen someone is hired, creates their checklist, books their first-week meetings, tells the people who need to act, and sends the welcome email on the right morning.\n\n**Platforms:** none, this is logic only\n**Settings:** CALENDAR_API_KEY, CALENDAR_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
       }
     },
     {
       "id": "8113f1d6-a5f3-49f6-ae85-f81d6ba7f5b2",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Hire confirmed",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "1a62c906-18bd-447c-ac2f-9912c625a41d",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Read the hire",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "65548fa8-317c-4ea7-a95f-d6b42eaa3634",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Seen before?",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -67,8 +67,8 @@
     {
       "id": "7170f6de-c6ea-4cea-a13f-bc9d478fd1f7",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "New hire?",
       "type": "n8n-nodes-base.if",
@@ -101,8 +101,8 @@
     {
       "id": "40b8a0dc-f966-4500-a35d-ffd255c93d5c",
       "position": [
-        960,
-        -90
+        1040,
+        90
       ],
       "name": "Build the checklist",
       "type": "n8n-nodes-base.code",
@@ -114,8 +114,8 @@
     {
       "id": "00c9cf76-60fb-4b61-a133-14df519df8c2",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "Save the task",
       "type": "n8n-nodes-base.httpRequest",
@@ -146,8 +146,8 @@
     {
       "id": "dcae3ec7-e95d-47e4-adbc-f00f76c29366",
       "position": [
-        1440,
-        0
+        1560,
+        180
       ],
       "name": "Book first-day welcome",
       "type": "n8n-nodes-base.httpRequest",
@@ -180,8 +180,8 @@
     {
       "id": "6de40182-e2bc-4e5e-a6a3-53f294f5ebf2",
       "position": [
-        1680,
-        0
+        1820,
+        180
       ],
       "name": "Schedule the welcome email",
       "type": "n8n-nodes-base.httpRequest",
@@ -213,8 +213,8 @@
     {
       "id": "272112a1-ed06-441c-a9d3-18023bfc6f3e",
       "position": [
-        1920,
-        0
+        2080,
+        180
       ],
       "name": "Team message",
       "type": "n8n-nodes-base.code",
@@ -226,8 +226,8 @@
     {
       "id": "5bec1bc9-bc60-400c-af8f-490bf7c8691a",
       "position": [
-        2160,
-        0
+        2340,
+        180
       ],
       "name": "Tell the team",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -244,8 +244,8 @@
     {
       "id": "e7aa6956-3546-4538-a9d7-551909492b49",
       "position": [
-        960,
-        90
+        1040,
+        270
       ],
       "name": "Already set up",
       "type": "n8n-nodes-base.noOp",

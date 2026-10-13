@@ -16,7 +16,10 @@ for (const file of files) {
   const text = fs.readFileSync(path.join(root, file), "utf8");
   const problems = [];
   if (SECRET.test(text)) problems.push("contains something that looks like a secret");
-  if (/"credentials"\s*:/.test(text)) problems.push("carries a credential reference; services are reached through env vars");
+  // A node names the credential it needs by placeholder. A real credential id never belongs in the repository.
+  for (const m of text.matchAll(/"id":\s*"([^"]+)",\s*"name":\s*"[^"]+"\s*}\s*}/g)) {
+    if (!/^__CRED:/.test(m[1]) && /"credentials"/.test(text.slice(Math.max(0, m.index - 200), m.index))) problems.push(`carries a real credential id (${m[1]})`);
+  }
   try {
     const out = execFileSync(bin, ["skills", "validate", path.join(root, file)], { encoding: "utf8", stdio: "pipe", env: { ...process.env, N8NAC_TELEMETRY_DISABLED: "1" } });
     if (!/Workflow is valid/.test(out)) problems.push(out.trim().split("\n").slice(-6).join(" | "));

@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Data · CRM to email list sync\nCopies contacts changed since the last run from the CRM to the email platform, page by page, and only moves its bookmark forward when a run finishes.\n\n**Needs:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
+        "width": 640,
+        "height": 230,
+        "content": "## Data · CRM to email list sync\nCopies contacts changed since the last run from the CRM to the email platform, page by page, and only moves its bookmark forward when a run finishes.\n\n**Platforms:** none, this is logic only\n**Settings:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/operations`"
       }
     },
     {
       "id": "31cf76fa-79f6-4a1a-a75a-bd45f2507f43",
       "position": [
         0,
-        0
+        90
       ],
       "name": "Every 15 minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -39,8 +39,8 @@
     {
       "id": "5211d1f3-4653-42dc-a18a-68cafffa7f2a",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Read the bookmark",
       "type": "n8n-nodes-base.httpRequest",
@@ -78,8 +78,8 @@
     {
       "id": "a55fb70f-c8e8-4d21-a637-f6933b556ef2",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Start from",
       "type": "n8n-nodes-base.code",
@@ -91,8 +91,8 @@
     {
       "id": "fd0e52ca-6250-41aa-ac4c-2337ef587b59",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "Changed contacts",
       "type": "n8n-nodes-base.httpRequest",
@@ -123,8 +123,8 @@
     {
       "id": "6f78b527-4253-4050-acd8-0779ebb82370",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Shape for the list",
       "type": "n8n-nodes-base.code",
@@ -136,8 +136,8 @@
     {
       "id": "711c4171-b7c0-448b-a51c-2b72b72e96d6",
       "position": [
-        1200,
-        0
+        1300,
+        90
       ],
       "name": "Anything changed?",
       "type": "n8n-nodes-base.if",
@@ -170,8 +170,8 @@
     {
       "id": "fb8ea85e-2e1a-499b-a923-117a3a52782c",
       "position": [
-        1440,
-        0
+        1560,
+        90
       ],
       "name": "Upsert to the list",
       "type": "n8n-nodes-base.httpRequest",
@@ -202,8 +202,8 @@
     {
       "id": "47dc46b7-b811-4c01-a5b9-df2020ad4bf9",
       "position": [
-        1680,
-        0
+        1820,
+        90
       ],
       "name": "Move the bookmark",
       "type": "n8n-nodes-base.httpRequest",

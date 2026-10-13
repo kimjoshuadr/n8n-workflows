@@ -59,15 +59,16 @@ export class ContentPipelineApproveAndPublishWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Content pipeline · Approve and publish
 Receives a person's decision on a draft. Approved drafts are published to the CMS once and queued for sharing; rejected ones go back with the reason.
 
-**Needs:** CMS_API_KEY, CMS_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CMS_API_KEY, CMS_BASE_URL, DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/content-pipeline\``,
     };
 
@@ -77,7 +78,7 @@ Receives a person's decision on a draft. Approved drafts are published to the CM
         name: 'Decision',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     Decision = {
         httpMethod: 'POST',
@@ -91,7 +92,7 @@ Receives a person's decision on a draft. Approved drafts are published to the CM
         name: 'Read the decision',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     ReadTheDecision = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -104,7 +105,7 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
         name: 'Valid?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     Valid = {
         conditions: {
@@ -136,7 +137,7 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
         name: 'Bad request',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [720, -90],
+        position: [780, 90],
     })
     BadRequest = {
         respondWith: 'json',
@@ -151,7 +152,7 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
         name: 'Load the draft',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 90],
+        position: [780, 270],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -188,7 +189,7 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
         name: 'Awaiting approval?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     AwaitingApproval = {
         conditions: {
@@ -220,7 +221,7 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
         name: 'Not pending',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [1200, -90],
+        position: [1300, 90],
     })
     NotPending = {
         respondWith: 'json',
@@ -235,7 +236,7 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
         name: 'Approved?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1200, 90],
+        position: [1300, 270],
     })
     Approved = {
         conditions: {
@@ -267,7 +268,7 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
         name: 'Publish to CMS',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, -90],
+        position: [1560, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -298,7 +299,7 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
         name: 'Mark published',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, -90],
+        position: [1820, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -338,7 +339,7 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
         name: 'Published',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [1920, 0],
+        position: [2080, 180],
     })
     Published = {
         respondWith: 'json',
@@ -353,7 +354,7 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
         name: 'Mark rejected',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 90],
+        position: [1560, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -393,7 +394,7 @@ return [{ json: { valid: !!decision && !!b.draft_id, decision, draft_id: String(
         name: 'Rejected',
         type: 'n8n-nodes-base.respondToWebhook',
         version: 1.1,
-        position: [1680, 90],
+        position: [1820, 270],
     })
     Rejected = {
         respondWith: 'json',

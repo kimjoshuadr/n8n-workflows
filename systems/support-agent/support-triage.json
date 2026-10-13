@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -570
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Support agent · Ticket triage\nLabels each new ticket by topic and urgency, routes it to the right team, and pages someone only when it is urgent.\n\n**Needs:** HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/support-agent`"
+        "width": 640,
+        "height": 230,
+        "content": "## Support agent · Ticket triage\nLabels each new ticket by topic and urgency, routes it to the right team, and pages someone only when it is urgent.\n\n**Platforms:** none, this is logic only\n**Settings:** HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/support-agent`"
       }
     },
     {
       "id": "431a2f30-91a4-4b47-af24-a2f667ac1dfe",
       "position": [
         0,
-        0
+        360
       ],
       "name": "Ticket created",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "edb65851-2fa0-4626-a9c9-c9ee992b1f46",
       "position": [
-        240,
-        0
+        260,
+        360
       ],
       "name": "Read the ticket",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "708e926a-f7d5-46df-a6ff-97df9a82e789",
       "position": [
-        480,
-        0
+        520,
+        360
       ],
       "name": "Classify",
       "type": "n8n-nodes-base.httpRequest",
@@ -82,8 +82,8 @@
     {
       "id": "7919cc74-98d4-4cc3-ac94-ddc39959eba0",
       "position": [
-        720,
-        0
+        780,
+        360
       ],
       "name": "Read the labels",
       "type": "n8n-nodes-base.code",
@@ -95,8 +95,8 @@
     {
       "id": "d638aa7d-b630-45a4-abc3-e66644b04cee",
       "position": [
-        960,
-        0
+        1040,
+        360
       ],
       "name": "By topic",
       "type": "n8n-nodes-base.switch",
@@ -189,8 +189,8 @@
     {
       "id": "e32eef67-376a-47d5-ac3a-7959a64506b7",
       "position": [
-        1200,
-        -270
+        1300,
+        90
       ],
       "name": "Close as spam",
       "type": "n8n-nodes-base.httpRequest",
@@ -221,8 +221,8 @@
     {
       "id": "4fad6ab2-8b70-4ac5-a51f-cde4668d7d7e",
       "position": [
-        1200,
-        -90
+        1300,
+        270
       ],
       "name": "Send to billing",
       "type": "n8n-nodes-base.httpRequest",
@@ -253,8 +253,8 @@
     {
       "id": "3874c530-1c45-4bd7-ac01-e6be81aa78f5",
       "position": [
-        1200,
-        90
+        1300,
+        450
       ],
       "name": "Send to engineering",
       "type": "n8n-nodes-base.httpRequest",
@@ -285,8 +285,8 @@
     {
       "id": "9d0d05e7-9aac-47e9-a2ca-8b2254b4ac26",
       "position": [
-        1200,
-        270
+        1300,
+        630
       ],
       "name": "Send to general queue",
       "type": "n8n-nodes-base.httpRequest",
@@ -317,8 +317,8 @@
     {
       "id": "c6dc00c3-876e-4539-afce-d063a9ba18e5",
       "position": [
-        1440,
-        0
+        1560,
+        360
       ],
       "name": "Urgent?",
       "type": "n8n-nodes-base.if",
@@ -351,8 +351,8 @@
     {
       "id": "5b5ccbb9-2713-43fd-a196-1f71bd86a29c",
       "position": [
-        1680,
-        0
+        1820,
+        360
       ],
       "name": "Page message",
       "type": "n8n-nodes-base.code",
@@ -364,8 +364,8 @@
     {
       "id": "8cac8dc5-3c3e-42f6-a07f-b8b45d049a2d",
       "position": [
-        1920,
-        0
+        2080,
+        360
       ],
       "name": "Page on-call",
       "type": "n8n-nodes-base.executeWorkflow",

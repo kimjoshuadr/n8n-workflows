@@ -15,7 +15,8 @@ Records each payment, failure and refund from the processor exactly once, update
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Datastore, Email, Chat |
+| Platforms | Datastore, Email, Chat |
+| Nodes | 18 |
 | Calls | `idempotency-guard`, `notify`, `error-handler` |
 | Files | [`payment-events.json`](payment-events.json) · [`payment-events.workflow.ts`](payment-events.workflow.ts) |
 
@@ -85,7 +86,8 @@ Each morning, compares yesterday's charges at the processor with the ledger and 
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Payments, Datastore, Chat |
+| Platforms | Payments, Datastore, Chat |
+| Nodes | 11 |
 | Calls | `notify`, `error-handler` |
 | Files | [`payment-reconcile.json`](payment-reconcile.json) · [`payment-reconcile.workflow.ts`](payment-reconcile.workflow.ts) |
 
@@ -137,7 +139,8 @@ Each morning, reminds customers with overdue invoices at 3, 7 and 14 days, then 
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Email, Chat |
+| Platforms | Datastore, Email, Chat |
+| Nodes | 9 |
 | Calls | `notify`, `error-handler` |
 | Files | [`invoice-dunning.json`](invoice-dunning.json) · [`invoice-dunning.workflow.ts`](invoice-dunning.workflow.ts) |
 

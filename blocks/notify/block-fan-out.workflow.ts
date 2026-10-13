@@ -43,15 +43,16 @@ export class BlockOneEventThreeChannelsWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · One event, three channels
 Sends the same message by chat, email and SMS, where each channel failing leaves the other two untouched.
 
-**Needs:** CHAT_API_KEY, CHAT_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, SMS_API_KEY, SMS_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CHAT_API_KEY, CHAT_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, SMS_API_KEY, SMS_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/notify\``,
     };
 
@@ -60,7 +61,7 @@ Sends the same message by chat, email and SMS, where each channel failing leaves
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -71,7 +72,7 @@ Sends the same message by chat, email and SMS, where each channel failing leaves
         name: 'Chat',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -102,7 +103,7 @@ Sends the same message by chat, email and SMS, where each channel failing leaves
         name: 'Email',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -134,7 +135,7 @@ Sends the same message by chat, email and SMS, where each channel failing leaves
         name: 'SMS',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 0],
+        position: [780, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -166,7 +167,7 @@ Sends the same message by chat, email and SMS, where each channel failing leaves
         name: 'Report',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [960, 0],
+        position: [1040, 90],
     })
     Report = {
         jsCode: `const sent = (name) => { const j = $(name).first().json; return !!j && !j.error; };

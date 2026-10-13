@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · Save a remote file to storage\nRecords a file under a name derived from its own address, so the same file fetched twice is stored once.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, STORAGE_API_KEY, STORAGE_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · Save a remote file to storage\nRecords a file under a name derived from its own address, so the same file fetched twice is stored once.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, STORAGE_API_KEY, STORAGE_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
       }
     },
     {
       "id": "7365d2e3-10c4-48e3-a242-5679c55b636f",
       "position": [
         0,
-        0
+        180
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "4a8806df-2c98-4674-a789-3ea70ce8acac",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Name it",
       "type": "n8n-nodes-base.code",
@@ -45,8 +45,8 @@
     {
       "id": "b72669aa-59b6-44de-a337-75fa7c6da333",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Claim the name",
       "type": "n8n-nodes-base.httpRequest",
@@ -87,8 +87,8 @@
     {
       "id": "e1db9b96-99b8-4460-a710-5f7abfb94805",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "New file?",
       "type": "n8n-nodes-base.if",
@@ -121,8 +121,8 @@
     {
       "id": "8ceaf464-815e-4fc6-ae54-2b3764a0e754",
       "position": [
-        960,
-        -90
+        1040,
+        90
       ],
       "name": "Copy to storage",
       "type": "n8n-nodes-base.httpRequest",
@@ -153,8 +153,8 @@
     {
       "id": "83f99df7-c607-4679-ac8a-392aeb49c2c6",
       "position": [
-        960,
-        90
+        1040,
+        270
       ],
       "name": "Already stored",
       "type": "n8n-nodes-base.noOp",

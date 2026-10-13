@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Support agent · Answer or hand over\nAnswers a customer's message from the help centre when it is confident, and hands the conversation to a person with a summary when it is not.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/support-agent`"
+        "width": 640,
+        "height": 230,
+        "content": "## Support agent · Answer or hand over\nAnswers a customer's message from the help centre when it is confident, and hands the conversation to a person with a summary when it is not.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/support-agent`"
       }
     },
     {
       "id": "2866a047-ee8e-4164-a73d-5a2df239ffd8",
       "position": [
         0,
-        0
+        180
       ],
       "name": "Message received",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "53043ff1-cc25-4195-a7bd-f4443123d123",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Read the message",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "11edd7ca-6ce2-4811-ada1-025b1f916dca",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Seen before?",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -67,8 +67,8 @@
     {
       "id": "6f23a2e7-bd5c-42da-a3ea-ecd4ded58340",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "New message?",
       "type": "n8n-nodes-base.if",
@@ -101,8 +101,8 @@
     {
       "id": "be624172-ccd3-40c6-a800-ca44ad17aa6d",
       "position": [
-        960,
-        -90
+        1040,
+        90
       ],
       "name": "Search the help centre",
       "type": "n8n-nodes-base.httpRequest",
@@ -140,8 +140,8 @@
     {
       "id": "9ec4b164-2fba-4715-a0ee-2743a711c90b",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "Build the context",
       "type": "n8n-nodes-base.code",
@@ -153,8 +153,8 @@
     {
       "id": "3bdcdff0-8678-4faf-a927-6d613b3b7d07",
       "position": [
-        1440,
-        0
+        1560,
+        180
       ],
       "name": "Draft an answer",
       "type": "n8n-nodes-base.httpRequest",
@@ -186,8 +186,8 @@
     {
       "id": "91d3c3d0-81be-4926-ab29-e4299b684f3a",
       "position": [
-        1680,
-        0
+        1820,
+        180
       ],
       "name": "Read the draft",
       "type": "n8n-nodes-base.code",
@@ -199,8 +199,8 @@
     {
       "id": "43f21659-c8e9-4ed8-ab1a-870a3d0ae3b3",
       "position": [
-        1920,
-        0
+        2080,
+        180
       ],
       "name": "Confident?",
       "type": "n8n-nodes-base.if",
@@ -233,8 +233,8 @@
     {
       "id": "9ccdc297-a8dd-48e6-a5d2-c60dd0989f3d",
       "position": [
-        2160,
-        -90
+        2340,
+        90
       ],
       "name": "Send the reply",
       "type": "n8n-nodes-base.httpRequest",
@@ -265,8 +265,8 @@
     {
       "id": "918faca5-5af7-4ad9-a2a8-4c255f277d58",
       "position": [
-        2160,
-        90
+        2340,
+        270
       ],
       "name": "Hand to a person",
       "type": "n8n-nodes-base.httpRequest",
@@ -297,8 +297,8 @@
     {
       "id": "7c9e8b18-90b2-4eac-ad7d-f98e55fcc001",
       "position": [
-        2400,
-        -90
+        2600,
+        90
       ],
       "name": "Leave a private note",
       "type": "n8n-nodes-base.httpRequest",
@@ -329,8 +329,8 @@
     {
       "id": "30859699-0b3e-43dd-a525-a15af3d19e12",
       "position": [
-        2400,
-        90
+        2600,
+        270
       ],
       "name": "Answered",
       "type": "n8n-nodes-base.code",
@@ -342,8 +342,8 @@
     {
       "id": "c26550dd-767a-4717-ae7d-b941ad48764d",
       "position": [
-        2640,
-        0
+        2860,
+        180
       ],
       "name": "Handed over",
       "type": "n8n-nodes-base.code",
@@ -355,8 +355,8 @@
     {
       "id": "9f550e86-6788-4672-a59a-ec64d075bf8a",
       "position": [
-        2880,
-        0
+        3120,
+        180
       ],
       "name": "Log the outcome",
       "type": "n8n-nodes-base.httpRequest",
@@ -387,8 +387,8 @@
     {
       "id": "99ecfdd6-aa4a-41c8-ab05-309ae9fc7f5f",
       "position": [
-        960,
-        90
+        1040,
+        270
       ],
       "name": "Ignore the repeat",
       "type": "n8n-nodes-base.noOp",

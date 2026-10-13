@@ -9,15 +9,15 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // Property name                    Node type (short)         Flags
 // AboutThisWorkflow                  stickyNote
 // Every15Minutes                     scheduleTrigger
-// FetchPending                       httpRequest                [alwaysOutput] [retry]
+// FetchPending                       supabase                   [creds] [alwaysOutput] [retry]
 // AnythingParked                     if
 // OneAtATime                         splitInBatches
 // Replay                             httpRequest                [onError→out(1)]
-// MarkReplayed                       httpRequest                [retry]
+// MarkReplayed                       supabase                   [creds] [alwaysOutput] [retry]
 // CountTheAttempt                    code
-// RecordTheAttempt                   httpRequest                [retry]
+// RecordTheAttempt                   supabase                   [creds] [alwaysOutput] [retry]
 // GivenUp                            if
-// Escalate                           httpRequest                [onError→regular] [retry]
+// Escalate                           slack                      [onError→regular] [creds] [retry]
 // NothingToDo                        noOp
 // AllReplayed                        noOp
 //
@@ -60,15 +60,15 @@ export class ReliabilityDeadLetterReplayWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Reliability · Dead letter replay
-Every fifteen minutes, sends parked work back to where it came from. Gives up after five attempts and says so.
+Every fifteen minutes, sends parked work back to where it came from. Gives up after five attempts and tells Slack.
 
-**Needs:** ALERT_CHANNEL, CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** Supabase, Slack
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`shared\``,
     };
 
@@ -77,7 +77,7 @@ Every fifteen minutes, sends parked work back to where it came from. Gives up af
         name: 'Every 15 minutes',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     Every15Minutes = {
         rule: {
@@ -93,42 +93,22 @@ Every fifteen minutes, sends parked work back to where it came from. Gives up af
     @node({
         id: '6a15b899-4292-4e3e-a405-18955e12daa3',
         name: 'Fetch pending',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [240, 0],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [260, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     FetchPending = {
-        method: 'GET',
-        url: '={{ $env.DB_BASE_URL }}/dead_letters',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
-                },
-            ],
-        },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'status',
-                    value: "={{ 'eq.pending' }}",
-                },
-                {
-                    name: 'limit',
-                    value: "={{ '50' }}",
-                },
-            ],
-        },
+        resource: 'row',
+        operation: 'getAll',
+        tableId: 'dead_letters',
+        returnAll: true,
+        filterType: 'string',
+        filterString: "={{ 'status=eq.pending&limit=50' }}",
     };
 
     @node({
@@ -136,7 +116,7 @@ Every fifteen minutes, sends parked work back to where it came from. Gives up af
         name: 'Anything parked?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     AnythingParked = {
         conditions: {
@@ -168,7 +148,7 @@ Every fifteen minutes, sends parked work back to where it came from. Gives up af
         name: 'One at a time',
         type: 'n8n-nodes-base.splitInBatches',
         version: 3,
-        position: [720, -90],
+        position: [780, 90],
     })
     OneAtATime = {
         batchSize: 1,
@@ -180,7 +160,7 @@ Every fifteen minutes, sends parked work back to where it came from. Gives up af
         name: 'Replay',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, -90],
+        position: [1040, 90],
         onError: 'continueErrorOutput',
     })
     Replay = {
@@ -197,40 +177,34 @@ Every fifteen minutes, sends parked work back to where it came from. Gives up af
     @node({
         id: '6f01597d-3c98-4da9-ae45-030a01f29c64',
         name: 'Mark replayed',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1200, -90],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [1300, 90],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
+        alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     MarkReplayed = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/dead_letters',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'dead_letters',
+        filterType: 'string',
+        filterString: "={{ 'id=eq.' + $('One at a time').item.json.id }}",
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'status',
+                    fieldValue: "={{ 'replayed' }}",
+                },
+                {
+                    fieldId: 'replayed_at',
+                    fieldValue: '={{ $now.toISO() }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'id',
-                    value: "={{ 'eq.' + $('One at a time').item.json.id }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ status: 'replayed', replayed_at: $now.toISO() }) }}",
     };
 
     @node({
@@ -238,7 +212,7 @@ Every fifteen minutes, sends parked work back to where it came from. Gives up af
         name: 'Count the attempt',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 90],
+        position: [1300, 270],
     })
     CountTheAttempt = {
         jsCode: `const row = $("One at a time").first().json;
@@ -249,40 +223,34 @@ return [{ json: { id: row.id, source: row.source, attempts, status: attempts >= 
     @node({
         id: '3b850c43-2ea9-4152-a0be-a0641276bcc8',
         name: 'Record the attempt',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1440, 0],
+        type: 'n8n-nodes-base.supabase',
+        version: 1,
+        position: [1560, 180],
+        credentials: { supabaseApi: { id: '__CRED:supabase__', name: 'Supabase' } },
+        alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     RecordTheAttempt = {
-        method: 'PATCH',
-        url: '={{ $env.DB_BASE_URL }}/dead_letters',
-        options: {
-            timeout: 15000,
-        },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
+        resource: 'row',
+        operation: 'update',
+        tableId: 'dead_letters',
+        filterType: 'string',
+        filterString: "={{ 'id=eq.' + $json.id }}",
+        dataToSend: 'defineBelow',
+        fieldsUi: {
+            fieldValues: [
                 {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.DB_API_KEY }}",
+                    fieldId: 'attempts',
+                    fieldValue: '={{ $json.attempts }}',
+                },
+                {
+                    fieldId: 'status',
+                    fieldValue: '={{ $json.status }}',
                 },
             ],
         },
-        sendQuery: true,
-        queryParameters: {
-            parameters: [
-                {
-                    name: 'id',
-                    value: "={{ 'eq.' + $json.id }}",
-                },
-            ],
-        },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody: '={{ JSON.stringify({ attempts: $json.attempts, status: $json.status }) }}',
     };
 
     @node({
@@ -290,7 +258,7 @@ return [{ json: { id: row.id, source: row.source, attempts, status: attempts >= 
         name: 'Given up?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1680, 0],
+        position: [1820, 180],
     })
     GivenUp = {
         conditions: {
@@ -320,33 +288,28 @@ return [{ json: { id: row.id, source: row.source, attempts, status: attempts >= 
     @node({
         id: '03924ad1-204a-44ab-a577-a6aff4c8d80f',
         name: 'Escalate',
-        type: 'n8n-nodes-base.httpRequest',
-        version: 4.2,
-        position: [1920, 0],
+        type: 'n8n-nodes-base.slack',
+        version: 2.3,
+        position: [2080, 180],
+        credentials: { slackApi: { id: '__CRED:slack__', name: 'Slack' } },
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
     })
     Escalate = {
-        method: 'POST',
-        url: '={{ $env.CHAT_BASE_URL }}/chat.postMessage',
-        options: {
-            timeout: 15000,
+        resource: 'message',
+        operation: 'post',
+        select: 'channel',
+        channelId: {
+            __rl: true,
+            mode: 'name',
+            value: "={{ '#ops-alerts' }}",
         },
-        sendHeaders: true,
-        headerParameters: {
-            parameters: [
-                {
-                    name: 'Authorization',
-                    value: "={{ 'Bearer ' + $env.CHAT_API_KEY }}",
-                },
-            ],
+        text: "={{ ':red_circle: Gave up replaying an item from ' + $('Count the attempt').item.json.source + ' after 5 attempts. It needs a person.' }}",
+        otherOptions: {
+            includeLinkToWorkflow: false,
         },
-        sendBody: true,
-        specifyBody: 'json',
-        jsonBody:
-            "={{ JSON.stringify({ channel: $env.ALERT_CHANNEL, text: ':red_circle: Gave up replaying an item from ' + $('Count the attempt').item.json.source + ' after 5 attempts. It needs a person.' }) }}",
     };
 
     @node({
@@ -354,7 +317,7 @@ return [{ json: { id: row.id, source: row.source, attempts, status: attempts >= 
         name: 'Nothing to do',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [720, 90],
+        position: [780, 270],
     })
     NothingToDo = {};
 
@@ -363,7 +326,7 @@ return [{ json: { id: row.id, source: row.source, attempts, status: attempts >= 
         name: 'All replayed',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [960, 90],
+        position: [1040, 270],
     })
     AllReplayed = {};
 

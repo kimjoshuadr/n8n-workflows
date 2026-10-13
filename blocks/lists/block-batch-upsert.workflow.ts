@@ -39,15 +39,16 @@ export class BlockUpsertInChunksWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Upsert in chunks
 Groups a long list into chunks of 100 and upserts each chunk in one request.
 
-**Needs:** DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/lists\``,
     };
 
@@ -56,7 +57,7 @@ Groups a long list into chunks of 100 and upserts each chunk in one request.
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -67,7 +68,7 @@ Groups a long list into chunks of 100 and upserts each chunk in one request.
         name: 'Chunk',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 90],
     })
     Chunk = {
         jsCode: `const rows = $input.all().map((i) => i.json);
@@ -81,7 +82,7 @@ return out;`,
         name: 'Upsert the chunk',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

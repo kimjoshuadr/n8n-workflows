@@ -44,15 +44,16 @@ export class BlockLoopThatRespectsARateLimitWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Loop that respects a rate limit
 Sends items in small batches with a pause between them, for APIs that reject bursts.
 
-**Needs:** EMAIL_API_KEY, EMAIL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** EMAIL_API_KEY, EMAIL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/lists\``,
     };
 
@@ -61,7 +62,7 @@ Sends items in small batches with a pause between them, for APIs that reject bur
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 180],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -72,7 +73,7 @@ Sends items in small batches with a pause between them, for APIs that reject bur
         name: 'Five at a time',
         type: 'n8n-nodes-base.splitInBatches',
         version: 3,
-        position: [240, 0],
+        position: [260, 180],
     })
     FiveAtATime = {
         batchSize: 5,
@@ -84,7 +85,7 @@ Sends items in small batches with a pause between them, for APIs that reject bur
         name: 'Send',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, -90],
+        position: [520, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -116,7 +117,7 @@ Sends items in small batches with a pause between them, for APIs that reject bur
         name: 'Pause',
         type: 'n8n-nodes-base.wait',
         version: 1.1,
-        position: [720, 0],
+        position: [780, 180],
     })
     Pause = {
         amount: 2,
@@ -128,7 +129,7 @@ Sends items in small batches with a pause between them, for APIs that reject bur
         name: 'Finished',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [480, 90],
+        position: [520, 270],
     })
     Finished = {};
 

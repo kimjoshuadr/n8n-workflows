@@ -53,15 +53,16 @@ export class ContentIndustryNewsDigestWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Content · Industry news digest
 Each Friday, reads the feeds you follow, drops what was already sent, and emails a short digest of what is new.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/content\``,
     };
 
@@ -70,7 +71,7 @@ Each Friday, reads the feeds you follow, drops what was already sent, and emails
         name: 'Friday 15:00',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     Friday1500 = {
         rule: {
@@ -88,7 +89,7 @@ Each Friday, reads the feeds you follow, drops what was already sent, and emails
         name: 'Feeds to read',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -116,7 +117,7 @@ Each Friday, reads the feeds you follow, drops what was already sent, and emails
         name: 'Fetch the feed',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 180],
         onError: 'continueRegularOutput',
     })
     FetchTheFeed = {
@@ -132,7 +133,7 @@ Each Friday, reads the feeds you follow, drops what was already sent, and emails
         name: 'Collect the items',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 180],
     })
     CollectTheItems = {
         jsCode: `const items = $input.all().flatMap((i) => i.json.items ?? []).filter((x) => x && x.url && x.title);
@@ -145,7 +146,7 @@ return unique.map((x) => ({ json: { url: x.url, title: x.title, summary: String(
         name: 'Claim as seen',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, 0],
+        position: [1040, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -185,7 +186,7 @@ return unique.map((x) => ({ json: { url: x.url, title: x.title, summary: String(
         name: 'Only the new ones',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 0],
+        position: [1300, 180],
     })
     OnlyTheNewOnes = {
         jsCode: `const fresh = $input.all().map((i) => i.json).filter((r) => r && r.url);
@@ -197,7 +198,7 @@ return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + "
         name: 'Anything new?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1440, 0],
+        position: [1560, 180],
     })
     AnythingNew = {
         conditions: {
@@ -229,7 +230,7 @@ return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + "
         name: 'Write the digest',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, -90],
+        position: [1820, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -267,7 +268,7 @@ return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + "
         name: 'Send the digest',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1920, 0],
+        position: [2080, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -298,7 +299,7 @@ return [{ json: { count: fresh.length, list: fresh.map((r) => "- " + r.title + "
         name: 'Quiet week',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1680, 90],
+        position: [1820, 270],
     })
     QuietWeek = {};
 

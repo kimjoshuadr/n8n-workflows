@@ -15,7 +15,8 @@ Takes a new order from the store, records it once, takes its items out of stock,
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Shop, Datastore, Email, Chat |
+| Platforms | Shop, Datastore, Email, Chat |
+| Nodes | 17 |
 | Calls | `idempotency-guard`, `notify`, `dead-letter`, `error-handler` |
 | Files | [`order-intake.json`](order-intake.json) · [`order-intake.workflow.ts`](order-intake.workflow.ts) |
 
@@ -80,7 +81,8 @@ Turns a courier status into the right message for the customer, and tells a pers
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Datastore, Email, Chat |
+| Platforms | Datastore, Email, Chat |
+| Nodes | 11 |
 | Calls | `notify`, `error-handler` |
 | Files | [`order-fulfilment.json`](order-fulfilment.json) · [`order-fulfilment.workflow.ts`](order-fulfilment.workflow.ts) |
 
@@ -130,7 +132,8 @@ Every half hour, writes once to people who left a cart over an hour ago and have
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Email |
+| Platforms | Datastore, Email |
+| Nodes | 7 |
 | Calls | `error-handler` |
 | Files | [`cart-recovery.json`](cart-recovery.json) · [`cart-recovery.workflow.ts`](cart-recovery.workflow.ts) |
 

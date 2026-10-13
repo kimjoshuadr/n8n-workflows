@@ -54,15 +54,16 @@ export class ContentPipelineShareWhatWasPublishedWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Content pipeline · Share what was published
 Every hour, writes a post per network for anything newly published and schedules it. One network failing does not stop the others.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SOCIAL_API_KEY, SOCIAL_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, SOCIAL_API_KEY, SOCIAL_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/content-pipeline\``,
     };
 
@@ -71,7 +72,7 @@ Every hour, writes a post per network for anything newly published and schedules
         name: 'Hourly',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     Hourly = {
         rule: {
@@ -89,7 +90,7 @@ Every hour, writes a post per network for anything newly published and schedules
         name: 'Published, not shared',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -130,7 +131,7 @@ Every hour, writes a post per network for anything newly published and schedules
         name: 'Anything new?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     AnythingNew = {
         conditions: {
@@ -162,7 +163,7 @@ Every hour, writes a post per network for anything newly published and schedules
         name: 'Each article',
         type: 'n8n-nodes-base.splitInBatches',
         version: 3,
-        position: [720, -90],
+        position: [780, 90],
     })
     EachArticle = {
         batchSize: 1,
@@ -174,7 +175,7 @@ Every hour, writes a post per network for anything newly published and schedules
         name: 'Write the posts',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, -90],
+        position: [1040, 90],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -213,7 +214,7 @@ Every hour, writes a post per network for anything newly published and schedules
         name: 'One item per network',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 0],
+        position: [1300, 180],
     })
     OneItemPerNetwork = {
         jsCode: `const a = $("Each article").first().json;
@@ -228,7 +229,7 @@ return ["x", "linkedin", "facebook"].map((network) => ({ json: { draft_id: a.id,
         name: 'Schedule the post',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 180],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -259,7 +260,7 @@ return ["x", "linkedin", "facebook"].map((network) => ({ json: { draft_id: a.id,
         name: 'Mark shared',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, 0],
+        position: [1820, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -298,7 +299,7 @@ return ["x", "linkedin", "facebook"].map((network) => ({ json: { draft_id: a.id,
         name: 'Nothing new',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [720, 90],
+        position: [780, 270],
     })
     NothingNew = {};
 
@@ -307,7 +308,7 @@ return ["x", "linkedin", "facebook"].map((network) => ({ json: { draft_id: a.id,
         name: 'Done',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [960, 90],
+        position: [1040, 270],
     })
     Done = {};
 

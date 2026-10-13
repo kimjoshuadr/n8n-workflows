@@ -9,7 +9,8 @@ Every morning, counts yesterday's rows in a table and posts the number.
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Chat |
+| Platforms | Datastore, Chat |
+| Nodes | 4 |
 | Calls | `error-handler` |
 | Files | [`block-scheduled-report.json`](block-scheduled-report.json) · [`block-scheduled-report.workflow.ts`](block-scheduled-report.workflow.ts) |
 
@@ -36,7 +37,8 @@ The two nodes a scheduled workflow adds so the heartbeat monitor can tell when i
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | Datastore |
+| Platforms | Datastore |
+| Nodes | 2 |
 | Calls | `error-handler` |
 | Files | [`block-heartbeat.json`](block-heartbeat.json) · [`block-heartbeat.workflow.ts`](block-heartbeat.workflow.ts) |
 
@@ -58,7 +60,8 @@ Tells a caller whether now is inside working hours in a given time zone, so mess
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | nothing external |
+| Platforms | none, logic only |
+| Nodes | 2 |
 | Calls | `error-handler` |
 | Files | [`block-working-hours.json`](block-working-hours.json) · [`block-working-hours.workflow.ts`](block-working-hours.workflow.ts) |
 

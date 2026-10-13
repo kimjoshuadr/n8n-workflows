@@ -9,7 +9,8 @@ Calls an address up to four times, waiting longer each time, and reports clearly
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | nothing external |
+| Platforms | none, logic only |
+| Nodes | 8 |
 | Calls | `error-handler` |
 | Files | [`block-retry-backoff.json`](block-retry-backoff.json) · [`block-retry-backoff.workflow.ts`](block-retry-backoff.workflow.ts) |
 
@@ -45,7 +46,8 @@ The pattern for any write that must not be lost: try, and if it still fails afte
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | CRM |
+| Platforms | CRM |
+| Nodes | 5 |
 | Calls | `dead-letter`, `error-handler` |
 | Files | [`block-error-to-dead-letter.json`](block-error-to-dead-letter.json) · [`block-error-to-dead-letter.workflow.ts`](block-error-to-dead-letter.workflow.ts) |
 
@@ -74,7 +76,8 @@ Answers whether a key (a user, an IP, a customer) is still under its hourly limi
 | | |
 |---|---|
 | Starts from | Called by another workflow |
-| Talks to | Datastore |
+| Platforms | Datastore |
+| Nodes | 6 |
 | Calls | `error-handler` |
 | Files | [`block-throttle.json`](block-throttle.json) · [`block-throttle.workflow.ts`](block-throttle.workflow.ts) |
 
@@ -104,7 +107,8 @@ Records a pending decision and gives back approve and reject links. Nothing proc
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Datastore |
+| Platforms | Datastore |
+| Nodes | 6 |
 | Calls | `error-handler` |
 | Files | [`block-approval-gate.json`](block-approval-gate.json) · [`block-approval-gate.workflow.ts`](block-approval-gate.workflow.ts) |
 

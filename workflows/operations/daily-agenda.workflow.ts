@@ -45,15 +45,16 @@ export class CalendarMorningAgendaWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Calendar · Morning agenda
 Posts today's meetings each weekday morning, with gaps and clashes pointed out, and stays silent on an empty day.
 
-**Needs:** CALENDAR_API_KEY, CALENDAR_BASE_URL, CHAT_API_KEY, CHAT_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CALENDAR_API_KEY, CALENDAR_BASE_URL, CHAT_API_KEY, CHAT_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/operations\``,
     };
 
@@ -62,7 +63,7 @@ Posts today's meetings each weekday morning, with gaps and clashes pointed out, 
         name: 'Weekdays 07:30',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     Weekdays0730 = {
         rule: {
@@ -80,7 +81,7 @@ Posts today's meetings each weekday morning, with gaps and clashes pointed out, 
         name: "Today's events",
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -120,7 +121,7 @@ Posts today's meetings each weekday morning, with gaps and clashes pointed out, 
         name: 'Lay out the day',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 180],
     })
     LayOutTheDay = {
         jsCode: `const events = ($input.first().json.events ?? []).filter((e) => e.start && e.end && !e.declined).sort((a, b) => new Date(a.start) - new Date(b.start));
@@ -137,7 +138,7 @@ return [{ json: { count: events.length, clashes, hours: Math.round(minutes / 6) 
         name: 'Anything on?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [720, 0],
+        position: [780, 180],
     })
     AnythingOn = {
         conditions: {
@@ -169,7 +170,7 @@ return [{ json: { count: events.length, clashes, hours: Math.round(minutes / 6) 
         name: 'Post the agenda',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, -90],
+        position: [1040, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -200,7 +201,7 @@ return [{ json: { count: events.length, clashes, hours: Math.round(minutes / 6) 
         name: 'Clear day',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [960, 90],
+        position: [1040, 270],
     })
     ClearDay = {};
 

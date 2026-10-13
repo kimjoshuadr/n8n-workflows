@@ -45,15 +45,16 @@ export class BlockLimitActionsPerKeyPerHourWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Limit actions per key per hour
 Answers whether a key (a user, an IP, a customer) is still under its hourly limit, and counts the attempt.
 
-**Needs:** DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/reliability\``,
     };
 
@@ -62,7 +63,7 @@ Answers whether a key (a user, an IP, a customer) is still under its hourly limi
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -73,7 +74,7 @@ Answers whether a key (a user, an IP, a customer) is still under its hourly limi
         name: "This hour's bucket",
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 90],
     })
     ThisHourSBucket = {
         jsCode: 'return $input.all().map((i) => ({ json: { ...i.json, limit: i.json.limit ?? 5, bucket: i.json.key + ":" + new Date().toISOString().slice(0, 13) } }));',
@@ -84,7 +85,7 @@ Answers whether a key (a user, an IP, a customer) is still under its hourly limi
         name: 'Read the count',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -121,7 +122,7 @@ Answers whether a key (a user, an IP, a customer) is still under its hourly limi
         name: 'Decide',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 90],
     })
     Decide = {
         jsCode: `const req = $("This hour's bucket").first().json;
@@ -134,7 +135,7 @@ return [{ json: { ...req, count: count + 1, allowed: count < req.limit } }];`,
         name: 'Count the attempt',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, 0],
+        position: [1040, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -177,7 +178,7 @@ return [{ json: { ...req, count: count + 1, allowed: count < req.limit } }];`,
         name: 'Answer',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [1200, 0],
+        position: [1300, 90],
     })
     Answer = {
         assignments: {

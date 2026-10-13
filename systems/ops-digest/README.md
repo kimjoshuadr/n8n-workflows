@@ -15,7 +15,8 @@ Every Monday, gathers the week's numbers from sales, orders, support and the sit
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Analytics, LLM, Chat, Email |
+| Platforms | Datastore, Analytics, LLM, Chat, Email |
+| Nodes | 11 |
 | Calls | `error-handler` |
 | Files | [`weekly-digest.json`](weekly-digest.json) · [`weekly-digest.workflow.ts`](weekly-digest.workflow.ts) |
 
@@ -65,7 +66,8 @@ Checks each watched number hourly and alerts when it crosses its line, and again
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Chat |
+| Platforms | Datastore, Chat |
+| Nodes | 6 |
 | Calls | `notify`, `error-handler` |
 | Files | [`threshold-alerts.json`](threshold-alerts.json) · [`threshold-alerts.workflow.ts`](threshold-alerts.workflow.ts) |
 

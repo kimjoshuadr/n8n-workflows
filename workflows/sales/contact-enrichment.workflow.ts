@@ -53,15 +53,16 @@ export class CrmEnrichNewContactsWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## CRM · Enrich new contacts
 Fills in company, role and size for a new CRM contact from an enrichment service, and never overwrites what a person already typed.
 
-**Needs:** CRM_API_KEY, CRM_BASE_URL, ENRICH_API_KEY, ENRICH_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CRM_API_KEY, CRM_BASE_URL, ENRICH_API_KEY, ENRICH_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/sales\``,
     };
 
@@ -71,7 +72,7 @@ Fills in company, role and size for a new CRM contact from an enrichment service
         name: 'Contact created',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     ContactCreated = {
         httpMethod: 'POST',
@@ -85,7 +86,7 @@ Fills in company, role and size for a new CRM contact from an enrichment service
         name: 'Read the contact',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     ReadTheContact = {
         jsCode: `const c = $input.first().json.body ?? {};
@@ -99,7 +100,7 @@ return [{ json: { id: String(c.id), email, existing: c.properties ?? {}, skip: !
         name: 'Work email?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     WorkEmail = {
         conditions: {
@@ -131,7 +132,7 @@ return [{ json: { id: String(c.id), email, existing: c.properties ?? {}, skip: !
         name: 'Look them up',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, -90],
+        position: [780, 90],
         onError: 'continueErrorOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -162,7 +163,7 @@ return [{ json: { id: String(c.id), email, existing: c.properties ?? {}, skip: !
         name: 'Only the blanks',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [960, -90],
+        position: [1040, 90],
     })
     OnlyTheBlanks = {
         jsCode: `const c = $("Work email?").first().json;
@@ -177,7 +178,7 @@ return [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } 
         name: 'Anything to add?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1200, 0],
+        position: [1300, 180],
     })
     AnythingToAdd = {
         conditions: {
@@ -209,7 +210,7 @@ return [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } 
         name: 'Update the contact',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, -90],
+        position: [1560, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -239,7 +240,7 @@ return [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } 
         name: 'Personal email, skipped',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [720, 90],
+        position: [780, 270],
     })
     PersonalEmailSkipped = {};
 
@@ -248,7 +249,7 @@ return [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } 
         name: 'Nothing new',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1440, 90],
+        position: [1560, 270],
     })
     NothingNew = {};
 
@@ -257,7 +258,7 @@ return [{ json: { id: c.id, updates, changed: Object.keys(updates).length > 0 } 
         name: 'Lookup failed, left as is',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [960, 90],
+        position: [1040, 270],
     })
     LookupFailedLeftAsIs = {};
 

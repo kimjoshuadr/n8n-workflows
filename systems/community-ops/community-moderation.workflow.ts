@@ -58,15 +58,16 @@ export class CommunityOpsMessageModerationWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -480],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Community ops · Message moderation
 Checks each message, removes clear scams, sends borderline ones to moderators, and never removes anything when the model is unavailable.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/community-ops\``,
     };
 
@@ -76,7 +77,7 @@ Checks each message, removes clear scams, sends borderline ones to moderators, a
         name: 'Message posted',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 270],
     })
     MessagePosted = {
         httpMethod: 'POST',
@@ -90,7 +91,7 @@ Checks each message, removes clear scams, sends borderline ones to moderators, a
         name: 'Read the message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 270],
     })
     ReadTheMessage = {
         jsCode: `const m = $input.first().json.body ?? {};
@@ -106,7 +107,7 @@ return [{ json: { message_id: String(m.id), channel_id: String(m.channel_id), us
         name: 'Judge it',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 270],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -145,7 +146,7 @@ return [{ json: { message_id: String(m.id), channel_id: String(m.channel_id), us
         name: 'Read the verdict',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 270],
     })
     ReadTheVerdict = {
         jsCode: `const before = $("Read the message").all();
@@ -168,7 +169,7 @@ return out;`,
         name: 'What to do?',
         type: 'n8n-nodes-base.switch',
         version: 3.2,
-        position: [960, 0],
+        position: [1040, 270],
     })
     WhatToDo = {
         rules: {
@@ -235,7 +236,7 @@ return out;`,
         name: 'Delete the message',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, -180],
+        position: [1300, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -265,7 +266,7 @@ return out;`,
         name: 'Time the author out',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 270],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -296,7 +297,7 @@ return out;`,
         name: 'Log the action',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, 0],
+        position: [1820, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -327,7 +328,7 @@ return out;`,
         name: 'Removed message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1920, 0],
+        position: [2080, 270],
     })
     RemovedMessage = {
         jsCode: `const m = $("What to do?").first().json;
@@ -339,7 +340,7 @@ return [{ json: { channel: "#mods", level: "info", text: "Removed a message from
         name: 'Review message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 0],
+        position: [1300, 270],
     })
     ReviewMessage = {
         jsCode: `const m = $input.first().json;
@@ -351,7 +352,7 @@ return [{ json: { channel: "#mods", level: "warn", text: "Please look at a messa
         name: 'Tell moderators',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [2160, 0],
+        position: [2340, 270],
     })
     TellModerators = {
         workflowId: {
@@ -367,7 +368,7 @@ return [{ json: { channel: "#mods", level: "warn", text: "Please look at a messa
         name: 'Leave it',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1200, 180],
+        position: [1300, 450],
     })
     LeaveIt = {};
 

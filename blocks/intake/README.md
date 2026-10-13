@@ -9,7 +9,8 @@ The smallest useful workflow: receive a form post, keep the fields you named, st
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Datastore |
+| Platforms | Datastore |
+| Nodes | 4 |
 | Calls | `error-handler` |
 | Files | [`block-webhook-to-table.json`](block-webhook-to-table.json) · [`block-webhook-to-table.workflow.ts`](block-webhook-to-table.workflow.ts) |
 
@@ -35,7 +36,8 @@ Refuses any request that does not carry the secret header, before doing anything
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | nothing external |
+| Platforms | none, logic only |
+| Nodes | 4 |
 | Calls | `error-handler` |
 | Files | [`block-webhook-secret.json`](block-webhook-secret.json) · [`block-webhook-secret.workflow.ts`](block-webhook-secret.workflow.ts) |
 
@@ -62,7 +64,8 @@ Checks a payload against simple rules and answers with exactly which fields were
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | nothing external |
+| Platforms | none, logic only |
+| Nodes | 5 |
 | Calls | `error-handler` |
 | Files | [`block-validate-respond.json`](block-validate-respond.json) · [`block-validate-respond.workflow.ts`](block-validate-respond.workflow.ts) |
 

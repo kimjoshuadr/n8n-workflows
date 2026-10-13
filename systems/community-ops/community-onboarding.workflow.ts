@@ -59,15 +59,16 @@ export class CommunityOpsMemberOnboardingWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Community ops · Member onboarding
 Welcomes a new member, gives them the starter role, records them, and flags accounts created minutes ago for a moderator to look at.
 
-**Needs:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** DB_API_KEY, DB_BASE_URL, DISCORD_API_KEY, DISCORD_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/community-ops\``,
     };
 
@@ -77,7 +78,7 @@ Welcomes a new member, gives them the starter role, records them, and flags acco
         name: 'Member joined',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     MemberJoined = {
         httpMethod: 'POST',
@@ -91,7 +92,7 @@ Welcomes a new member, gives them the starter role, records them, and flags acco
         name: 'Read the member',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     ReadTheMember = {
         jsCode: `const m = $input.first().json.body ?? {};
@@ -105,7 +106,7 @@ return [{ json: { user_id: String(m.user?.id), username: m.user?.username ?? "ne
         name: 'A person?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     APerson = {
         conditions: {
@@ -137,7 +138,7 @@ return [{ json: { user_id: String(m.user?.id), username: m.user?.username ?? "ne
         name: 'Seen before?',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [720, -90],
+        position: [780, 90],
     })
     SeenBefore = {
         workflowId: {
@@ -153,7 +154,7 @@ return [{ json: { user_id: String(m.user?.id), username: m.user?.username ?? "ne
         name: 'First join?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     FirstJoin = {
         conditions: {
@@ -185,7 +186,7 @@ return [{ json: { user_id: String(m.user?.id), username: m.user?.username ?? "ne
         name: 'Save the member',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, -90],
+        position: [1300, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -216,7 +217,7 @@ return [{ json: { user_id: String(m.user?.id), username: m.user?.username ?? "ne
         name: 'Brand new account?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1440, 0],
+        position: [1560, 180],
     })
     BrandNewAccount = {
         conditions: {
@@ -248,7 +249,7 @@ return [{ json: { user_id: String(m.user?.id), username: m.user?.username ?? "ne
         name: 'Review message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, -90],
+        position: [1820, 90],
     })
     ReviewMessage = {
         jsCode: `const m = $("First join?").first().json;
@@ -260,7 +261,7 @@ return [{ json: { channel: "#mods", level: "warn", text: m.username + " joined w
         name: 'Ask a moderator',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1920, -90],
+        position: [2080, 90],
     })
     AskAModerator = {
         workflowId: {
@@ -276,7 +277,7 @@ return [{ json: { channel: "#mods", level: "warn", text: m.username + " joined w
         name: 'Give starter role',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, 90],
+        position: [1820, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -307,7 +308,7 @@ return [{ json: { channel: "#mods", level: "warn", text: m.username + " joined w
         name: 'Welcome them',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1920, 90],
+        position: [2080, 270],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -339,7 +340,7 @@ return [{ json: { channel: "#mods", level: "warn", text: m.username + " joined w
         name: 'Ignore bots',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [720, 90],
+        position: [780, 270],
     })
     IgnoreBots = {};
 
@@ -348,7 +349,7 @@ return [{ json: { channel: "#mods", level: "warn", text: m.username + " joined w
         name: 'Rejoined',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [1200, 90],
+        position: [1300, 270],
     })
     Rejoined = {};
 

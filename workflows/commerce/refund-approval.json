@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -480
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Payments · Refund requests\nRefunds small amounts on recent orders automatically, and sends anything larger, older or repeated to a person with the facts attached.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, PAYMENTS_API_KEY, PAYMENTS_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
+        "width": 640,
+        "height": 230,
+        "content": "## Payments · Refund requests\nRefunds small amounts on recent orders automatically, and sends anything larger, older or repeated to a person with the facts attached.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, PAYMENTS_API_KEY, PAYMENTS_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `workflows/commerce`"
       }
     },
     {
       "id": "7fd7f990-cc1e-41db-a29b-aa29ee3a4832",
       "position": [
         0,
-        0
+        270
       ],
       "name": "Refund requested",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "fbea3a51-881e-454e-ab6b-09a5885c815e",
       "position": [
-        240,
-        0
+        260,
+        270
       ],
       "name": "Read the request",
       "type": "n8n-nodes-base.code",
@@ -49,8 +49,8 @@
     {
       "id": "8e554982-1e8c-444e-af1e-2a3180d59aab",
       "position": [
-        480,
-        0
+        520,
+        270
       ],
       "name": "Valid?",
       "type": "n8n-nodes-base.if",
@@ -83,8 +83,8 @@
     {
       "id": "f1226abd-4556-4995-a264-87b282849c8d",
       "position": [
-        720,
-        -90
+        780,
+        180
       ],
       "name": "Invalid",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -100,8 +100,8 @@
     {
       "id": "6398f882-6201-40a1-a1ec-914c2274ef81",
       "position": [
-        720,
-        90
+        780,
+        360
       ],
       "name": "Load the order",
       "type": "n8n-nodes-base.httpRequest",
@@ -139,8 +139,8 @@
     {
       "id": "962f37e7-43a1-417e-afc0-7a1dc7ff8c10",
       "position": [
-        960,
-        0
+        1040,
+        270
       ],
       "name": "Order found?",
       "type": "n8n-nodes-base.if",
@@ -173,8 +173,8 @@
     {
       "id": "ce1b18cb-650b-421d-a601-768ca4c5142a",
       "position": [
-        1200,
-        -90
+        1300,
+        180
       ],
       "name": "Unknown order",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -190,8 +190,8 @@
     {
       "id": "165d585a-b746-4539-a49c-4c591a7e7a98",
       "position": [
-        1200,
-        90
+        1300,
+        360
       ],
       "name": "Past refunds",
       "type": "n8n-nodes-base.httpRequest",
@@ -229,8 +229,8 @@
     {
       "id": "f7db93bf-aaff-413f-acb0-714c5ee658d5",
       "position": [
-        1440,
-        0
+        1560,
+        270
       ],
       "name": "Apply the policy",
       "type": "n8n-nodes-base.code",
@@ -242,8 +242,8 @@
     {
       "id": "9b43df5f-9418-4d50-abda-43e9c88511f8",
       "position": [
-        1680,
-        0
+        1820,
+        270
       ],
       "name": "Decision",
       "type": "n8n-nodes-base.switch",
@@ -311,8 +311,8 @@
     {
       "id": "89727790-60c7-43dc-a7d0-cc877fe0ca7f",
       "position": [
-        1920,
-        -180
+        2080,
+        90
       ],
       "name": "Already refunded",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -328,8 +328,8 @@
     {
       "id": "08dc9c47-152b-436c-ae18-e450884688a8",
       "position": [
-        1920,
-        0
+        2080,
+        270
       ],
       "name": "Refund at the processor",
       "type": "n8n-nodes-base.httpRequest",
@@ -364,8 +364,8 @@
     {
       "id": "96cf1058-4f1e-43e4-a62b-b17d9a28d5fd",
       "position": [
-        2160,
-        -90
+        2340,
+        180
       ],
       "name": "Record the refund",
       "type": "n8n-nodes-base.httpRequest",
@@ -396,8 +396,8 @@
     {
       "id": "aa509920-8bdf-4c3c-ac51-af0894d62c6b",
       "position": [
-        2400,
-        -90
+        2600,
+        180
       ],
       "name": "Mark the order",
       "type": "n8n-nodes-base.httpRequest",
@@ -437,8 +437,8 @@
     {
       "id": "9a0c31a9-5445-4e24-a40d-cd0aa479ad31",
       "position": [
-        2640,
-        0
+        2860,
+        270
       ],
       "name": "Refunded",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -454,8 +454,8 @@
     {
       "id": "42660ce5-9634-4d36-aaf8-c4d9ca989c08",
       "position": [
-        1920,
-        180
+        2080,
+        450
       ],
       "name": "Review message",
       "type": "n8n-nodes-base.code",
@@ -467,8 +467,8 @@
     {
       "id": "f7ced98e-c1f1-4e1a-aee6-354c0662d828",
       "position": [
-        2160,
-        90
+        2340,
+        360
       ],
       "name": "Ask finance",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -485,8 +485,8 @@
     {
       "id": "2b46bc9c-a009-4ea3-abe8-3ef9244d47ae",
       "position": [
-        2400,
-        90
+        2600,
+        360
       ],
       "name": "Under review",
       "type": "n8n-nodes-base.respondToWebhook",

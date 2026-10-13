@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · CSV text to rows\nParses CSV text properly, including quoted commas and blank lines, into one item per row.\n\n**Needs:** nothing external\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · CSV text to rows\nParses CSV text properly, including quoted commas and blank lines, into one item per row.\n\n**Platforms:** none, this is logic only\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/data`"
       }
     },
     {
       "id": "19f91a05-4d91-48d9-ae9f-bb0b97a2d092",
       "position": [
         0,
-        0
+        90
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "3153f988-044b-41a2-ab72-7a1c9aaaacee",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Parse",
       "type": "n8n-nodes-base.code",

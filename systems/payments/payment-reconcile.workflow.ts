@@ -56,15 +56,16 @@ export class PaymentsDailyReconciliationWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Payments · Daily reconciliation
 Each morning, compares yesterday's charges at the processor with the ledger and reports anything on one side and not the other.
 
-**Needs:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, PAYMENTS_API_KEY, PAYMENTS_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CHAT_API_KEY, CHAT_BASE_URL, DB_API_KEY, DB_BASE_URL, PAYMENTS_API_KEY, PAYMENTS_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/payments\``,
     };
 
@@ -73,7 +74,7 @@ Each morning, compares yesterday's charges at the processor with the ledger and 
         name: '06:00 daily',
         type: 'n8n-nodes-base.scheduleTrigger',
         version: 1.2,
-        position: [0, 0],
+        position: [0, 180],
     })
     _0600Daily = {
         rule: {
@@ -91,7 +92,7 @@ Each morning, compares yesterday's charges at the processor with the ledger and 
         name: 'Processor charges',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -131,7 +132,7 @@ Each morning, compares yesterday's charges at the processor with the ledger and 
         name: 'Ledger lines',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [480, 0],
+        position: [520, 180],
         alwaysOutputData: true,
         executeOnce: true,
         retryOnFail: true,
@@ -173,7 +174,7 @@ Each morning, compares yesterday's charges at the processor with the ledger and 
         name: 'Compare',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [720, 0],
+        position: [780, 180],
     })
     Compare = {
         jsCode: `const charges = ($("Processor charges").first().json.data ?? []).filter((c) => c.paid !== false);
@@ -196,7 +197,7 @@ return [{ json: { checked: charges.length, issues, clean: issues.length === 0, t
         name: 'Books agree?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     BooksAgree = {
         conditions: {
@@ -228,7 +229,7 @@ return [{ json: { checked: charges.length, issues, clean: issues.length === 0, t
         name: 'Post all clear',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1200, -90],
+        position: [1300, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -259,7 +260,7 @@ return [{ json: { checked: charges.length, issues, clean: issues.length === 0, t
         name: 'One item per issue',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1200, 90],
+        position: [1300, 270],
     })
     OneItemPerIssue = {
         jsCode: 'return $input.first().json.issues.map((json) => ({ json: { ...json, found_at: new Date().toISOString(), status: "open" } }));',
@@ -270,7 +271,7 @@ return [{ json: { checked: charges.length, issues, clean: issues.length === 0, t
         name: 'Record the issue',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 0],
+        position: [1560, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -300,7 +301,7 @@ return [{ json: { checked: charges.length, issues, clean: issues.length === 0, t
         name: 'Mismatch message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, 0],
+        position: [1820, 180],
     })
     MismatchMessage = {
         jsCode: `const r = $("Compare").first().json;
@@ -312,7 +313,7 @@ return [{ json: { channel: "#finance", level: "critical", text: r.issues.length 
         name: 'Alert finance',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1920, 0],
+        position: [2080, 180],
     })
     AlertFinance = {
         workflowId: {
@@ -328,7 +329,7 @@ return [{ json: { channel: "#finance", level: "critical", text: r.issues.length 
         name: 'Check in',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [2160, 0],
+        position: [2340, 180],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,

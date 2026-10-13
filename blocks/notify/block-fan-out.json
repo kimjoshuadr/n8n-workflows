@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -300
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · One event, three channels\nSends the same message by chat, email and SMS, where each channel failing leaves the other two untouched.\n\n**Needs:** CHAT_API_KEY, CHAT_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, SMS_API_KEY, SMS_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/notify`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · One event, three channels\nSends the same message by chat, email and SMS, where each channel failing leaves the other two untouched.\n\n**Platforms:** none, this is logic only\n**Settings:** CHAT_API_KEY, CHAT_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, SMS_API_KEY, SMS_BASE_URL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/notify`"
       }
     },
     {
       "id": "e3a50d45-e58c-49b7-ad42-f3eae85432bc",
       "position": [
         0,
-        0
+        90
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "25f408bd-0113-4440-a475-74d1d68017c2",
       "position": [
-        240,
-        0
+        260,
+        90
       ],
       "name": "Chat",
       "type": "n8n-nodes-base.httpRequest",
@@ -65,8 +65,8 @@
     {
       "id": "f3ca4c32-3691-404a-af90-893f391fe04a",
       "position": [
-        480,
-        0
+        520,
+        90
       ],
       "name": "Email",
       "type": "n8n-nodes-base.httpRequest",
@@ -98,8 +98,8 @@
     {
       "id": "b02d9e72-5abb-4a3f-a51a-636fd8586fe0",
       "position": [
-        720,
-        0
+        780,
+        90
       ],
       "name": "SMS",
       "type": "n8n-nodes-base.httpRequest",
@@ -131,8 +131,8 @@
     {
       "id": "f882cc6b-f470-4b73-a97c-6606f4dadeac",
       "position": [
-        960,
-        0
+        1040,
+        90
       ],
       "name": "Report",
       "type": "n8n-nodes-base.code",

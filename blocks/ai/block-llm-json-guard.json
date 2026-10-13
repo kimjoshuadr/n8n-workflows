@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -390
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Block · A model reply you can rely on\nAsks a model for JSON, checks the reply has the fields you need, asks once more if it does not, and then gives up honestly.\n\n**Needs:** LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/ai`"
+        "width": 640,
+        "height": 230,
+        "content": "## Block · A model reply you can rely on\nAsks a model for JSON, checks the reply has the fields you need, asks once more if it does not, and then gives up honestly.\n\n**Platforms:** none, this is logic only\n**Settings:** LLM_API_KEY, LLM_BASE_URL, LLM_MODEL\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `blocks/ai`"
       }
     },
     {
       "id": "94360127-1344-4382-a350-ab007574aaa7",
       "position": [
         0,
-        0
+        180
       ],
       "name": "When called",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -32,8 +32,8 @@
     {
       "id": "2f1630bb-4649-4948-a2c3-dd5716b04e48",
       "position": [
-        240,
-        0
+        260,
+        180
       ],
       "name": "Ask",
       "type": "n8n-nodes-base.httpRequest",
@@ -65,8 +65,8 @@
     {
       "id": "60c14cb6-e19d-4c53-a456-15c40ad60e0c",
       "position": [
-        480,
-        0
+        520,
+        180
       ],
       "name": "Check the reply",
       "type": "n8n-nodes-base.code",
@@ -78,8 +78,8 @@
     {
       "id": "62ce4d4d-8ea1-4996-a96b-a19629d4a546",
       "position": [
-        720,
-        0
+        780,
+        180
       ],
       "name": "Good?",
       "type": "n8n-nodes-base.if",
@@ -112,8 +112,8 @@
     {
       "id": "8333bf41-bb7b-45b8-aabe-d66f039585f0",
       "position": [
-        960,
-        -90
+        1040,
+        90
       ],
       "name": "Try once more?",
       "type": "n8n-nodes-base.if",
@@ -146,8 +146,8 @@
     {
       "id": "035b0b71-4f54-4c1e-a0be-3f2ccaf019af",
       "position": [
-        960,
-        90
+        1040,
+        270
       ],
       "name": "Usable",
       "type": "n8n-nodes-base.set",
@@ -176,8 +176,8 @@
     {
       "id": "50a2db02-a98f-4aaa-accc-fd3d8cbf1604",
       "position": [
-        1200,
-        0
+        1300,
+        180
       ],
       "name": "Not usable",
       "type": "n8n-nodes-base.set",

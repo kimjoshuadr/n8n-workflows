@@ -43,15 +43,16 @@ export class BlockFailedCallToDeadLetterWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Failed call to dead letter
 The pattern for any write that must not be lost: try, and if it still fails after retries, park the payload.
 
-**Needs:** CRM_API_KEY, CRM_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CRM_API_KEY, CRM_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/reliability\``,
     };
 
@@ -60,7 +61,7 @@ The pattern for any write that must not be lost: try, and if it still fails afte
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 180],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -71,7 +72,7 @@ The pattern for any write that must not be lost: try, and if it still fails afte
         name: 'Write',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 180],
         onError: 'continueErrorOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -102,7 +103,7 @@ The pattern for any write that must not be lost: try, and if it still fails afte
         name: 'Written',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [480, -90],
+        position: [520, 90],
     })
     Written = {
         assignments: {
@@ -124,7 +125,7 @@ The pattern for any write that must not be lost: try, and if it still fails afte
         name: 'Wrap',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 90],
+        position: [520, 270],
     })
     Wrap = {
         jsCode: 'return [{ json: { source: "block-error-to-dead-letter", reason: "CRM write failed after retries", payload: $("When called").first().json } }];',
@@ -135,7 +136,7 @@ The pattern for any write that must not be lost: try, and if it still fails afte
         name: 'Park it',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [720, 0],
+        position: [780, 180],
     })
     ParkIt = {
         workflowId: {

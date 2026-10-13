@@ -57,15 +57,16 @@ export class LeadIntakeBookingSyncWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Lead intake · Booking sync
 When a call is booked, moves the lead forward everywhere at once: the lead record, the CRM deal and the sales channel.
 
-**Needs:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL
+**Platforms:** none, this is logic only
+**Settings:** CRM_API_KEY, CRM_BASE_URL, DB_API_KEY, DB_BASE_URL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`systems/lead-intake\``,
     };
 
@@ -75,7 +76,7 @@ When a call is booked, moves the lead forward everywhere at once: the lead recor
         name: 'Booking created',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     BookingCreated = {
         httpMethod: 'POST',
@@ -89,7 +90,7 @@ When a call is booked, moves the lead forward everywhere at once: the lead recor
         name: 'Read the booking',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     ReadTheBooking = {
         jsCode: `const b = $input.first().json.body ?? {};
@@ -104,7 +105,7 @@ return [{ json: { email, starts_at: p.startTime ?? p.start_time, booking_id: Str
         name: 'Seen before?',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [480, 0],
+        position: [520, 180],
     })
     SeenBefore = {
         workflowId: {
@@ -120,7 +121,7 @@ return [{ json: { email, starts_at: p.startTime ?? p.start_time, booking_id: Str
         name: 'New booking?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [720, 0],
+        position: [780, 180],
     })
     NewBooking = {
         conditions: {
@@ -152,7 +153,7 @@ return [{ json: { email, starts_at: p.startTime ?? p.start_time, booking_id: Str
         name: 'Mark lead booked',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [960, -90],
+        position: [1040, 90],
         alwaysOutputData: true,
         retryOnFail: true,
         maxTries: 3,
@@ -192,7 +193,7 @@ return [{ json: { email, starts_at: p.startTime ?? p.start_time, booking_id: Str
         name: 'Known lead?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1200, 0],
+        position: [1300, 180],
     })
     KnownLead = {
         conditions: {
@@ -224,7 +225,7 @@ return [{ json: { email, starts_at: p.startTime ?? p.start_time, booking_id: Str
         name: 'Open CRM deal',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, -90],
+        position: [1560, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -255,7 +256,7 @@ return [{ json: { email, starts_at: p.startTime ?? p.start_time, booking_id: Str
         name: 'Booked message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1680, -90],
+        position: [1820, 90],
     })
     BookedMessage = {
         jsCode: `const l = $("Known lead?").first().json;
@@ -267,7 +268,7 @@ return [{ json: { text: l.name + " booked a call for " + l.call_at + ".", level:
         name: 'Tell sales',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1920, 0],
+        position: [2080, 180],
     })
     TellSales = {
         workflowId: {
@@ -283,7 +284,7 @@ return [{ json: { text: l.name + " booked a call for " + l.call_at + ".", level:
         name: 'Unknown message',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [1440, 90],
+        position: [1560, 270],
     })
     UnknownMessage = {
         jsCode: 'return [{ json: { text: "A call was booked by " + $("New booking?").first().json.email + ", who is not in the leads table.", level: "warn" } }];',
@@ -294,7 +295,7 @@ return [{ json: { text: l.name + " booked a call for " + l.call_at + ".", level:
         name: 'Flag it',
         type: 'n8n-nodes-base.executeWorkflow',
         version: 1.1,
-        position: [1680, 90],
+        position: [1820, 270],
     })
     FlagIt = {
         workflowId: {
@@ -310,7 +311,7 @@ return [{ json: { text: l.name + " booked a call for " + l.call_at + ".", level:
         name: 'Already handled',
         type: 'n8n-nodes-base.noOp',
         version: 1,
-        position: [960, 90],
+        position: [1040, 270],
     })
     AlreadyHandled = {};
 

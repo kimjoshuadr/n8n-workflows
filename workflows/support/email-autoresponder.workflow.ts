@@ -53,15 +53,16 @@ export class SupportInboxTriageAndFirstReplyWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -390],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Support · Inbox triage and first reply
 Sorts the shared inbox: answers the handful of questions that have a fixed answer, files newsletters and receipts, and leaves everything else for a person.
 
-**Needs:** EMAIL_API_KEY, EMAIL_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** none, this is logic only
+**Settings:** EMAIL_API_KEY, EMAIL_BASE_URL, HELPDESK_API_KEY, HELPDESK_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`workflows/support\``,
     };
 
@@ -71,7 +72,7 @@ Sorts the shared inbox: answers the handful of questions that have a fixed answe
         name: 'Email received',
         type: 'n8n-nodes-base.webhook',
         version: 2,
-        position: [0, 0],
+        position: [0, 180],
     })
     EmailReceived = {
         httpMethod: 'POST',
@@ -85,7 +86,7 @@ Sorts the shared inbox: answers the handful of questions that have a fixed answe
         name: 'Read the email',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 180],
     })
     ReadTheEmail = {
         jsCode: `const m = $input.first().json.body ?? {};
@@ -99,7 +100,7 @@ return [{ json: { id: String(m.id), from, subject: String(m.subject ?? ""), text
         name: 'From a person?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [480, 0],
+        position: [520, 180],
     })
     FromAPerson = {
         conditions: {
@@ -131,7 +132,7 @@ return [{ json: { id: String(m.id), from, subject: String(m.subject ?? ""), text
         name: 'Archive it',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, -90],
+        position: [780, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -161,7 +162,7 @@ return [{ json: { id: String(m.id), from, subject: String(m.subject ?? ""), text
         name: 'What is it asking?',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [720, 90],
+        position: [780, 270],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -200,7 +201,7 @@ return [{ json: { id: String(m.id), from, subject: String(m.subject ?? ""), text
         name: 'Read the intent',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [960, 0],
+        position: [1040, 180],
     })
     ReadTheIntent = {
         jsCode: `const before = $("From a person?").all();
@@ -223,7 +224,7 @@ return out;`,
         name: 'A fixed-answer question?',
         type: 'n8n-nodes-base.if',
         version: 2.2,
-        position: [1200, 0],
+        position: [1300, 180],
     })
     AFixedAnswerQuestion = {
         conditions: {
@@ -256,7 +257,7 @@ return out;`,
         name: 'Send the standard reply',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, -90],
+        position: [1560, 90],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -287,7 +288,7 @@ return out;`,
         name: 'Label as answered',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1680, 0],
+        position: [1820, 180],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,
@@ -318,7 +319,7 @@ return out;`,
         name: 'Leave for a person',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [1440, 90],
+        position: [1560, 270],
         retryOnFail: true,
         maxTries: 3,
         waitBetweenTries: 1000,

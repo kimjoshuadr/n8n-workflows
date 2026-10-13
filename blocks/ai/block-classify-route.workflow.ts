@@ -47,15 +47,16 @@ export class BlockClassifyThenRouteWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -480],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Classify, then route
 Has a model put a message into one of a fixed set of labels and routes on it, with a default route for anything unexpected.
 
-**Needs:** LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+**Platforms:** none, this is logic only
+**Settings:** LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/ai\``,
     };
 
@@ -64,7 +65,7 @@ Has a model put a message into one of a fixed set of labels and routes on it, wi
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 270],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -75,7 +76,7 @@ Has a model put a message into one of a fixed set of labels and routes on it, wi
         name: 'Classify',
         type: 'n8n-nodes-base.httpRequest',
         version: 4.2,
-        position: [240, 0],
+        position: [260, 270],
         onError: 'continueRegularOutput',
         retryOnFail: true,
         maxTries: 3,
@@ -114,7 +115,7 @@ Has a model put a message into one of a fixed set of labels and routes on it, wi
         name: 'Read the label',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [480, 0],
+        position: [520, 270],
     })
     ReadTheLabel = {
         jsCode: `let label = "general";
@@ -127,7 +128,7 @@ return [{ json: { ...$("When called").first().json, label } }];`,
         name: 'By label',
         type: 'n8n-nodes-base.switch',
         version: 3.2,
-        position: [720, 0],
+        position: [780, 270],
     })
     ByLabel = {
         rules: {
@@ -194,7 +195,7 @@ return [{ json: { ...$("When called").first().json, label } }];`,
         name: 'Billing',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [960, -180],
+        position: [1040, 90],
     })
     Billing = {
         assignments: {
@@ -216,7 +217,7 @@ return [{ json: { ...$("When called").first().json, label } }];`,
         name: 'Technical',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [960, 0],
+        position: [1040, 270],
     })
     Technical = {
         assignments: {
@@ -238,7 +239,7 @@ return [{ json: { ...$("When called").first().json, label } }];`,
         name: 'General',
         type: 'n8n-nodes-base.set',
         version: 3.4,
-        position: [960, 180],
+        position: [1040, 450],
     })
     General = {
         assignments: {

@@ -15,7 +15,8 @@ Welcomes a new member, gives them the starter role, records them, and flags acco
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | Discord, Datastore, Chat |
+| Platforms | Discord, Datastore, Chat |
+| Nodes | 13 |
 | Calls | `idempotency-guard`, `notify`, `error-handler` |
 | Files | [`community-onboarding.json`](community-onboarding.json) · [`community-onboarding.workflow.ts`](community-onboarding.workflow.ts) |
 
@@ -69,7 +70,8 @@ Checks each message, removes clear scams, sends borderline ones to moderators, a
 | | |
 |---|---|
 | Starts from | Webhook |
-| Talks to | LLM, Discord, Datastore, Chat |
+| Platforms | LLM, Discord, Datastore, Chat |
+| Nodes | 12 |
 | Calls | `notify`, `error-handler` |
 | Files | [`community-moderation.json`](community-moderation.json) · [`community-moderation.workflow.ts`](community-moderation.workflow.ts) |
 
@@ -124,7 +126,8 @@ Posts announcements at the time they were scheduled for, once, and reports any t
 | | |
 |---|---|
 | Starts from | Schedule |
-| Talks to | Datastore, Discord, Chat |
+| Platforms | Datastore, Discord, Chat |
+| Nodes | 11 |
 | Calls | `notify`, `error-handler` |
 | Files | [`community-announcements.json`](community-announcements.json) · [`community-announcements.workflow.ts`](community-announcements.workflow.ts) |
 

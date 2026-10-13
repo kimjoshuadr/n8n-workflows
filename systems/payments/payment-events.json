@@ -7,20 +7,20 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -570
+        -80,
+        -210
       ],
       "parameters": {
-        "width": 620,
-        "height": 220,
-        "content": "## Payments · Event ledger\nRecords each payment, failure and refund from the processor exactly once, updates the invoice, and sends the receipt or the retry notice.\n\n**Needs:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, PAYMENTS_WEBHOOK_SECRET\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
+        "width": 640,
+        "height": 230,
+        "content": "## Payments · Event ledger\nRecords each payment, failure and refund from the processor exactly once, updates the invoice, and sends the receipt or the retry notice.\n\n**Platforms:** none, this is logic only\n**Settings:** DB_API_KEY, DB_BASE_URL, EMAIL_API_KEY, EMAIL_BASE_URL, PAYMENTS_WEBHOOK_SECRET\n**Source and tests:** github.com/kimjoshuadr/n8n-workflows · `systems/payments`"
       }
     },
     {
       "id": "1df99ca6-66d9-4b26-aea8-189f0cd074b0",
       "position": [
         0,
-        0
+        360
       ],
       "name": "Payment event",
       "type": "n8n-nodes-base.webhook",
@@ -36,8 +36,8 @@
     {
       "id": "b999fdca-a584-4416-a8ae-253d6192da13",
       "position": [
-        240,
-        0
+        260,
+        360
       ],
       "name": "Signed?",
       "type": "n8n-nodes-base.if",
@@ -70,8 +70,8 @@
     {
       "id": "ddba1875-6030-497e-a8df-19bf02596182",
       "position": [
-        480,
-        -90
+        520,
+        270
       ],
       "name": "Unauthorised",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -87,8 +87,8 @@
     {
       "id": "4539a812-c446-4942-a270-b7c15a47ff83",
       "position": [
-        480,
-        90
+        520,
+        450
       ],
       "name": "Read the event",
       "type": "n8n-nodes-base.code",
@@ -100,8 +100,8 @@
     {
       "id": "ebc81471-1db2-4394-a815-bae534df600a",
       "position": [
-        720,
-        0
+        780,
+        360
       ],
       "name": "Seen before?",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -118,8 +118,8 @@
     {
       "id": "5c36a794-32fe-49a9-a724-5d7e589dd195",
       "position": [
-        960,
-        0
+        1040,
+        360
       ],
       "name": "New event?",
       "type": "n8n-nodes-base.if",
@@ -152,8 +152,8 @@
     {
       "id": "6abd1e57-5047-411a-ac51-92fba181d15c",
       "position": [
-        1200,
-        -90
+        1300,
+        270
       ],
       "name": "Already recorded",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -169,8 +169,8 @@
     {
       "id": "1966f55f-e626-400b-ae31-bb0aa2206e22",
       "position": [
-        1200,
-        90
+        1300,
+        450
       ],
       "name": "Which event?",
       "type": "n8n-nodes-base.switch",
@@ -263,8 +263,8 @@
     {
       "id": "793f844b-66d0-474d-a389-030d836d2a3d",
       "position": [
-        1440,
-        -270
+        1560,
+        90
       ],
       "name": "Ledger: credit",
       "type": "n8n-nodes-base.httpRequest",
@@ -295,8 +295,8 @@
     {
       "id": "f343455c-2f7f-4ea6-aaba-a32a138c091e",
       "position": [
-        1680,
-        -180
+        1820,
+        180
       ],
       "name": "Mark invoice paid",
       "type": "n8n-nodes-base.httpRequest",
@@ -337,8 +337,8 @@
     {
       "id": "a8298417-a3e1-4ed4-a69d-0b8b14778a60",
       "position": [
-        1920,
-        -90
+        2080,
+        270
       ],
       "name": "Send receipt",
       "type": "n8n-nodes-base.httpRequest",
@@ -370,8 +370,8 @@
     {
       "id": "dbedd1fe-a271-4e26-a00e-8491961b1ca4",
       "position": [
-        1440,
-        -90
+        1560,
+        270
       ],
       "name": "Mark invoice failed",
       "type": "n8n-nodes-base.httpRequest",
@@ -412,8 +412,8 @@
     {
       "id": "3f2ddc1e-027a-4dc4-a942-cdbf726e81b4",
       "position": [
-        1680,
-        0
+        1820,
+        360
       ],
       "name": "Ask to update card",
       "type": "n8n-nodes-base.httpRequest",
@@ -445,8 +445,8 @@
     {
       "id": "e27e0fc7-9cbc-4f4a-a7a2-f777829d441b",
       "position": [
-        1440,
-        90
+        1560,
+        450
       ],
       "name": "Ledger: debit",
       "type": "n8n-nodes-base.httpRequest",
@@ -477,8 +477,8 @@
     {
       "id": "d01584a2-0199-4844-ad1c-2591a1bc229b",
       "position": [
-        1680,
-        180
+        1820,
+        540
       ],
       "name": "Refund message",
       "type": "n8n-nodes-base.code",
@@ -490,8 +490,8 @@
     {
       "id": "881191cb-1b22-4e06-a381-ed5bf819a420",
       "position": [
-        1920,
-        90
+        2080,
+        450
       ],
       "name": "Tell finance",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -508,8 +508,8 @@
     {
       "id": "e8d852ed-f906-4f64-a6d1-ac42ab5b6e10",
       "position": [
-        2160,
-        0
+        2340,
+        360
       ],
       "name": "Recorded",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -525,8 +525,8 @@
     {
       "id": "ab6cbdf4-0e54-4b36-a3d6-e381a671e42a",
       "position": [
-        1440,
-        270
+        1560,
+        630
       ],
       "name": "Not handled",
       "type": "n8n-nodes-base.respondToWebhook",

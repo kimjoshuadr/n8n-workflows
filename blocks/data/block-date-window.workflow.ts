@@ -37,15 +37,15 @@ export class BlockYesterdayInTheBusinessSTimeZoneWorkflow {
         name: 'About this workflow',
         type: 'n8n-nodes-base.stickyNote',
         version: 1,
-        position: [-40, -300],
+        position: [-80, -210],
     })
     AboutThisWorkflow = {
-        width: 620,
-        height: 220,
+        width: 640,
+        height: 230,
         content: `## Block · Yesterday, in the business's time zone
 Works out the start and end of 'yesterday' or 'last week' in a named time zone, which is where most reporting bugs come from.
 
-**Needs:** nothing external
+**Platforms:** none, this is logic only
 **Source and tests:** github.com/kimjoshuadr/n8n-workflows · \`blocks/data\``,
     };
 
@@ -54,7 +54,7 @@ Works out the start and end of 'yesterday' or 'last week' in a named time zone, 
         name: 'When called',
         type: 'n8n-nodes-base.executeWorkflowTrigger',
         version: 1.1,
-        position: [0, 0],
+        position: [0, 90],
     })
     WhenCalled = {
         inputSource: 'passthrough',
@@ -65,7 +65,7 @@ Works out the start and end of 'yesterday' or 'last week' in a named time zone, 
         name: 'Window',
         type: 'n8n-nodes-base.code',
         version: 2,
-        position: [240, 0],
+        position: [260, 90],
     })
     Window = {
         jsCode: `return $input.all().map((item) => {
