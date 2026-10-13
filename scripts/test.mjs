@@ -16,53 +16,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { loadAll, refsOf, root } from "./load.mjs";
-
-const N8N = process.env.N8N_URL ?? "http://localhost:5679";
-const MOCKS = process.env.MOCKS_URL ?? "http://localhost:4010";
-const OWNER = { email: "test@example.com", firstName: "Test", lastName: "Runner", password: "Testrunner123" };
-const keyFile = path.join(root, ".n8n-test-key");
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-/** n8n answers its health check before its API is up; wait for the API itself. */
-async function ready() {
-  for (let i = 0; i < 120; i++) {
-    try {
-      const res = await fetch(`${N8N}/rest/settings`);
-      if (res.ok && /json/.test(res.headers.get("content-type") ?? "")) return;
-    } catch {}
-    await sleep(1000);
-  }
-  throw new Error(`n8n at ${N8N} did not become ready in two minutes`);
-}
-
-async function apiKey() {
-  await ready();
-  if (fs.existsSync(keyFile)) {
-    const key = fs.readFileSync(keyFile, "utf8").trim();
-    const ok = await fetch(`${N8N}/api/v1/workflows?limit=1`, { headers: { "X-N8N-API-KEY": key } });
-    if (ok.status === 200) return key;
-  }
-  const json = { "content-type": "application/json" };
-  let res = await fetch(`${N8N}/rest/login`, { method: "POST", headers: json, body: JSON.stringify({ emailOrLdapLoginId: OWNER.email, password: OWNER.password }) });
-  if (!res.ok) res = await fetch(`${N8N}/rest/owner/setup`, { method: "POST", headers: json, body: JSON.stringify(OWNER) });
-  if (!res.ok) throw new Error(`cannot sign in to the test n8n: ${res.status} ${await res.text()}`);
-  const cookie = res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
-  const scopes = (await (await fetch(`${N8N}/rest/api-keys/scopes`, { headers: { cookie } })).json()).data;
-  const made = await fetch(`${N8N}/rest/api-keys`, { method: "POST", headers: { ...json, cookie }, body: JSON.stringify({ label: `tests-${Date.now()}`, scopes, expiresAt: null }) });
-  if (!made.ok) throw new Error(`cannot create an API key: ${made.status} ${await made.text()}`);
-  const key = (await made.json()).data.rawApiKey;
-  fs.writeFileSync(keyFile, key);
-  return key;
-}
-
-let KEY;
-async function n8n(method, p, body) {
-  const res = await fetch(`${N8N}/api/v1${p}`, { method, headers: { "X-N8N-API-KEY": KEY, "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`${method} ${p} -> ${res.status} ${text.slice(0, 400)}`);
-  return text ? JSON.parse(text) : {};
-}
-const mock = async (p, body) => (await fetch(`${MOCKS}${p}`, { method: body === undefined ? "GET" : "POST", headers: { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) })).json();
+import { connect, n8n, mock, ensureCredentials, fill as fillAll, sleep, N8N } from "./n8n.mjs";
+import { PLATFORMS } from "../lib/platforms.mjs";
+import { UNIQUE } from "../lib/schema.mjs";
 
 const isWebhook = (def) => def.trigger === "webhook";
 
@@ -95,7 +51,18 @@ function testCopy(def) {
   return json;
 }
 
-const fill = (json, ids) => JSON.parse(JSON.stringify(json).replace(/__WF:([a-z0-9-]+)__/g, (_, id) => ids[id] ?? `MISSING_${id}`));
+let CREDS = {};
+const fill = (json, ids) => fillAll(json, ids, CREDS);
+
+/** "slack" means any of Slack's hostnames; anything else is a path prefix. */
+const hostsOf = (to) => PLATFORMS[to]?.hosts ?? null;
+const sentTo = (call, to) => (hostsOf(to) ? hostsOf(to).includes(call.host) : call.path.startsWith(to));
+const matches = (k, w) =>
+  (!w.to || sentTo(k, w.to)) &&
+  (!w.path || k.path === w.path || (w.path.endsWith("*") && k.path.startsWith(w.path.slice(0, -1)))) &&
+  (!w.method || k.method === w.method) &&
+  (w.body === undefined || contains(k.body, w.body)) &&
+  (w.query === undefined || contains(k.query, w.query));
 
 /** True when every key in `want` is in `got` with the same value, at any depth. */
 function contains(got, want) {
@@ -120,6 +87,8 @@ async function waitForExecution(workflowId, after) {
 async function runCase(def, wf, c) {
   const problems = [];
   await mock("/__reset", {});
+  await mock("/__unique", UNIQUE);
+  if (c.llm) await mock("/__llm", { replies: c.llm });
   if (c.seed) await mock("/__seed", c.seed);
   for (const r of c.routes ?? []) await mock("/__route", r);
   for (const f of c.fail ?? []) await mock("/__fail", f);
@@ -159,20 +128,24 @@ async function runCase(def, wf, c) {
 
   // Calls made after the run ended (an error workflow's alert) need a moment.
   let calls = [];
-  const callsOk = () => (c.calls ?? []).every((w) => calls.some((k) => k.path === w.path && (!w.method || k.method === w.method) && (w.body === undefined || contains(k.body, w.body)) && (w.query === undefined || contains(k.query, w.query))));
+  const callsOk = () => (c.calls ?? []).every((w) => calls.some((k) => matches(k, w)));
   for (let i = 0; i < (c.settle ? 40 : 1); i++) {
     calls = await mock("/__calls");
     if (callsOk()) break;
     await sleep(250);
   }
+  const show = (w) => `${w.to ?? ""} ${w.method ?? ""} ${w.path ?? ""}`.replace(/\s+/g, " ").trim();
   for (const w of c.calls ?? []) {
-    const hit = calls.some((k) => k.path === w.path && (!w.method || k.method === w.method) && (w.body === undefined || contains(k.body, w.body)) && (w.query === undefined || contains(k.query, w.query)));
-    if (!hit) problems.push(`no call to ${w.method ?? ""} ${w.path}${w.body ? ` with ${JSON.stringify(w.body)}` : ""}; saw ${JSON.stringify(calls.filter((k) => k.path === w.path).map((k) => k.body)).slice(0, 300)}`);
+    if (calls.some((k) => matches(k, w))) continue;
+    const near = calls.filter((k) => matches(k, { to: w.to, path: w.path })).map((k) => k.body);
+    problems.push(`no call to ${show(w)}${w.body ? ` with ${JSON.stringify(w.body)}` : ""}; saw ${JSON.stringify(near).slice(0, 400)}`);
   }
-  for (const p of c.noCalls ?? []) if (calls.some((k) => k.path.startsWith(p))) problems.push(`unexpected call to ${p}`);
-  for (const [p, n] of Object.entries(c.callCount ?? {})) {
-    const got = calls.filter((k) => k.path === p).length;
-    if (got !== n) problems.push(`${got} calls to ${p}, wanted ${n}`);
+  for (const to of c.noCalls ?? []) if (calls.some((k) => sentTo(k, to))) problems.push(`unexpected call to ${to}`);
+  // "slack" counts every call to Slack; "slack /api/chat.postMessage" only that path.
+  for (const [what, n] of Object.entries(c.callCount ?? {})) {
+    const [to, path] = what.includes(" ") ? what.split(" ") : hostsOf(what) ? [what, undefined] : [undefined, what];
+    const got = calls.filter((k) => matches(k, { to, path })).length;
+    if (got !== n) problems.push(`${got} calls to ${what}, wanted ${n}`);
   }
   for (const [table, rows] of Object.entries(c.table ?? {})) {
     const got = await mock(`/db/${table}`);
@@ -196,7 +169,8 @@ async function n8nVersion() {
 
 const filter = process.argv[2];
 const defs = await loadAll();
-KEY = await apiKey();
+await connect();
+CREDS = await ensureCredentials();
 
 // Start clean: this instance exists only for these tests.
 for (;;) {

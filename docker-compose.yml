@@ -1,5 +1,9 @@
-# A throwaway n8n and a mock of every external service, for running the tests.
-# Nothing here talks to a real account: `docker compose down -v` removes it all.
+# A throwaway n8n and a stand-in for every platform the workflows talk to.
+#
+# The mock answers on the platforms' own hostnames (slack.com, api.hubapi.com
+# and so on) inside this network, over TLS with a certificate made at start-up.
+# That is what lets the real n8n nodes for those platforms run end to end in
+# the tests without an account anywhere. `docker compose down -v` removes it all.
 services:
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest
@@ -14,14 +18,67 @@ services:
       EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
       EXECUTIONS_DATA_SAVE_ON_ERROR: all
       GENERIC_TIMEZONE: UTC
+      # The mock's certificate is self-signed. Never set this on a real instance.
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
     volumes: ["n8n_data:/home/node/.n8n"]
-    depends_on: [mocks]
+    depends_on:
+      mocks:
+        condition: service_healthy
   mocks:
     image: node:22-alpine
     working_dir: /app
-    command: node server.mjs
+    command: >
+      sh -c "apk add --no-cache openssl >/dev/null &&
+      mkdir -p /certs &&
+      openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj /CN=mocks
+      -keyout /certs/key.pem -out /certs/cert.pem 2>/dev/null &&
+      node server.mjs"
     volumes: ["./mocks:/app:ro"]
     ports: ["4010:4010"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4010/health"]
+      interval: 2s
+      retries: 30
+    networks:
+      default:
+        aliases:
+          - slack.com
+          - api.hubapi.com
+          - sheets.googleapis.com
+          - oauth2.googleapis.com
+          - www.googleapis.com
+          - gmail.googleapis.com
+          - api.anthropic.com
+          - api.openai.com
+          - api.pinecone.io
+          - kb-index.svc.pinecone.io
+          - api.elevenlabs.io
+          - serpapi.com
+          - api.sendgrid.com
+          - acme.zendesk.com
+          - api.stripe.com
+          - acme-store.myshopify.com
+          - discord.com
+          - acme.supabase.co
+          - acme.wordpress.test
+          - api.twilio.com
+          - person.clearbit.com
+          - company.clearbit.com
+          - person-stream.clearbit.com
+          - api.calendly.com
+          - api.typeform.com
+          - api.airtable.com
+          - api.notion.com
+          - api.linkedin.com
+          - quickbooks.api.intuit.com
+          - sandbox-quickbooks.api.intuit.com
+          - us1.api.mailchimp.com
+          - api.bamboohr.com
+          - app.posthog.com
+          - api.frankfurter.app
+          - graph.facebook.com
+          - api.x.com
+          - api.twitter.com
 
 volumes:
   n8n_data:
